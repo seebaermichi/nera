@@ -1,0 +1,5 @@
+aside
+  nav
+    each item in meta.sideNav
+      - var currentClass = item.current ? 'current' : ''
+      a(href=item.url, class=currentClass) !{ item.name }

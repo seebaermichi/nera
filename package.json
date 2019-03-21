@@ -1,0 +1,26 @@
+{
+  "name": "nera",
+  "version": "1.0.0",
+  "description": "A simple static site generator",
+  "main": "render.js",
+  "scripts": {
+    "render": "node index.js",
+    "serve": "http-server ./public -p 8080"
+  },
+  "keywords": [],
+  "author": "“Michael <micha.becker79@gmail.com> (https://github.com/seebaermichi)",
+  "license": "ISC",
+  "dependencies": {
+    "fs-readdir-recursive": "^1.1.0",
+    "markdown-it": "^8.4.2",
+    "markdown-it-github-preamble": "^1.0.0",
+    "markdown-it-meta": "^0.0.1",
+    "pretty": "^2.0.0",
+    "pug": "^2.0.3",
+    "read-yaml": "^1.1.0",
+    "rimraf": "^2.6.3"
+  },
+  "devDependencies": {
+    "http-server": "^0.11.1"
+  }
+}
