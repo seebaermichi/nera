@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 const fsReaddirRecursive = require('fs-readdir-recursive')
+const ncp = require('ncp').ncp
 const pretty = require('pretty')
 const pug = require('pug')
 const readYaml = require('read-yaml')
@@ -48,4 +49,15 @@ pages.forEach(file => {
     })
 })
 
-console.log('\x1b[32m%s\x1b[0m', 'Done')
+if (fs.existsSync('./assets')) {
+  ncp.limit = 16
+  ncp('./assets', './public', error => {
+    if (error) {
+      return console.log(error)
+    }
+
+    console.log('\x1b[32m%s\x1b[0m', 'Done')
+  })
+} else {
+  console.log('\x1b[32m%s\x1b[0m', 'Done')
+}
