@@ -16,6 +16,21 @@ const appConfig = readYaml.sync('./config/app.yaml')
 const mainNav = readYaml.sync('./config/main-navigation.yaml')
 
 const pages = fsReaddirRecursive('./pages')
+const subNavs = []
+
+pages.forEach((page, index) => {
+  const subPath = getPath(page)
+  md.render(fs.readFileSync(`./pages/${page}`, 'utf-8'))
+
+  if (subPath !== '') {
+    subNavs.push({
+      name: md.meta.title,
+      path: subPath,
+      pos: md.meta.position || index,
+      url: page.replace('.md', '.html')
+    })
+  }
+})
 
 rimraf.sync('./public')
 
@@ -23,14 +38,16 @@ let data = {
   app: Object.assign({}, appConfig, { mainNav }),
 }
 
-pages.forEach(file => {
-  const content = md.render(fs.readFileSync(`./pages/${file}`, 'utf-8'))
-  const newFilePath = `${file.split('.md')[0]}.html`
+pages.forEach(page => {
+  const content = md.render(fs.readFileSync(`./pages/${page}`, 'utf-8'))
+  const newPagePath = `${page.split('.md')[0]}.html`
 
   data = Object.assign({}, data, {
     content: content,
     meta: Object.assign({}, md.meta, {
-      pageUrl: newFilePath
+      pagePath: getPath(page),
+      pageUrl: newPagePath,
+      sideNav: getSubNav(subNavs, newPagePath)
     })
   })
 
@@ -41,11 +58,11 @@ pages.forEach(file => {
     meta: data.meta
   })
 
-  fs.promises.mkdir(path.dirname(`./public/${newFilePath}`), {
+  fs.promises.mkdir(path.dirname(`./public/${newPagePath}`), {
     'recursive': true
   })
     .then(() => {
-      fs.writeFileSync(`./public/${newFilePath}`, pretty(html), 'utf-8')
+      fs.writeFileSync(`./public/${newPagePath}`, pretty(html), 'utf-8')
     })
 })
 
@@ -60,4 +77,20 @@ if (fs.existsSync('./assets')) {
   })
 } else {
   console.log('\x1b[32m%s\x1b[0m', 'Done')
+}
+
+function getPath(url) {
+  const pathElements = url.split('/')
+  return pathElements.length > 0 ? pathElements.splice(0, pathElements.length - 1).join('/') : '/'
+}
+
+function getSubNav(subNavs, url) {
+  return subNavs.filter(({ path }) => url.includes(path))
+    .map(element => ({
+      current: element.url === url,
+      name: element.name,
+      pos: element.pos,
+      url: `/${element.url}`
+    }))
+    .sort((a, b) => a.pos - b.pos)
 }

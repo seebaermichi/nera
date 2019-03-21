@@ -1,3 +1,5 @@
 nav
   each item in app.mainNav
-    a(href=item.url) !{ item.name }
+    - var currentClass = item.url.includes(meta.pageUrl) ? 'current' : ''
+    - var currentPathCss = meta.pagePath !== '' && item.url.includes(meta.pagePath) ? 'current-path' : ''
+    a(href=item.url, class=`${currentClass} ${currentPathCss}`) !{ item.name }
