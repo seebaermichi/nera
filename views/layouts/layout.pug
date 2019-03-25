@@ -5,6 +5,9 @@ html(lang=app.lang)
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
     meta(http-equiv="X-UA-Compatible", content="ie=edge")
     title !{ meta.title } | !{ app.name }
+    meta(name="description", content=`${meta.description || app.description}`)
+    meta(name="keywords", conent=`${meta.keywords || app.keywords}`)
+    meta(name="generator" content="nera - 1.0.0")
   body
     include ../partials/main-navigation.pug
     block content
