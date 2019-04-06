@@ -6,7 +6,7 @@ Markdown files.
 > Make sure you run at least Node version 10.2 on your system
 
 ```bash
-git clone git@bitbucket.org:michab/static.schneckenmuehle.de.git
+git clone git@github.com:seebaermichi/nera.git
 
 # Install dependencies
 npm install
