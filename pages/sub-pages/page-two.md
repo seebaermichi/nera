@@ -1,6 +1,6 @@
 ---
 layout: pages/docu.pug
-position: 2
+# position: 2
 title: Page Two
 ---
 # Page Two

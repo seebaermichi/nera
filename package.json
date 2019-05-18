@@ -1,9 +1,10 @@
 {
   "name": "nera",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple static site generator",
-  "main": "render.js",
+  "main": "index.js",
   "scripts": {
+    "start": "nodemon -e js,md,pug,yaml,css --ignore public/",
     "render": "node index.js",
     "serve": "http-server ./public -p 8080"
   },
@@ -22,6 +23,7 @@
     "rimraf": "^2.6.3"
   },
   "devDependencies": {
-    "http-server": "^0.11.1"
+    "http-server": "^0.11.1",
+    "nodemon": "^1.19.0"
   }
 }
