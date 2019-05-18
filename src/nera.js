@@ -16,17 +16,29 @@ class Nera {
         this.config = readYaml.sync('./config/app.yaml')
         this.md = new Markdown().use(meta)
         this.pages = fsReaddirRecursive('./pages')
-        this.plugins = fsReaddirRecursive('./src/plugins')
+        this.pluginsData = []
+        this.plugins = []
         this.pagesData = []
         this.successLogColor = '\x1b[32m%s\x1b[0m'
         this.data = {
             app: this.config
         }
 
-        this.getPagesData()
+        this.setPagesData()
+        this.setPlugins()
     }
 
     run() {
+        this.pluginsData.forEach(file => {
+            const pluginClass = require(`./plugins/${file}`)
+
+            this.data.app = pluginClass.addAppData(this.data.app)
+            this.pagesData = this.pagesData.map(data => ({
+                content: data.content,
+                meta: pluginClass.addMetaData(data.meta)
+            }))
+        })
+
         this.createHtmlFiles()
 
         this.copyAssetsToPublic()
@@ -65,7 +77,7 @@ class Nera {
         rimraf.sync('./public')
     }
 
-    getPagesData() {
+    setPagesData() {
         this.pagesData = this.pages.map(page => ({
             content: md.render(fs.readFileSync(`./pages/${page}`, 'utf-8')),
             meta: Object.assign({}, md.meta, {
@@ -78,6 +90,10 @@ class Nera {
     getPathName(pagePath) {
         const pathElements = pagePath.split('/')
         return pathElements.length > 0 ? pathElements.splice(0, pathElements.length - 1).join('/') : '/'
+    }
+
+    setPlugins() {
+        this.pluginsData = fsReaddirRecursive('./src/plugins').filter(file => file.includes('index.js'))
     }
 }
 

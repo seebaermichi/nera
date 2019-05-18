@@ -9,5 +9,5 @@ html(lang=app.lang)
     meta(name="keywords", conent=`${meta.keywords || app.keywords}`)
     meta(name="generator" content="nera - 1.0.0")
   body
-    //- include ../partials/main-navigation.pug
+    include ../../src/plugins/main-navigation/views/main-navigation.pug
     block content

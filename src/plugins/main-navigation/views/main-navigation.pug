@@ -1,5 +1,5 @@
 nav
   each item in app.mainNav.elements
-    - const currentClass = item.url.includes(meta.pageHrefRelative) ? app.mainNav.activeClass : ''
+    - const currentClass = item.url.includes(meta.htmlPathName) ? app.mainNav.activeClass : ''
     - const currentPathCss = meta.pagePathName !== '' && item.url.includes(meta.pagePathName) ? app.mainNav.activePathClass : ''
     a(href=item.url, class=`${currentClass} ${currentPathCss}`) #{ item.name }
