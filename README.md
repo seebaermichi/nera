@@ -56,8 +56,11 @@ Within the pages directory you add the Markdown files which actually include the
 
 ### Src
 The `src` directory include the app itself. Here you find the `nera.js` file which includes all the functionality to run the  
-app. It also includes the `plugins` folder. In it you would place additional functionality. There is already an example,  
-the main navigation.
+app.
+
+### Plugins
+The `src` folder also includes the `plugins` folder. In it you would place additional functionality. There is already an  
+example, the main navigation. Find detailed documentation about plugins in the plugins [README file]().
 
 ### Views
 In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.
