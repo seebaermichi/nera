@@ -1,7 +1,8 @@
 nav
   each item, index in app.mainNav.elements
-    - const currentClass = item.url.includes(meta.htmlPathName) ? app.mainNav.activeClass : ''
-    //- Todo: add current path css class
+    - const currentClass = item.href.includes(meta.htmlPathName) ? app.mainNav.activeClass : ''
+    - const currentPathClass = currentClass === '' && meta.pagePathName !== '' && item.href.includes(meta.pagePathName) ? app.mainNav.activePathClass : ''
+
     if index !== 0
       | &nbsp;|&nbsp;
-    a(href=item.url, class=`${currentClass}`) #{ item.name }
+    a(href=item.href, class=`${currentClass}${currentPathClass}`) #{ item.name }

@@ -1,9 +1,9 @@
 activeClass: 'current'
 activePathClass: 'current-path'
 elements:
-  - url: /index.html
+  - href: /index.html
     name: Home
-  - url: /sub-pages-first-group/page-one.html
+  - href: /sub-pages-first-group/page-one.html
     name: First page one
-  - url: /sub-pages-second-group/page-two.html
+  - href: /sub-pages-second-group/page-two.html
     name: Second page one
