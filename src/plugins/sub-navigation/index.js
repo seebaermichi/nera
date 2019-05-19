@@ -2,27 +2,30 @@ const Plugin = require('../../plugin')
 
 class SubNavigation extends Plugin {
     addMetaData(data) {
-        const subNavs = []
+        if (data !== null && typeof data === 'object') {
+            const subNavs = []
 
-        data.forEach(({ meta }, index) => {
-            if (meta.pagePathName !== '') {
-                subNavs.push({
-                    name: meta.title,
-                    path: meta.pagePathName, // without file name
-                    position: meta.position || index,
-                    href: meta.htmlPathName
-                })
-            }
-        })
-
-        data = data.map(dataSet => ({
-            content: dataSet.content,
-            meta: Object.assign({}, dataSet.meta, {
-                subNav: {
-                    elements: this.getSideNav(subNavs, dataSet.meta.htmlPathName)
+            data.forEach(({ meta }, index) => {
+                if (meta.pagePathName !== '') {
+                    subNavs.push({
+                        name: meta.title,
+                        path: meta.pagePathName, // without file name
+                        position: meta.position || index,
+                        href: meta.htmlPathName
+                    })
                 }
             })
-        }))
+
+            data = data.map(dataSet => ({
+                content: dataSet.content,
+                meta: Object.assign({}, dataSet.meta, {
+                    subNav: dataSet.meta.subNav || Object.assign({}, this.configData, {
+                        elements: this.getSideNav(subNavs, dataSet.meta.htmlPathName)
+                    })
+                })
+            }))
+
+        }
 
         return data
     }
