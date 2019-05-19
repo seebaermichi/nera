@@ -3,9 +3,7 @@ activePathClass: 'current-path'
 elements:
   - url: /index.html
     name: Home
-  - url: /sub-pages/page-one.html
-    name: Page one
-  - url: /sub-pages/page-two.html
-    name: Page two
-  - url: /sub-pages/page-three.html
-    name: Page three
+  - url: /sub-pages-first-group/page-one.html
+    name: First page one
+  - url: /sub-pages-second-group/page-two.html
+    name: Second page one

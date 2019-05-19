@@ -33,10 +33,7 @@ class Nera {
             const pluginClass = require(`./plugins/${file}`)
 
             this.data.app = pluginClass.addAppData(this.data.app)
-            this.pagesData = this.pagesData.map(data => ({
-                content: data.content,
-                meta: pluginClass.addMetaData(data.meta)
-            }))
+            this.pagesData = pluginClass.addMetaData(this.pagesData)
         })
 
         this.createHtmlFiles()
@@ -81,7 +78,7 @@ class Nera {
         this.pagesData = this.pages.map(page => ({
             content: md.render(fs.readFileSync(`./pages/${page}`, 'utf-8')),
             meta: Object.assign({}, md.meta, {
-                pagePathName: this.getPathName(page),
+                pagePathName: this.getPathName(page), // path name without file
                 htmlPathName: `/${page.split('.md')[0]}.html`
             })
         }))

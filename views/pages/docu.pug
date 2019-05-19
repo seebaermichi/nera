@@ -1,5 +1,7 @@
 extends ../layouts/layout
 
 block content
-  //- include ../partials/side-navigation.pug
-  main !{ content }
+  include ../../src/plugins/sub-navigation/views/sub-navigation.pug
+  main
+    h1 #{ meta.title }
+    | !{ content }

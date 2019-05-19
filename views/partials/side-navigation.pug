@@ -1,5 +1,0 @@
-aside
-  nav
-    each item in meta.sideNav
-      - const currentClass = item.current ? meta.sideNav.activeClass || app.mainNav.activeClass : ''
-      a(href=item.url, class=currentClass) #{ item.name }

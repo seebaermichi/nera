@@ -1,0 +1,7 @@
+aside
+  nav
+    each item, index in meta.subNav.elements
+      - const currentClass = item.current ? meta.subNav.activeClass || app.mainNav.activeClass : ''
+      if index !== 0
+        | &nbsp;|&nbsp;
+      a(href=item.href, class=currentClass) #{ item.name }
