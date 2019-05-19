@@ -23,25 +23,14 @@ npm start
 
 ## Directory and file structure
 ```
-|-- assets
-|-- config
+|-- assets/
+|-- config/
     |-- app.yaml
-|-- pages
-|-- src
-    |-- plugins
-        |-- main-navigation
-            |-- config
-                |-- main-navigation.yaml
-            |-- views
-                |-- main-navigation.pug
-            |-- index.js
-        |-- sub-navigation
-            |-- views
-                |-- sub-navigation.pug
-            |-- index.js
+|-- pages/
+|-- src/
+    |-- plugins/
     |-- nera.js
-    |-- plugin.js
-|-- views
+|-- views/
 |-- index.js
 ```
 
