@@ -16,7 +16,6 @@ class Nera {
         this.config = readYaml.sync('./config/app.yaml')
         this.md = new Markdown().use(meta)
         this.pages = fsReaddirRecursive('./pages')
-        this.pluginsData = []
         this.plugins = []
         this.pagesData = []
         this.successLogColor = '\x1b[32m%s\x1b[0m'
@@ -29,16 +28,18 @@ class Nera {
     }
 
     run() {
-        this.pluginsData.forEach(file => {
+        this.loadPlugins()
+        this.createHtmlFiles()
+        this.copyAssetsToPublic()
+    }
+
+    loadPlugins() {
+        this.plugins.forEach(file => {
             const pluginClass = require(`./plugins/${file}`)
 
             this.data.app = pluginClass.addAppData(this.data.app)
             this.pagesData = pluginClass.addMetaData(this.pagesData)
         })
-
-        this.createHtmlFiles()
-
-        this.copyAssetsToPublic()
     }
 
     createHtmlFiles() {
@@ -90,7 +91,7 @@ class Nera {
     }
 
     setPlugins() {
-        this.pluginsData = fsReaddirRecursive('./src/plugins').filter(file => file.includes('index.js'))
+        this.plugins = fsReaddirRecursive('./src/plugins').filter(file => file.includes('index.js'))
     }
 }
 

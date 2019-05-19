@@ -5,14 +5,14 @@ class MainNavigation extends Plugin {
         super(`${__dirname}/config/main-navigation.yaml`)
     }
 
-    addAppData(data) {
-        if (data !== null && typeof data === 'object') {
-            return Object.assign({}, data, {
+    addAppData(appData) {
+        if (appData !== null && typeof appData === 'object') {
+            return Object.assign({}, appData, {
                 mainNav: this.configData
             })
         }
 
-        return data
+        return appData
     }
 }
 

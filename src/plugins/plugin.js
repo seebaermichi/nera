@@ -10,12 +10,12 @@ class Plugin {
         }
     }
 
-    addAppData(data) {
-        return data
+    addAppData(appData) {
+        return appData
     }
 
-    addMetaData(data) {
-        return data
+    addMetaData(pagesData) {
+        return pagesData
     }
 }
 

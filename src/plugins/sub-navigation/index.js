@@ -1,11 +1,11 @@
 const Plugin = require('../plugin')
 
 class SubNavigation extends Plugin {
-    addMetaData(data) {
-        if (data !== null && typeof data === 'object') {
+    addMetaData(pagesData) {
+        if (pagesData !== null && Array.isArray(pagesData)) {
             const subNavs = []
 
-            data.forEach(({ meta }, index) => {
+            pagesData.forEach(({ meta }, index) => {
                 if (meta.pagePathName !== '') {
                     subNavs.push({
                         name: meta.title,
@@ -16,27 +16,26 @@ class SubNavigation extends Plugin {
                 }
             })
 
-            data = data.map(dataSet => ({
-                content: dataSet.content,
-                meta: Object.assign({}, dataSet.meta, {
-                    subNav: dataSet.meta.subNav || Object.assign({}, this.configData, {
-                        elements: this.getSideNav(subNavs, dataSet.meta.htmlPathName)
+            pagesData = pagesData.map(({ content, meta }) => ({
+                content,
+                meta: Object.assign({}, meta, {
+                    subNav: meta.subNav || Object.assign({}, this.configData, {
+                        elements: this.getSideNav(subNavs, meta.htmlPathName)
                     })
                 })
             }))
-
         }
 
-        return data
+        return pagesData
     }
 
-    getSideNav(subNavs, href) {
-        return subNavs.filter(({ path }) => href.includes(path))
-            .map(element => ({
-                current: element.href === href,
-                name: element.name,
-                position: element.position,
-                href: element.href
+    getSideNav(subNavs, currentHref) {
+        return subNavs.filter(({ path }) => currentHref.includes(path))
+            .map(({ href, name, position }) => ({
+                current: href === currentHref,
+                name,
+                position,
+                href
             }))
             .sort((a, b) => a.position - b.position)
     }
