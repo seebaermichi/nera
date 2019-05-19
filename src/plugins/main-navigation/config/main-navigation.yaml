@@ -4,4 +4,8 @@ elements:
   - url: /index.html
     name: Home
   - url: /sub-pages/page-one.html
-    name: Sub Pages
+    name: Page one
+  - url: /sub-pages/page-two.html
+    name: Page two
+  - url: /sub-pages/page-three.html
+    name: Page three
