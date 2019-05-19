@@ -79,8 +79,9 @@ class Nera {
         this.pagesData = this.pages.map(page => ({
             content: md.render(fs.readFileSync(`./pages/${page}`, 'utf-8')),
             meta: Object.assign({}, md.meta, {
-                pagePathName: this.getPathName(page), // path name without file
-                htmlPathName: `/${page.split('.md')[0]}.html`
+                createdAt: fs.statSync(`./pages/${page}`).birthtime,
+                htmlPathName: `/${page.split('.md')[0]}.html`,
+                pagePathName: this.getPathName(page) // path name without file
             })
         }))
     }
