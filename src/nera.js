@@ -44,7 +44,7 @@ class Nera {
 
     createHtmlFiles() {
         this.pagesData.forEach(pageData => {
-            const fn = pug.compileFile(`./views/${md.meta.layout}`)
+            const fn = pug.compileFile(`./views/${pageData.meta.layout}`)
             const html = fn(Object.assign({}, this.data, pageData))
 
             fs.promises.mkdir(path.dirname(`./public/${pageData.meta.htmlPathName}`), {
