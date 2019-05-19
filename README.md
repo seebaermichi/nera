@@ -60,7 +60,7 @@ app.
 
 ### Plugins
 The `src` folder also includes the `plugins` folder. In it you would place additional functionality. There is already an  
-example, the main navigation. Find detailed documentation about plugins in the plugins [README file]().
+example, the main navigation. Find detailed documentation about plugins in the plugins [README file](https://github.com/seebaermichi/nera/tree/master/src/plugins).
 
 ### Views
 In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.
