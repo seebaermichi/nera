@@ -1,4 +1,4 @@
-const Plugin = require('../../plugin')
+const Plugin = require('../plugin')
 
 class MainNavigation extends Plugin {
     constructor() {

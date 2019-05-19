@@ -1,4 +1,4 @@
-const Plugin = require('../../plugin')
+const Plugin = require('../plugin')
 
 class SubNavigation extends Plugin {
     addMetaData(data) {
