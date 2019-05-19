@@ -30,11 +30,15 @@ npm start
 |-- src
     |-- plugins
         |-- main-navigation
-        |-- config
-            |-- main-navigation.yaml
-        |-- views
-            |-- main-navigation.pug
-        |-- index.js
+            |-- config
+                |-- main-navigation.yaml
+            |-- views
+                |-- main-navigation.pug
+            |-- index.js
+        |-- sub-navigation
+            |-- views
+                |-- sub-navigation.pug
+            |-- index.js
     |-- nera.js
     |-- plugin.js
 |-- views
