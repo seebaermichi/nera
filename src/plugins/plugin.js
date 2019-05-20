@@ -2,20 +2,22 @@ const fs = require('fs')
 const readYaml = require('read-yaml')
 
 class Plugin {
-    constructor(configFilePath) {
+    constructor({ appData, pagesData }, configFilePath = '') {
+        this.appData = appData
+        this.pagesData = pagesData
         this.configData = ''
 
-        if (fs.existsSync(configFilePath)) {
+        if (configFilePath !== '' && fs.existsSync(configFilePath)) {
             this.configData = readYaml.sync(configFilePath)
         }
     }
 
-    addAppData(appData) {
-        return appData
+    addAppData() {
+        return this.appData
     }
 
-    addMetaData(pagesData) {
-        return pagesData
+    addMetaData() {
+        return this.pagesData
     }
 }
 

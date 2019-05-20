@@ -1,11 +1,11 @@
 const Plugin = require('../plugin')
 
 class SubNavigation extends Plugin {
-    addMetaData(pagesData) {
-        if (pagesData !== null && Array.isArray(pagesData)) {
+    addMetaData() {
+        if (this.pagesData !== null && Array.isArray(this.pagesData)) {
             const subNavs = []
 
-            pagesData.forEach(({ meta }, index) => {
+            this.pagesData.forEach(({ meta }, index) => {
                 if (meta.pagePathName !== '') {
                     subNavs.push({
                         name: meta.title,
@@ -16,7 +16,7 @@ class SubNavigation extends Plugin {
                 }
             })
 
-            pagesData = pagesData.map(({ content, meta }) => ({
+            this.pagesData = this.pagesData.map(({ content, meta }) => ({
                 content,
                 meta: Object.assign({}, meta, {
                     subNav: meta.subNav || Object.assign({}, this.configData, {
@@ -26,7 +26,7 @@ class SubNavigation extends Plugin {
             }))
         }
 
-        return pagesData
+        return this.pagesData
     }
 
     getSideNav(subNavs, currentHref) {
@@ -41,4 +41,4 @@ class SubNavigation extends Plugin {
     }
 }
 
-module.exports = new SubNavigation()
+module.exports = SubNavigation

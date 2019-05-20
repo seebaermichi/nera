@@ -36,9 +36,10 @@ class Nera {
     loadPlugins() {
         this.plugins.forEach(file => {
             const pluginClass = require(`./plugins/${file}`)
+            const plugin = new pluginClass({ appData: this.data.app, pagesData: this.pagesData })
 
-            this.data.app = pluginClass.addAppData(this.data.app)
-            this.pagesData = pluginClass.addMetaData(this.pagesData)
+            this.data.app = plugin.addAppData()
+            this.pagesData = plugin.addMetaData()
         })
     }
 
