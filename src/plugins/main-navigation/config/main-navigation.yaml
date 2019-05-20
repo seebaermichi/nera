@@ -1,9 +1,0 @@
-activeClass: 'current'
-activePathClass: 'current-path'
-elements:
-  - href: /index.html
-    name: Home
-  - href: /sub-pages-first-group/page-one.html
-    name: First page one
-  - href: /sub-pages-second-group/page-two.html
-    name: Second page one
