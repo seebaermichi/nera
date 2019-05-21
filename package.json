@@ -4,7 +4,7 @@
   "description": "A simple static site generator",
   "main": "index.js",
   "scripts": {
-    "pretest": "eslint --ignore-path .gitignore .",
+    "lint": "eslint --ignore-path .gitignore .",
     "start": "nodemon -e js,md,pug,yaml,css --ignore public/",
     "render": "node index.js",
     "serve": "http-server ./public -p 8080"
@@ -16,8 +16,8 @@
     "node": ">=10.2.0"
   },
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/seebaermichi/nera"
+    "type": "git",
+    "url": "https://github.com/seebaermichi/nera"
   },
   "dependencies": {
     "fs-readdir-recursive": "^1.1.0",
@@ -39,6 +39,7 @@
     "eslint-plugin-promise": "^4.1.1",
     "eslint-plugin-standard": "^4.0.0",
     "http-server": "^0.11.1",
+    "husky": "^2.3.0",
     "nodemon": "^1.19.0"
   }
 }
