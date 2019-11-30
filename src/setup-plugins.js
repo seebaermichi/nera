@@ -15,7 +15,7 @@ const getPluginsData = data => {
       }
 
       if (plugin.hasOwnProperty('getMetaData')) {
-        data.meta = plugin.getMetaData(data)
+        data.pagesData = plugin.getMetaData(data)
       }
     })
   }
