@@ -1,6 +1,7 @@
 # Nera - a lightweight static site generator
 Nera is a really simple static site generator. It creates static html files out of  
 Markdown files.
+> Please be aware of that this software is still under development. It might be that there will be changes which are not compatible with former versions.
 
 ## Get started
 > Make sure you run at least Node version 10.2 on your system
@@ -29,6 +30,7 @@ npm start
 |-- pages/
 |-- src/
     |-- plugins/
+        |-- plugin-helper.js
     |-- core.js
     |-- index.js
     |-- render.js
