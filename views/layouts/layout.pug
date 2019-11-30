@@ -7,7 +7,8 @@ html(lang=app.lang)
     title #{ meta.title } | #{ app.name }
     meta(name="description", content=`${meta.description || app.description}`)
     meta(name="keywords", conent=`${meta.keywords || app.keywords}`)
-    meta(name="generator" content="nera - 1.0.0")
+    meta(name="generator" content=`nera - ${process.env.npm_package_version}`)
+    meta(name="robots" content=`${meta.robots || app.robots}`)
 
   body
     block content
