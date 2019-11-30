@@ -1,4 +1,3 @@
-const Nera = require('./src/nera')
+const run = require('./src')
 
-const nera = new Nera()
-nera.run()
+run()
