@@ -2,9 +2,8 @@ const fs = require('fs')
 const path = require('path')
 
 const fsReaddirRecursive = require('fs-readdir-recursive')
-const Markdown = require('markdown-it')
 const meta = require('markdown-it-meta')
-const md = new Markdown().use(meta)
+const md = require('markdown-it')({ html: true }).use(meta)
 const readYaml = require('read-yaml')
 
 const defaultSettings = {
