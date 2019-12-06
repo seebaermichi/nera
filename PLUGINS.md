@@ -7,3 +7,4 @@ Static site generator Nera makes it easy to create plugins. There are already a 
 * [Main navigation](https://github.com/seebaermichi/nera-plugin-main-navigation)
 * [Page navigation](https://github.com/seebaermichi/nera-plugin-page-navigation)
 * [Statistics](https://github.com/seebaermichi/nera-plugin-statistics)
+* [Popular content](https://github.com/seebaermichi/nera-plugin-popular-content)
