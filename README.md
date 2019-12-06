@@ -58,12 +58,16 @@ Have a look at the current [collection of available plugins](https://github.com/
 ### Views
 In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.  
 In addition to the content of the markdown file there is also more data available. There is one `app` object, which includes all the properties from the `config/app.yaml` file. The other object is the `meta` object. Where `app` includes data relevant or usable on every page the `meta` object only includes data for the page itself. Therefore it includes by default all the properties and values you define in the meta section of the markdown file. In addition it includes  
+
 __`createdAt`__  
 is datetime when the markdown file was created  
-__`href`__
+
+__`href`__  
 is the path to the current html file  
+
 __`dirname`__  
 is the dirname of the current html file  
+
 The `meta` object could of course also include more data depending on what your plugins add to id.
 
 ## Page Markdown files
