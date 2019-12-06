@@ -43,13 +43,13 @@ npm start
 Are all CSS, JavaScript, font and image files which are used on your website. During the render process all assets are copied to the `public` directory.
 
 ### Config
-Here you can define global settings for your website. All the global settings should got to the `config/app.yaml`. Like lang, name, etc.
+Here you can define global settings for your website. All the global settings should got to the `config/app.yaml`. Like lang, name, etc. They will be available in the `data.app` object within source or plugin files or as `app` object within the view files.
 
 ### Pages
-Within the pages directory you add the Markdown files which actually include the content of your page. Find more information about the Markdown files below.
+Within the pages directory you add the Markdown files which actually include meta information or settings and the content of your page. Find more information about the Markdown files below.
 
 ### Src
-The `src` directory includes the app itself. Here you find the `core.js`, `index.js`, `render.js` and `setup-plugins.js` files which include all the functionality to run the app.
+The `src` directory includes the app itself. Here you find the `core.js`, `index.js`, `render.js` and `setup-plugins.js` files which include all the functionality to read the markdown files, get the settings, load plugins, copy assets and render the Html files into the `puplic` folder.
 
 ### Plugins
 The `src` folder also includes the `plugins` folder. In it you would place additional functionality.  
