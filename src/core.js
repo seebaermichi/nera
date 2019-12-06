@@ -33,9 +33,10 @@ const getPagesData = pages => {
     meta: Object.assign({}, md.meta, {
       createdAt: fs.statSync(`${defaultSettings.folders.pages}/${page}`)
         .birthtime,
-      htmlPathName: `/${page.split('.md')[0]}.html`,
+      htmlPathName: `/${page.split('.md')[0]}.html`, /* depricated */
       href: `/${page.split('.md')[0]}.html`,
-      pagePathName: path.dirname(page)
+      pagePathName: path.dirname(page), /* depricated */
+      dirname: path.dirname(page)
     })
   }))
 }
