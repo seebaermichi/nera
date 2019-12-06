@@ -34,6 +34,7 @@ const getPagesData = pages => {
       createdAt: fs.statSync(`${defaultSettings.folders.pages}/${page}`)
         .birthtime,
       htmlPathName: `/${page.split('.md')[0]}.html`,
+      href: `/${page.split('.md')[0]}.html`,
       pagePathName: path.dirname(page)
     })
   }))
