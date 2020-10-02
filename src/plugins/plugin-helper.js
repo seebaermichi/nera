@@ -5,6 +5,8 @@ const getConfig = configFilePath => {
   if (configFilePath !== '' && fs.existsSync(configFilePath)) {
     return readYaml.sync(configFilePath)
   }
+
+  return false
 }
 
 module.exports = {
