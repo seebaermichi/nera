@@ -9,3 +9,4 @@ Static site generator Nera makes it easy to create plugins. There are already a 
 * [Statistics](https://github.com/seebaermichi/nera-plugin-statistics)
 * [Popular content](https://github.com/seebaermichi/nera-plugin-popular-content)
 * [Tags](https://github.com/seebaermichi/nera-plugin-tags)
+* [Social Media Links](https://github.com/seebaermichi/nera-plugin-social-media-links)
