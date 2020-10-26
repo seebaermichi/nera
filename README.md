@@ -82,3 +82,6 @@ Content goes here...
 ```
 > Of course you can add many more so called meta data. It will be available in the view files as `meta` object.  
 > In addition the basic config values are available within the `app` object.
+
+## Links
+* [Read about how Nera is used to create the Nera website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)
