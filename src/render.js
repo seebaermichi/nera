@@ -26,22 +26,24 @@ const copyFolder = (sourceFolder, targetFolder) => {
 const createHtmlFiles = (data, viewsFolder, publicFolder) => {
   if (fs.existsSync(viewsFolder)) {
     data.pagesData.forEach(pageData => {
-      const fn = pug.compileFile(`${viewsFolder}/${pageData.meta.layout}`)
-      const html = fn(Object.assign({}, data, pageData))
+      if (pageData.meta.layout) {
+        const fn = pug.compileFile(`${viewsFolder}/${pageData.meta.layout}`)
+        const html = fn(Object.assign({}, data, pageData))
 
-      fs.promises
-        .mkdir(path.dirname(`${publicFolder}/${pageData.meta.htmlPathName}`), {
-          recursive: true
-        })
-        .then(() => {
-          fs.writeFileSync(
-            `${publicFolder}/${pageData.meta.htmlPathName}`,
-            pretty(html),
-            'utf-8'
-          )
+        fs.promises
+          .mkdir(path.dirname(`${publicFolder}/${pageData.meta.htmlPathName}`), {
+            recursive: true
+          })
+          .then(() => {
+            fs.writeFileSync(
+              `${publicFolder}/${pageData.meta.htmlPathName}`,
+              pretty(html),
+              'utf-8'
+            )
 
-          console.log(SUCCESS_COLOR, 'Html files created')
-        })
+            console.log(SUCCESS_COLOR, 'Html files created')
+          })
+      }
     })
   } else {
     console.error('views folder not found')
