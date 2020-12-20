@@ -2,13 +2,13 @@ const fs = require('fs')
 const readYaml = require('read-yaml')
 
 const getConfig = configFilePath => {
-  if (configFilePath !== '' && fs.existsSync(configFilePath)) {
-    return readYaml.sync(configFilePath)
-  }
+    if (configFilePath !== '' && fs.existsSync(configFilePath)) {
+        return readYaml.sync(configFilePath)
+    }
 
-  return false
+    return false
 }
 
 module.exports = {
-  getConfig
+    getConfig
 }

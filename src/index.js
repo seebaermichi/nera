@@ -3,15 +3,15 @@ const getPluginsData = require('./setup-plugins')
 const { copyFolder, deleteFolder, createHtmlFiles } = require('./render')
 
 const run = () => {
-  let data = appData
-  const { assets, dist, views } = defaultSettings.folders
-  data.pagesData = getPagesData(data.pages)
+    let data = appData
+    const { assets, dist, views } = defaultSettings.folders
+    data.pagesData = getPagesData(data.pages)
 
-  data = getPluginsData(data)
+    data = getPluginsData(data)
 
-  deleteFolder(dist)
-  createHtmlFiles(data, views, dist)
-  copyFolder(assets, dist)
+    deleteFolder(dist)
+    createHtmlFiles(data, views, dist)
+    copyFolder(assets, dist)
 }
 
 module.exports = run
