@@ -1,12 +1,16 @@
 # Nera plugins
 Static site generator Nera makes it easy to create plugins. There are already a couple available.
 
-## List of plugins
-* [Simple page list](https://github.com/seebaermichi/nera-plugin-simple-page-list)
-* [Page pagination](https://github.com/seebaermichi/nera-plugin-page-pagination)
+## List of plugins (12)
+* [Link attributes](https://github.com/seebaermichi/nera-plugin-link-attributes)
 * [Main navigation](https://github.com/seebaermichi/nera-plugin-main-navigation)
+* [Navigation](https://github.com/seebaermichi/nera-plugin-navigation)
+* [One page](https://github.com/seebaermichi/nera-plugin-one-page)
 * [Page navigation](https://github.com/seebaermichi/nera-plugin-page-navigation)
-* [Statistics](https://github.com/seebaermichi/nera-plugin-statistics)
+* [Page pagination](https://github.com/seebaermichi/nera-plugin-page-pagination)
 * [Popular content](https://github.com/seebaermichi/nera-plugin-popular-content)
-* [Tags](https://github.com/seebaermichi/nera-plugin-tags)
+* [Simple page list](https://github.com/seebaermichi/nera-plugin-simple-page-list)
 * [Social Media Links](https://github.com/seebaermichi/nera-plugin-social-media-links)
+* [Stacks](https://github.com/seebaermichi/nera-plugin-stacks)
+* [Statistics](https://github.com/seebaermichi/nera-plugin-statistics)
+* [Tags](https://github.com/seebaermichi/nera-plugin-tags)
