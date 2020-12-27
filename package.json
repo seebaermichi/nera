@@ -8,7 +8,7 @@
     "start": "nodemon -e js,md,pug,yaml,css --ignore public/",
     "render": "node index.js",
     "preserve": "npm run render",
-    "serve": "http-server ./public"
+    "serve": "node_modules/.bin/browser-sync start --server 'public' --files '.'"
   },
   "keywords": [],
   "author": "“Michael <micha.becker79@gmail.com> (https://github.com/seebaermichi)",
@@ -33,13 +33,13 @@
   },
   "devDependencies": {
     "acorn": "^6.4.2",
+    "browser-sync": "^2.26.13",
     "eslint": "^5.16.0",
     "eslint-config-standard": "^12.0.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-node": "^9.2.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.1.0",
-    "http-server": "^0.12.3",
     "husky": "^2.7.0",
     "nodemon": "^1.19.4"
   }

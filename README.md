@@ -12,7 +12,7 @@ git clone git@github.com:seebaermichi/nera.git
 # Install dependencies
 npm install
 
-# Run local server
+# Run local server (browser-sync)
 npm run serve
 
 # Render the static files
