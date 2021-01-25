@@ -5,8 +5,8 @@ html(lang=app.lang)
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
     meta(http-equiv="X-UA-Compatible", content="ie=edge")
     title #{ meta.title } | #{ app.name }
-    meta(name="description", content=`${ meta.description || app.description }`)
-    meta(name="keywords", content=`${ meta.keywords || app.keywords }`)
+    meta(name="description", content=`${ meta.description || t('app_description') }`)
+    meta(name="keywords", content=`${ meta.keywords || t('app_keywords') }`)
     meta(name="generator" content=`nera - ${ process.env.npm_package_version }`)
     meta(name="robots" content=`${ meta.robots || app.robots }`)
 

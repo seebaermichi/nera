@@ -1,5 +1,8 @@
 lang: en
 name: Nera
-description: Nera is an easy to use and light weight static site generator
-keywords: nera, static site generator, easy, light weight
 robots: index,follow
+
+translations:
+  en:
+    app_description: Nera is an easy to use and light weight static site generator
+    app_keywords: nera, static site generator, easy, light weight

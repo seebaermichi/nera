@@ -83,5 +83,26 @@ Content goes here...
 > Of course you can add many more so called meta data. It will be available in the view files as `meta` object.  
 > In addition the basic config values are available within the `app` object.
 
+## Translations
+If you want to use Nera for your multi-language website, you can do this easily by adding translations to the app config file and use the `t` function in your pug templates.  
+_`config/app.yaml`_
+```yaml
+...
+translations:
+  en:
+    app_description: Nera is an easy to use and light weight static site generator
+  es:
+    app_description: Nera es un generador de sitios estáticos liviano y fácil de usar
+```
+_`views/layouts/layout.pug`_
+```pug
+...
+head
+    ...
+    meta(name="description", content=`${ meta.description || t('app_description') }`)
+    ...
+```
+The `t` function will search for the key in the translations of the app config file and will return the translation for this key. If it can not find the translations property or if there isn't the given key within the translations the function will just return the key.
+
 ## Links
 * [Read about how Nera is used to create the Nera website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)

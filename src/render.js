@@ -46,6 +46,11 @@ const createHtmlFiles = (data, viewsFolder, publicFolder) => {
     if (fs.existsSync(viewsFolder)) {
         data.pagesData.forEach(pageData => {
             if (pageData.meta.layout) {
+                // Method to enable translations
+                data.t = key => data.app.translations
+                    ? data.app.translations[pageData.meta.lang || data.app.lang][key] || key
+                    : key
+
                 const fn = pug.compileFile(`${viewsFolder}/${pageData.meta.layout}`)
                 const html = fn(Object.assign({}, data, pageData))
 
