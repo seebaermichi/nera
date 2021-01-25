@@ -8,16 +8,35 @@ const rimraf = require('rimraf') // The UNIX command rm -rf for node.
 
 const SUCCESS_COLOR = '\x1b[32m%s\x1b[0m'
 
+const getIgnoredFiles = () => {
+    if (fs.existsSync(`${path.resolve()}/src/.neraignore`)) {
+        return fs.readFileSync(`${path.resolve()}/src/.neraignore`, 'utf8')
+            .toString()
+            .split('\n')
+    }
+
+    return []
+}
+
+const ignoreFiles = (ignore, file) => {
+    return ignore.filter(item => item !== '')
+        .filter(item => file.includes(item)).length === 0
+}
+
 const copyFolder = (sourceFolder, targetFolder) => {
     if (fs.existsSync(sourceFolder)) {
+        const ignore = getIgnoredFiles()
         ncp.limit = 16
-        ncp(sourceFolder, targetFolder, error => {
-            if (error) {
-                return console.log(error)
-            }
+        ncp(sourceFolder,
+            targetFolder,
+            { filter: file => ignoreFiles(ignore, file) },
+            error => {
+                if (error) {
+                    return console.log(error)
+                }
 
-            console.log(SUCCESS_COLOR, 'Assets copied')
-        })
+                console.log(SUCCESS_COLOR, 'Assets copied')
+            })
     } else {
         console.log(SUCCESS_COLOR, 'No Assets found')
     }
