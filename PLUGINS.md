@@ -1,7 +1,8 @@
 # Nera plugins
 Static site generator Nera makes it easy to create plugins. There are already a couple available.
 
-## List of plugins (12)
+## List of plugins (13)
+* [Canonical links](https://github.com/seebaermichi/nera-plugin-canonical-links)
 * [Link attributes](https://github.com/seebaermichi/nera-plugin-link-attributes)
 * [Main navigation](https://github.com/seebaermichi/nera-plugin-main-navigation)
 * [Navigation](https://github.com/seebaermichi/nera-plugin-navigation)
