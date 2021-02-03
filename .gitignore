@@ -1,4 +1,5 @@
 node_modules
 public
+!src/admin/public
 ISSUES.md
 .vscode/

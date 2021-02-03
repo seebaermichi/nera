@@ -1,0 +1,79 @@
+extends ../layouts/edit
+
+include ../mixins/icons
+include ../mixins/form-elements
+include ../mixins/overlay
+
+block sidebar
+    a.text-gray-500(class="hover:text-gray-900" href=`/admin?page=${ page }`)
+        +arrow_left_icon('h-6 w-6')
+
+    input(type="hidden" name="page" value=page)
+
+    .mt-4
+        +label File name
+        input.textInput(value=pageName name='page_name')
+
+        +label File path
+        input.textInput(value=pagePath name='page_path')
+
+    .mt-12
+        .flex
+            h4.text-gray-500.text-xl Meta data
+
+            button.text-yellow-500.ml-auto(type="button" @click="showOverlay = true")
+                +plus_icon('h-6 w-6')
+
+        +overlay
+            +label('lg') New meta property
+
+            input.textInput(x-ref="newMetaProperty")
+
+            .text-center
+                button.button.bg-yellow-500.font-bold.mt-12.text-lg.text-yellow-100(
+                    type="button"
+                    class="w-1/2"
+                    @click="metaArray.push($refs.newMetaProperty.value.trim().toLowerCase().replace(/ /g, '_')); metaArray.sort((a, b) => (a > b ? 1 : -1)); showOverlay = false; $refs.newMetaProperty.value = '';"
+                ) Add
+
+        template(x-for="(item, index) in metaArray" :key="index")
+            .mt-2
+                +label
+                    span(x-text="item")
+
+                template(x-if="item !== 'layout'")
+                    div
+                        template(x-if="meta[item] && meta[item].length > 100")
+                            textarea.textInput.h-36(
+                                :name="'meta[' + item + ']'"
+                                :value="meta[item] || ''"
+                            )
+
+                        template(
+                            x-if="!meta[item] || (meta[item].length <= 100 || meta[item] > 0)"
+                        )
+                            input.textInput(
+                                :name="'meta[' + item + ']'"
+                                :value="meta[item] || ''"
+                            )
+
+                template(x-if="item === 'layout'")
+                    select.bg-white.textInput(:name="'meta[' + item + ']'")
+                        template(x-for="(option, id) in meta[item]" :key="id")
+                            option(
+                                x-bind:value="'pages/' + option"
+                                x-text="'pages/' + option"
+                                x-bind:selected="'pages/' + option === selectedLayout"
+                            )
+
+        .flex.justify-between.mt-12
+            button.button.bg-gray-200(
+                class="hover:bg-gray-300 w-1/5"
+                type="reset"
+            ) Reset
+
+            button.button.bg-yellow-500.font-bold.text-yellow-100(
+                class="hover:bg-yellow-600 w-1/5"
+                type="submit"
+            ) Save
+

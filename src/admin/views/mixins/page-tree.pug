@@ -1,0 +1,76 @@
+include icons
+
+mixin actions()
+    .actions.absolute.bg-gray-50.inline-flex.items-center.justify-end.px-2.py-1.text-gray-500(
+        class="group-hover:right-0"
+    )
+        block
+
+mixin page_tree(page, isFirst=false)
+    - const actionItemClasses = 'focus:outline-none inline-flex items-center text-gray-500 hover:text-gray-900'
+
+    li.relative.whitespace-nowrap(
+        class=`${!isFirst ? 'hide pl-4' : 'mt-4 -ml-1'} ${page.href ? 'is-file' : 'is-folder'}`
+        @click.stop="event.target.parentNode.classList.toggle('hide')"
+    )
+
+        if page.href
+            .file.group.min-w-full.overflow-hidden.pl-8.relative.w-min
+                span #{ page.name }
+
+                +actions
+                    a(
+                        class=actionItemClasses
+                        href=`/admin/copy?page=${ page.href }`
+                        title="copy"
+                    )
+                        +copy_icon('h-4 w-4')
+
+                    a.ml-2(
+                        class=actionItemClasses
+                        href=`/admin/edit?page=${ page.href }`
+                        title="edit"
+                    )
+                        +edit_icon('h-4 w-4')
+
+                    if page.isPage
+                        button.ml-2(
+                            class=actionItemClasses
+                            title="show"
+                            @click=`previewSrc = \'/${ page.href.replace('.md', '.html') }\'`
+                        )
+                            +eye_icon('h-4 w-4')
+
+                    a.ml-2(
+                        class=actionItemClasses
+                        href=`/admin/delete?page=${page.href}`
+                        title="delete"
+                    )
+                        +trash_alt_icon('h-4 w-4')
+
+        else
+            button.folder.group.min-w-full.overflow-hidden.pl-8.relative.text-left.w-min(
+                class="focus:outline-none"
+                type="button"
+            )
+                | #{ page.name }
+
+                +actions
+                    a(
+                        class=actionItemClasses
+                        href=`/admin/new-file?page=${page.href}`
+                        title="new file"
+                    )
+                        +file_plus_icon('h-4 w-4')
+
+                    a.ml-2(
+                        class=actionItemClasses
+                        href=`/admin/new-folder?page=${page.href}`
+                        title="new folder"
+                    )
+                        +folder_plus_icon('h-4 w-4')
+
+        if page.children && page.children.length > 0
+            ul
+                each item in page.children
+                    +page_tree(item)

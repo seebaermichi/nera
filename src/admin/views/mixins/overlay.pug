@@ -1,0 +1,7 @@
+mixin overlay()
+    .overlay.fixed.flex.h-screen.items-center.justify-center.left-0.top-0.w-screen.z-10(:class="showOverlay ? '' : 'hidden'")
+        .bg-white.flex.flex-col.h-96.p-16.relative.rounded.shadow(class="w-1/3", , @click.away="showOverlay = false")
+            button.absolute.right-4.text-yellow-500.top-4(type="button", @click="showOverlay = false")
+                +close_icon('h-6 w-6')
+
+            block

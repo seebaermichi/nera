@@ -1,0 +1,32 @@
+include ./mixins/icons
+
+<!DOCTYPE html>
+html(lang='en')
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        meta(http-equiv="X-UA-Compatible", content="ie=edge")
+        title #{ title } | Nera
+
+        link(href="/static/dist/admin.css", rel="stylesheet")
+        link(href="/static/additional.css", rel="stylesheet")
+
+        script(src='https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.0/dist/alpine.min.js' defer='')
+
+    body.antialiased.font-sans.bg-gray-100
+        .px-4.pb-6
+            h3.font-medium.leading-6.py-6.text-lg.text-gray-900
+                | Nera Content Management
+
+            .grid.grid-cols-10.gap-8(x-data=`{ host: 'http://localhost:3000', previewSrc: '/${ page ? page.replace('.md', '.html') : ''}', meta: ${ pageContent ? JSON.stringify(pageContent.meta) : '{}' }, metaArray: ${ pageContent ? JSON.stringify(Object.keys(pageContent.meta).sort((a, b) => (a > b ? 1 : -1))) : '[]' }, selectedLayout: '${ selectedLayout ? selectedLayout : '' }', showOverlay: false }`)
+                .sidebar.bg-white.p-6.shadow.overflow-auto.rounded(class=`col-span-${ sidebarWidth ? sidebarWidth : '2'}`)
+                    block sidebar
+
+                .preview.bg-gray-50.relative.shadow.overflow-hidden.rounded(class=`col-span-${ sidebarWidth ? 10 - sidebarWidth : '8'}`)
+                    .toolbar.absolute.bg-white.border-b.flex.h-12.items-center.justify-center.left-0.pl-2.rounded.top-0.w-full
+                        button.absolute.left-2.p-2.text-gray-500(@click="$refs.preview.setAttribute('src', $refs.preview.getAttribute('src'))")
+                            +redo_icon('h-4 w-4')
+
+                        input.border.px-2.py-1.rounded.text-gray-400(class="w-1/3" :value="host + previewSrc", readonly)
+
+                    iframe.mt-12.w-full(:src="host + previewSrc", x-ref="preview")

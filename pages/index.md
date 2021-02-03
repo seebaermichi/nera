@@ -1,8 +1,8 @@
 ---
-layout: pages/default.pug
-title: Home
-description: This is Nera, a light weight static site generator
-keywords: nera, light weight, static site generator
+description: 'This is Nera, a light weight static site generator'
+keywords: 'nera, light weight, static site generator'
+layout: 'pages/default.pug'
+title: 'Home'
 ---
 # Nera - a lightweight static site generator
 Nera is a really simple static site generator. It creates static html files out of  
@@ -80,12 +80,3 @@ The `meta` object could of course also include more data depending on what your 
 ## Page Markdown files
 Each Markdown file which includes the content of a dedicated webpage needs to have some settings in the head. See an example below:
 ```markdown
----
-layout: pages/default.pug
-title: Homepage
----
-# Content
-Content goes here...
-```
-> Of course you can add many more so called meta data. It will be available in the view files as `meta` object.  
-> In addition the basic config values are available within the `app` object.

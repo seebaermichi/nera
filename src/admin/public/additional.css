@@ -1,0 +1,104 @@
+.preview,
+.sidebar {
+    height: calc(100vh - 96px)
+}
+
+.sidebar li.hide > ul {
+    display: none;
+}
+
+.sidebar li svg.open {
+    display: inline;
+}
+
+.sidebar li.hide svg.open {
+    display: none;
+}
+
+.sidebar li.hide svg.closed {
+    display: inline;
+}
+
+.sidebar li svg.closed {
+    display: none;
+}
+
+.is-file + .is-folder,
+.is-folder + .is-file {
+    margin-top: .5rem;
+}
+
+li > ul {
+    margin-bottom: .5rem;
+}
+
+.file:hover,
+.folder:hover {
+    background: linear-gradient(90deg, #fff 0, #fff 1.75rem, #f3f4f6 1.75rem, #f3f4f6 100%);
+}
+
+.folder:before,
+.file:before {
+    content: '';
+    display: inline-block;
+    flex: none;
+    height: 1rem;
+    margin-right: .25rem;
+    margin-left: -1.5rem;
+    position: absolute;
+    top: .25rem;
+    width: 1rem;
+}
+
+.file:before {
+    background: transparent url(/static/images/icons/file.svg) 0 0 no-repeat;
+}
+
+.folder:before {
+    background: transparent url(/static/images/icons/folder-open.svg) 0 0 no-repeat;
+    height: 1.125rem;
+    margin-right: .5rem;
+    margin-left: -1.75rem;
+    width: 1.125rem;
+}
+
+.hide > .folder:before {
+    background: transparent url(/static/images/icons/folder.svg) 0 0 no-repeat;
+}
+
+.preview iframe,
+.preview .content-wrapper {
+    height: calc(100% - 3rem);
+}
+
+.preview .content {
+    resize: none;
+}
+
+.editor-toolbar {
+    background: white;
+    border: 0;
+    border-bottom: 1px solid #e5e7eb;
+    opacity: .95;
+    position: absolute;
+    top: 48px;
+    z-index: 10;
+    width: 100%;
+}
+
+.CodeMirror {
+    border: 0;
+    margin-top: 48px;
+    min-height: calc(100% - 48px - 48px);
+    padding: 24px 32px;
+}
+
+.file .actions,
+.folder .actions {
+    right: -100%;
+    transition: right .5s ease-out .2s;
+}
+
+.overlay {
+    background: rgba(254, 243, 199, .25);
+}

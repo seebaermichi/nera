@@ -1,0 +1,9 @@
+extends ../layout
+
+block sidebar
+    h4.text-lg Markdown files
+
+    ul
+        each item in pageStructure
+            include ../mixins/page-tree
+            +page_tree(item, true)

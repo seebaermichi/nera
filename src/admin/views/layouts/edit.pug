@@ -1,0 +1,78 @@
+include ../mixins/icons
+
+<!DOCTYPE html>
+html(lang='en')
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        meta(http-equiv="X-UA-Compatible", content="ie=edge")
+        title #{ title } | Nera
+
+        link(href="/static/dist/admin.css" rel="stylesheet")
+        link(href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css" rel="stylesheet")
+        link(href="/static/additional.css" rel="stylesheet")
+
+        script(src='https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.0/dist/alpine.min.js' defer='')
+        script(src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js")
+
+    body.antialiased.font-sans.bg-gray-100
+        - const host = 'http://localhost:3000'
+        - const previewSrc = page ? page.replace('.md', '.html') : ''
+        - const meta = pageContent ? JSON.stringify(pageContent.meta) : {}
+        - const metaArray = pageContent ? JSON.stringify(Object.keys(pageContent.meta).sort((a, b) => (a > b ? 1 : -1))) : []
+        .px-4.pb-6(x-data=`{ host: '${ host }', previewSrc: '/${ previewSrc }', meta: ${ meta }, metaArray: ${ metaArray }, selectedLayout: '${ selectedLayout || '' }', showOverlay: false, showPreview: ${ showPreview } }`)
+            h3.font-medium.leading-6.py-6.text-lg.text-gray-900
+                | Nera Content Management
+
+            form(action="/admin/page/store" method="post" x-ref="editForm")
+                .grid.grid-cols-10.gap-8
+                    .sidebar.bg-white.p-6.shadow.overflow-auto.rounded(
+                        class=`col-span-${ sidebarWidth || '2'}`
+                    )
+                        block sidebar
+
+                    .preview.bg-gray-50.relative.shadow.overflow-hidden.rounded(
+                        class=`col-span-${ sidebarWidth ? 10 - sidebarWidth : '8'}`
+                    )
+                        .toolbar.absolute.bg-white.border-b.flex.h-12.items-center.justify-center.left-0.pl-2.rounded.top-0.w-full
+                            template(x-if="showPreview")
+                                button.absolute.left-2.p-2.text-gray-500(
+                                    class="hover:text-gray-900"
+                                    @click="$refs.preview.setAttribute('src', $refs.preview.getAttribute('src'))"
+                                )
+                                    +redo_icon('h-4 w-4')
+
+                            input.border.px-2.py-1.rounded.text-gray-400(
+                                class="w-1/3"
+                                :value="host + previewSrc"
+                                readonly
+                            )
+
+                            template(x-if="!showPreview")
+                                button.toggle-preview.absolute.right-2.p-2.text-gray-500(
+                                    type="button"
+                                    class="hover:text-gray-900"
+                                    @click="$refs.editForm.submit()"
+                                )
+                                    +eye_icon('h-4 w-4')
+
+                            template(x-if="showPreview")
+                                a.toggle-preview.absolute.right-2.p-2.text-gray-500(
+                                    class="hover:text-gray-900"
+                                    href=`/admin/edit/?page=${page}&showPreview=false`
+
+                                )
+                                    +edit_icon('h-4 w-4')
+
+                        iframe.mt-12.w-full(
+                            :class="{ 'hidden': !showPreview }"
+                            :src="host + previewSrc"
+                            x-ref="preview"
+                        )
+
+                        .content-wrapper.mt-12.overflow-auto.w-full(:class="{ 'hidden': showPreview }")
+                            textarea.content(name="content")
+                                | #{ pageContent.content }
+
+        script
+            | const simplemde = new SimpleMDE(!{ JSON.stringify(editorToolbar, false) })

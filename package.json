@@ -4,6 +4,7 @@
   "description": "A simple static site generator",
   "main": "index.js",
   "scripts": {
+    "admin": "nodemon src/admin/index.js",
     "lint": "eslint --ignore-path .gitignore .",
     "start": "nodemon -e js,md,pug,yaml,css --ignore public/",
     "render": "node index.js",
@@ -21,15 +22,22 @@
     "url": "https://github.com/seebaermichi/nera"
   },
   "dependencies": {
+    "@tailwindcss/forms": "^0.2.1",
+    "autoprefixer": "^10.2.4",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
     "fs-readdir-recursive": "^1.1.0",
     "markdown-it": "^8.4.2",
     "markdown-it-github-preamble": "^1.0.0",
     "markdown-it-meta": "^0.0.1",
     "ncp": "^2.0.0",
+    "postcss": "^8.2.4",
+    "postcss-cli": "^8.3.1",
     "pretty": "^2.0.0",
     "pug": "^2.0.4",
     "read-yaml": "^1.1.0",
-    "rimraf": "^2.7.1"
+    "rimraf": "^2.7.1",
+    "tailwindcss": "^2.0.2"
   },
   "devDependencies": {
     "acorn": "^6.4.2",
