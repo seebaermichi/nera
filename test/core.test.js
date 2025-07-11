@@ -73,13 +73,15 @@ describe('getPagesData', () => {
         expect(result[0].content).toMatch(/<h1[^>]*>Welcome!<\/h1>/)
         expect(result[0].meta.href).toBe('/index.html')
         expect(result[0].meta.createdAt).toBeInstanceOf(Date)
-        expect(result[0].meta.dirname).toBe('.')
+        expect(result[0].meta.fullPath).toBe('/index.html')
+        expect(result[0].meta.dirname).toBe('/')
+        expect(result[0].meta.filename).toBe('index.html')
     })
 
     it('handles nested page paths correctly', () => {
         const result = getPagesData(['blog/post.md'], PAGES)
         expect(result[0].meta.href).toBe('/blog/post.html')
-        expect(result[0].meta.dirname).toBe('blog')
+        expect(result[0].meta.dirname).toBe('/blog')
     })
 
     it('handles invalid markdown gracefully', () => {

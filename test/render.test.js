@@ -62,8 +62,9 @@ describe('createHtmlFiles', () => {
                         layout: 'index.pug',
                         title: 'Home',
                         lang: 'en',
-                        dirname: '.',
-                        filename: 'index'
+                        dirname: '/',
+                        filename: 'index.html',
+                        fullPath: '/index.html'
                     }
                 }
             ]

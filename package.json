@@ -1,6 +1,6 @@
 {
     "name": "nera",
-    "version": "3.0.0",
+    "version": "4.0.0",
     "description": "A simple static site generator",
     "main": "index.js",
     "scripts": {
@@ -24,6 +24,7 @@
         "url": "https://github.com/seebaermichi/nera"
     },
     "dependencies": {
+        "@nera-static/plugin-navigation": "file:../nera-plugins/nera-plugin-navigation",
         "cpy": "^9.0.1",
         "fs-readdir-recursive": "^1.1.0",
         "gray-matter": "^4.0.3",

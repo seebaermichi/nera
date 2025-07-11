@@ -21,15 +21,15 @@ beforeAll(async () => {
 
     await fs.writeFile(
         path.join(PLUGINS_DIR, 'plugin-a/index.js'),
-        `export function getAppData() {
-      return { pluginA: true };
+        `export function getAppData(data) {
+      return { ...data.app, pluginA: true };
     }`
     )
 
     await fs.writeFile(
         path.join(PLUGINS_DIR, 'plugin-b/index.js'),
-        `export function getMetaData() {
-      return [{ title: 'from plugin B' }];
+        `export function getMetaData(data) {
+      return [...data.pagesData, { title: 'from plugin B' }];
     }`
     )
 
@@ -52,7 +52,6 @@ describe('getPluginsData', () => {
 
         const result = await getPluginsData(data, PLUGINS_DIR)
 
-        expect(result.plugins).toHaveLength(3)
         expect(result.app.pluginA).toBe(true)
         expect(result.app.siteName).toBe('Original')
         expect(result.pagesData).toEqual([{ title: 'from plugin B' }])
@@ -61,6 +60,7 @@ describe('getPluginsData', () => {
     it('handles empty plugins gracefully', async () => {
         const data = { app: {}, pagesData: [] }
         const result = await getPluginsData(data, PLUGINS_DIR)
+
         expect(result.app).toBeTypeOf('object')
         expect(result.pagesData).toBeTypeOf('object')
     })

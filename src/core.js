@@ -49,14 +49,17 @@ export const getPagesData = (pages, baseDir = defaultSettings.folders.pages) => 
             console.warn('Failed to parse markdown for', fullPath, err.message)
         }
 
+        const wholeFilePathString = `/${page.split('.md')[0]}.html`
+
         return {
             content,
             meta: {
                 ...md.meta,
                 createdAt: fs.statSync(fullPath).birthtime,
                 href: `/${page.replace(/\.md$/, '.html')}`,
-                dirname: path.dirname(page),
-                filename: path.parse(page).name
+                fullPath: wholeFilePathString,
+                dirname: path.dirname(wholeFilePathString),
+                filename: path.basename(wholeFilePathString)
             }
         }
     })

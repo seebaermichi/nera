@@ -71,7 +71,7 @@ export const createHtmlFiles = async (data, viewsFolder, publicFolder) => {
             const htmlPath = path.join(
                 publicFolder,
                 pageData.meta.dirname,
-                `${pageData.meta.filename}.html`
+                `${pageData.meta.filename}`
             )
 
             await fs.mkdir(path.dirname(htmlPath), { recursive: true })
