@@ -1,26 +1,40 @@
-const fsReaddirRecursive = require('fs-readdir-recursive')
+import fsReaddirRecursive from 'fs-readdir-recursive'
+import path from 'path'
+import { pathToFileURL } from 'url'
 
-const getPlugins = () =>
-    fsReaddirRecursive('./src/plugins').filter(file => file.includes('index.js'))
+/**
+ * Recursively collect all index.js files from the plugin path.
+ * Assumes ESM-based plugins.
+ */
+export const getPlugins = (pluginPath = './src/plugins') =>
+    fsReaddirRecursive(pluginPath).filter((file) => file.endsWith('index.js'))
 
-const getPluginsData = data => {
-    data.plugins = getPlugins()
+/**
+ * Dynamically imports ESM plugin modules and applies their data transformations.
+ */
+export const getPluginsData = async (data, pluginsDir = './src/plugins') => {
+    const pluginPaths = getPlugins(pluginsDir)
+    data.plugins = pluginPaths
 
-    if (data.plugins.length > 0) {
-        data.plugins.forEach(file => {
-            const plugin = require(`./plugins/${file}`)
+    for (const file of pluginPaths) {
+        const fullPath = path.join(pluginsDir, file)
+        try {
+            const plugin = await import(pathToFileURL(fullPath).href) // ESM only
 
-            if (plugin.hasOwnProperty('getAppData')) {
-                data.app = plugin.getAppData(data)
+            if (typeof plugin.getAppData === 'function') {
+                data.app = { ...data.app, ...plugin.getAppData(data) }
             }
 
-            if (plugin.hasOwnProperty('getMetaData')) {
-                data.pagesData = plugin.getMetaData(data)
+            if (typeof plugin.getMetaData === 'function') {
+                const metaData = plugin.getMetaData(data)
+                if (Array.isArray(metaData)) {
+                    data.pagesData = metaData
+                }
             }
-        })
+        } catch (err) {
+            console.warn(`Failed to load plugin ${file}: ${err.message}`)
+        }
     }
 
     return data
 }
-
-module.exports = getPluginsData

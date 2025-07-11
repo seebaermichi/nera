@@ -1,17 +1,17 @@
-const { appData, getPagesData, defaultSettings } = require('./core')
-const getPluginsData = require('./setup-plugins')
-const { copyFolder, deleteFolder, createHtmlFiles } = require('./render')
+import { loadAppData, getPagesData, defaultSettings } from './core.js'
+import { getPluginsData } from './setup-plugins.js'
+import { copyFolder, deleteFolder, createHtmlFiles } from './render.js'
 
-const run = () => {
-    let data = appData
-    const { assets, dist, views } = defaultSettings.folders
-    data.pagesData = getPagesData(data.pages)
+const run = async (settings = defaultSettings) => {
+    let data = loadAppData(settings)
+    const { assets, dist, views, pages, plugins } = settings.folders
 
-    data = getPluginsData(data)
+    data.pagesData = getPagesData(data.pages, pages)
+    data = await getPluginsData(data, plugins)
 
-    deleteFolder(dist)
-    createHtmlFiles(data, views, dist)
-    copyFolder(assets, dist)
+    await deleteFolder(dist)
+    await createHtmlFiles(data, views, dist)
+    await copyFolder(assets, dist)
 }
 
-module.exports = run
+export default run

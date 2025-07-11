@@ -1,0 +1,5 @@
+{
+  "watch": ["src", "pages", "views", "assets", "config", "plugins"],
+  "ext": "js,md,pug,yaml",
+  "exec": "node index.js"
+}

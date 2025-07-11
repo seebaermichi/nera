@@ -1,12 +1,13 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import fsReaddirRecursive from 'fs-readdir-recursive'
+import meta from 'markdown-it-meta'
+import MarkdownIt from 'markdown-it'
+import readYaml from 'read-yaml'
 
-const fsReaddirRecursive = require('fs-readdir-recursive')
-const meta = require('markdown-it-meta')
-const md = require('markdown-it')({ html: true }).use(meta)
-const readYaml = require('read-yaml')
+const md = new MarkdownIt({ html: true }).use(meta)
 
-const defaultSettings = {
+export const defaultSettings = {
     folders: {
         assets: './assets',
         config: './config',
@@ -16,33 +17,47 @@ const defaultSettings = {
     }
 }
 
-const appData = {
-    app: readYaml.sync(`${defaultSettings.folders.config}/app.yaml`),
-    content: null,
-    meta: null,
-    pages: fsReaddirRecursive(defaultSettings.folders.pages),
-    plugins: [],
-    pagesData: []
+export const loadAppData = (settings = defaultSettings) => {
+    let appConfig = {}
+
+    try {
+        appConfig = readYaml.sync(
+            path.join(settings.folders.config, 'app.yaml')
+        )
+    } catch (err) {
+        console.warn('Could not load app.yaml:', err.message)
+    }
+
+    return {
+        app: appConfig,
+        content: null,
+        meta: null,
+        pages: fsReaddirRecursive(settings.folders.pages),
+        plugins: [],
+        pagesData: []
+    }
 }
 
-const getPagesData = pages => {
-    return pages.map(page => ({
-        content: md.render(
-            fs.readFileSync(`${defaultSettings.folders.pages}/${page}`, 'utf-8')
-        ),
-        meta: Object.assign({}, md.meta, {
-            createdAt: fs.statSync(`${defaultSettings.folders.pages}/${page}`)
-                .birthtime,
-            htmlPathName: `/${page.split('.md')[0]}.html`, /* depricated */
-            href: `/${page.split('.md')[0]}.html`,
-            pagePathName: path.dirname(page), /* depricated */
-            dirname: path.dirname(page)
-        })
-    }))
-}
+export const getPagesData = (pages, baseDir = defaultSettings.folders.pages) => {
+    return pages.map((page) => {
+        const fullPath = path.join(baseDir, page)
+        let content = ''
 
-module.exports = {
-    appData,
-    defaultSettings,
-    getPagesData
+        try {
+            content = md.render(fs.readFileSync(fullPath, 'utf-8'))
+        } catch (err) {
+            console.warn('Failed to parse markdown for', fullPath, err.message)
+        }
+
+        return {
+            content,
+            meta: {
+                ...md.meta,
+                createdAt: fs.statSync(fullPath).birthtime,
+                href: `/${page.replace(/\.md$/, '.html')}`,
+                dirname: path.dirname(page),
+                filename: path.parse(page).name
+            }
+        }
+    })
 }
