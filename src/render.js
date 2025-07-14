@@ -24,12 +24,12 @@ const getIgnoredFiles = (basePath) => {
     return []
 }
 
-export function ignoreFiles(ignoreList, filePath, sourceRoot) {
-    const relativePath = path.relative(sourceRoot, filePath.path).replace(/\\/g, '/');
+export function ignoreFiles (ignoreList, filePath, sourceRoot) {
+    const relativePath = path.relative(sourceRoot, filePath).replace(/\\/g, '/')
 
     return !ignoreList.some(pattern =>
         relativePath === pattern || relativePath.startsWith(`${pattern}/`)
-    );
+    )
 }
 
 export const copyFolder = async (sourceFolder, targetFolder) => {
@@ -39,7 +39,7 @@ export const copyFolder = async (sourceFolder, targetFolder) => {
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {
                 parents: true,
-                filter: (file) => ignoreFiles(ignore, file, sourceFolder)
+                filter: (file) => ignoreFiles(ignore, file.path, sourceFolder)
             })
             console.log(SUCCESS_COLOR, 'Assets copied')
         } catch (err) {

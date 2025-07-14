@@ -13,7 +13,8 @@ export const defaultSettings = {
         config: './config',
         pages: './pages',
         dist: './public',
-        views: './views'
+        views: './views',
+        plugins: './src/plugins'
     }
 }
 
