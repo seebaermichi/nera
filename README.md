@@ -1,108 +1,165 @@
-# Nera - a lightweight static site generator
-Nera is a really simple static site generator. It creates static html files out of  
-Markdown files.
-> Please be aware of that this software is still under development. It might be that there will be changes which are not compatible with former versions.
+# Nera – a lightweight static site generator
 
-## Get started
-> Make sure you run at least Node version 10.2 on your system
+**Nera** is a minimal static site generator that transforms Markdown content into fast, clean HTML pages using [Pug](https://pugjs.org/) templates. It is designed to be simple to use, yet extendable with plugins.
+
+> ⚠️ This project is under active development. Breaking changes may occur.
+
+---
+
+## 🚀 Getting Started
+
+```bash
+npm install -g @nera-static/installer
+
+# Create a new project
+nera new my-nera-site
+
+cd my-nera-site
+npm run dev        # Start dev server with live reload
+npm run render     # Render the static site to /public
+```
+
+Alternatively, clone manually:
 
 ```bash
 git clone git@github.com:seebaermichi/nera.git
-
-# Install dependencies
+cd nera
+rm -fr .git
 npm install
-
-# Run local server (browser-sync)
-npm run serve
-
-# Render the static files
-npm run render
-
-# Local development
-npm start
+npm run dev
 ```
 
-## Directory and file structure
+---
+
+## 🗂️ Directory Structure
+
+```bash
+my-nera-site/
+├── assets/              # CSS, JS, images, fonts – copied to /public
+├── config/
+│   └── app.yaml         # Global site config (name, lang, translations, etc.)
+├── pages/               # Markdown content with frontmatter metadata
+├── public/              # Rendered static site output
+├── src/
+│   ├── plugins/         # Local plugins (optional)
+│   ├── core.js
+│   ├── index.js
+│   ├── render.js
+│   └── setup-plugins.js
+├── views/               # Pug templates (layouts and partials)
+└── .neraignore          # List of asset files or folders to ignore during render
 ```
-|-- assets/
-|-- config/
-    |-- app.yaml
-|-- pages/
-|-- src/
-    |-- plugins/
-        |-- plugin-helper.js
-    |-- core.js
-    |-- index.js
-    |-- render.js
-    |-- setup-plugins.js
-|-- views/
-|-- index.js
-```
 
-### Assets
-Are all CSS, JavaScript, font and image files which are used on your website. During the render process all assets are copied to the `public` directory.
+---
 
-### Config
-Here you can define global settings for your website. All the global settings should got to the `config/app.yaml`. Like lang, name, etc. They will be available in the `data.app` object within source or plugin files or as `app` object within the view files.
+## 📄 Page Content (`pages/`)
 
-### Pages
-Within the pages directory you add the Markdown files which actually include meta information or settings and the content of your page. Find more information about the Markdown files below.
+Each Markdown file must define frontmatter metadata, e.g.:
 
-### Src
-The `src` directory includes the app itself. Here you find the `core.js`, `index.js`, `render.js` and `setup-plugins.js` files which include all the functionality to read the markdown files, get the settings, load plugins, copy assets and render the Html files into the `puplic` folder.
-
-### Plugins
-The `src` folder also includes the `plugins` folder. In it you would place additional functionality.  
-Have a look at the current [collection of available plugins](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
-
-### Views
-In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.  
-In addition to the content of the markdown file there is also more data available. There is one `app` object, which includes all the properties from the `config/app.yaml` file. The other object is the `meta` object. Where `app` includes data relevant or usable on every page the `meta` object only includes data for the page itself. Therefore it includes by default all the properties and values you define in the meta section of the markdown file. In addition it includes  
-
-__`createdAt`__  
-is datetime when the markdown file was created  
-
-__`href`__  
-is the path to the current html file  
-
-__`dirname`__  
-is the dirname of the current html file  
-
-The `meta` object could of course also include more data depending on what your plugins add to id.
-
-## Page Markdown files
-Each Markdown file which includes the content of a dedicated webpage needs to have some settings in the head. See an example below:
 ```markdown
 ---
 layout: pages/default.pug
 title: Homepage
 ---
-# Content
-Content goes here...
-```
-> Of course you can add many more so called meta data. It will be available in the view files as `meta` object.  
-> In addition the basic config values are available within the `app` object.
+# Welcome to Nera
 
-## Translations
-If you want to use Nera for your multi-language website, you can do this easily by adding translations to the app config file and use the `t` function in your pug templates.  
-_`config/app.yaml`_
+This content will be injected into the layout file defined above.
+```
+
+> All frontmatter values are accessible as the `meta` object in your Pug templates.
+
+---
+
+## 🎨 Templates (`views/`)
+
+Nera uses [Pug](https://pugjs.org/) for layout rendering. You have access to:
+
+- `app`: values from `config/app.yaml`
+- `meta`: metadata from the current markdown page
+- `t(key)`: translation function
+
+Example:
+
+```pug
+doctype html
+html(lang=app.lang)
+  head
+    title= meta.title
+    meta(name="description", content=meta.description || t('app_description'))
+  body
+    h1= meta.title
+    != content
+```
+
+---
+
+## 🌍 Translations
+
+You can define translations in `config/app.yaml`:
+
 ```yaml
-...
+lang: en
 translations:
   en:
-    app_description: Nera is an easy to use and light weight static site generator
-  es:
-    app_description: Nera es un generador de sitios estáticos liviano y fácil de usar
+    app_description: Nera is a simple static site generator.
+  de:
+    app_description: Nera ist ein einfacher Generator für statische Webseiten.
 ```
-_`views/layouts/layout.pug`_
-```pug
-...
-head
-    ...
-    meta(name="description", content=`${ meta.description || t('app_description') }`)
-    ...
-```
-The `t` function will search for the key in the translations of the app config file and will return the translation for this key. If it can not find the translations property or if there isn't the given key within the translations the function will just return the key.
 
-## Links
-* [Read about how Nera is used to create the Nera website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)
+Use the `t` function in templates:
+
+```pug
+meta(name="description", content=t('app_description'))
+```
+
+If the key or language is missing, the key itself is returned as fallback.
+
+---
+
+## 🔌 Plugins
+
+Nera supports plugins that can:
+
+- Add data to the app or individual pages
+- Modify metadata
+- Inject routes or components
+- Extend rendering logic
+
+You can place local plugins in `src/plugins/` or install official ones via npm:
+
+```bash
+npm install @nera-static/plugin-navigation
+```
+
+For usage, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
+
+---
+
+## 📁 Asset Handling
+
+All files in the `assets/` directory will be copied to `/public` during render. You can exclude files using `.neraignore`. Example:
+
+```
+ignore.txt
+css/dev-only.css
+```
+
+Supports nested paths relative to `assets/`.
+
+---
+
+## 🛠 Development Scripts
+
+```bash
+npm run dev     # Starts local development server
+npm run render  # Renders pages to /public
+npm start       # Shortcut for dev mode
+```
+
+---
+
+## 📚 Further Reading
+
+- [How Nera is used to build its own website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)
+
+---
