@@ -11,9 +11,8 @@ dotenv.config()
 
 const SUCCESS_COLOR = '\x1b[32m%s\x1b[0m'
 
-const getIgnoredFiles = () => {
-    const tmpDir = process.env.TEST_TEMP_DIR || '.test-temp'
-    const ignorePath = path.resolve(tmpDir, 'src', '.neraignore')
+const getIgnoredFiles = (basePath) => {
+    const ignorePath = path.join(basePath, '.neraignore')
 
     if (fssync.existsSync(ignorePath)) {
         return fssync
@@ -25,21 +24,22 @@ const getIgnoredFiles = () => {
     return []
 }
 
-const ignoreFiles = (ignoreList, filePath) => {
-    const filePathStr = typeof filePath === 'string' ? filePath : filePath.path
-    const fileName = path.basename(filePathStr)
+export function ignoreFiles(ignoreList, filePath, sourceRoot) {
+    const relativePath = path.relative(sourceRoot, filePath.path).replace(/\\/g, '/');
 
-    return !ignoreList.includes(fileName)
+    return !ignoreList.some(pattern =>
+        relativePath === pattern || relativePath.startsWith(`${pattern}/`)
+    );
 }
 
 export const copyFolder = async (sourceFolder, targetFolder) => {
     if (fssync.existsSync(sourceFolder)) {
-        const ignore = getIgnoredFiles()
+        const ignore = getIgnoredFiles(path.dirname(sourceFolder))
 
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {
                 parents: true,
-                filter: (file) => ignoreFiles(ignore, file)
+                filter: (file) => ignoreFiles(ignore, file, sourceFolder)
             })
             console.log(SUCCESS_COLOR, 'Assets copied')
         } catch (err) {
@@ -71,7 +71,7 @@ export const createHtmlFiles = async (data, viewsFolder, publicFolder) => {
 
             const htmlPath = path.join(
                 publicFolder,
-                pageData.meta.dirname,
+                pageData.meta.dirname.replace(/^\/+/, ''),
                 `${pageData.meta.filename}`
             )
 
