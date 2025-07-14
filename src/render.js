@@ -35,6 +35,7 @@ const ignoreFiles = (ignoreList, filePath) => {
 export const copyFolder = async (sourceFolder, targetFolder) => {
     if (fssync.existsSync(sourceFolder)) {
         const ignore = getIgnoredFiles()
+
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {
                 parents: true,

@@ -1,58 +1,76 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
+import os from 'os'
 import { copyFolder, createHtmlFiles, deleteFolder } from '../src/render.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-const TMP_DIR = path.resolve(process.env.TEST_TEMP_DIR || '.test-temp')
-const SRC = path.join(TMP_DIR, 'src')
-const ASSETS = path.join(SRC, 'assets')
-const VIEWS = path.join(SRC, 'views')
-const PUBLIC = path.join(TMP_DIR, 'public')
-
-beforeAll(async () => {
-    if (fssync.existsSync(TMP_DIR)) {
-        await fs.rm(TMP_DIR, { recursive: true, force: true })
-    }
-
-    await fs.mkdir(ASSETS, { recursive: true })
-    await fs.mkdir(VIEWS, { recursive: true })
-
-    const includePath = path.join(ASSETS, 'include.txt')
-    const ignorePath = path.join(ASSETS, 'ignore.txt')
-    const ignoreFilePath = path.join(SRC, '.neraignore')
-    const layoutPath = path.join(VIEWS, 'index.pug')
-
-    await fs.writeFile(includePath, 'Include me')
-    await fs.writeFile(ignorePath, 'Ignore me')
-    await fs.writeFile(ignoreFilePath, 'ignore.txt\n')
-    await fs.writeFile(
-        layoutPath,
-        'html\n  head\n    title #{meta.title}\n  body\n    h1= t("headline")'
+const createTempPath = (sub = '') =>
+    path.join(
+        os.tmpdir(),
+        `.nera-test-${Date.now()}-${Math.random().toString(36).slice(2)}${sub}`
     )
-})
-
-afterAll(async () => {
-    await fs.rm(TMP_DIR, { recursive: true, force: true })
-})
 
 describe('copyFolder', () => {
-    it('copies files excluding ignored ones', async () => {
-        await copyFolder(ASSETS, PUBLIC)
+    let srcDir, publicDir, tmpRoot
 
-        const exists = fssync.existsSync(PUBLIC)
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        srcDir = path.join(tmpRoot, 'src', 'assets')
+        publicDir = path.join(tmpRoot, 'public')
+
+        await fs.mkdir(srcDir, { recursive: true })
+
+        await fs.writeFile(path.join(srcDir, 'include.txt'), 'Include me')
+        await fs.writeFile(path.join(srcDir, 'ignore.txt'), 'Ignore me')
+
+        const ignoreFile = path.join(tmpRoot, 'src', '.neraignore')
+        await fs.mkdir(path.dirname(ignoreFile), { recursive: true })
+        await fs.writeFile(ignoreFile, 'ignore.txt\n')
+
+        process.env.TEST_TEMP_DIR = tmpRoot
+    })
+
+    afterEach(async () => {
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    it('copies files excluding ignored ones', async () => {
+        await copyFolder(srcDir, publicDir)
+
+        const exists = fssync.existsSync(publicDir)
         expect(exists).toBe(true)
 
-        const files = exists ? await fs.readdir(PUBLIC) : []
+        const files = exists ? await fs.readdir(publicDir) : []
         expect(files).toContain('include.txt')
         expect(files).not.toContain('ignore.txt')
     })
 })
 
 describe('createHtmlFiles', () => {
+    let viewsDir, publicDir, tmpRoot
+
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        viewsDir = path.join(tmpRoot, 'src', 'views')
+        publicDir = path.join(tmpRoot, 'public')
+
+        await fs.mkdir(viewsDir, { recursive: true })
+
+        const layoutPath = path.join(viewsDir, 'index.pug')
+        await fs.writeFile(
+            layoutPath,
+            'html\n  head\n    title #{meta.title}\n  body\n    h1= t("headline")'
+        )
+    })
+
+    afterEach(async () => {
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
     it('renders HTML from Pug template and writes to public folder', async () => {
         const data = {
             app: { lang: 'en', translations: { en: { headline: 'Welcome!' } } },
@@ -70,9 +88,9 @@ describe('createHtmlFiles', () => {
             ]
         }
 
-        await createHtmlFiles(data, VIEWS, PUBLIC)
+        await createHtmlFiles(data, viewsDir, publicDir)
 
-        const filePath = path.join(PUBLIC, 'index.html')
+        const filePath = path.join(publicDir, 'index.html')
         const exists = fssync.existsSync(filePath)
         expect(exists).toBe(true)
 
@@ -83,15 +101,25 @@ describe('createHtmlFiles', () => {
 })
 
 describe('deleteFolder', () => {
+    let publicDir
+
+    beforeEach(async () => {
+        publicDir = createTempPath('/public')
+        await fs.mkdir(publicDir, { recursive: true })
+        await fs.writeFile(path.join(publicDir, 'temp.txt'), 'test')
+    })
+
+    afterEach(async () => {
+        await fs
+            .rm(publicDir, { recursive: true, force: true })
+            .catch(() => {})
+    })
+
     it('removes the public folder if it exists', async () => {
-        await fs.mkdir(PUBLIC, { recursive: true })
-        const dummyFile = path.join(PUBLIC, 'temp.txt')
-        await fs.writeFile(dummyFile, 'test')
+        expect(fssync.existsSync(publicDir)).toBe(true)
 
-        expect(fssync.existsSync(dummyFile)).toBe(true)
+        await deleteFolder(publicDir)
 
-        await deleteFolder(PUBLIC)
-
-        expect(fssync.existsSync(PUBLIC)).toBe(false)
+        expect(fssync.existsSync(publicDir)).toBe(false)
     })
 })
