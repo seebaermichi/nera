@@ -1,3 +1,3 @@
-const run = require('./src')
+import run from './src/index.js'
 
 run()

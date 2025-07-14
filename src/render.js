@@ -1,93 +1,100 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs/promises'
+import fssync from 'fs'
+import path from 'path'
+import cpy from 'cpy'
+import pug from 'pug'
+import pretty from 'pretty'
+import { rimraf } from 'rimraf'
+import dotenv from 'dotenv'
 
-const ncp = require('ncp').ncp // Asynchronous recursive file & directory copying
-const pug = require('pug')
-const pretty = require('pretty')
-const rimraf = require('rimraf') // The UNIX command rm -rf for node.
+dotenv.config()
 
 const SUCCESS_COLOR = '\x1b[32m%s\x1b[0m'
 
-const getIgnoredFiles = () => {
-    if (fs.existsSync(`${path.resolve()}/src/.neraignore`)) {
-        return fs.readFileSync(`${path.resolve()}/src/.neraignore`, 'utf8')
-            .toString()
-            .split('\n')
-    }
+const getIgnoredFiles = (basePath) => {
+    const ignorePath = path.join(basePath, '.neraignore')
 
+    if (fssync.existsSync(ignorePath)) {
+        return fssync
+            .readFileSync(ignorePath, 'utf8')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line !== '')
+    }
     return []
 }
 
-const ignoreFiles = (ignore, file) => {
-    return ignore.filter(item => item !== '')
-        .filter(item => file.includes(item)).length === 0
+export function ignoreFiles (ignoreList, filePath, sourceRoot) {
+    const relativePath = path.relative(sourceRoot, filePath).replace(/\\/g, '/')
+
+    return !ignoreList.some(pattern =>
+        relativePath === pattern || relativePath.startsWith(`${pattern}/`)
+    )
 }
 
-const copyFolder = (sourceFolder, targetFolder) => {
-    if (fs.existsSync(sourceFolder)) {
-        const ignore = getIgnoredFiles()
-        ncp.limit = 16
-        ncp(sourceFolder,
-            targetFolder,
-            { filter: file => ignoreFiles(ignore, file) },
-            error => {
-                if (error) {
-                    return console.log(error)
-                }
+export const copyFolder = async (sourceFolder, targetFolder) => {
+    if (fssync.existsSync(sourceFolder)) {
+        const ignore = getIgnoredFiles(path.dirname(sourceFolder))
 
-                console.log(SUCCESS_COLOR, 'Assets copied')
+        try {
+            await cpy([`${sourceFolder}/**/*`], targetFolder, {
+                parents: true,
+                filter: (file) => ignoreFiles(ignore, file.path, sourceFolder)
             })
+            console.log(SUCCESS_COLOR, 'Assets copied')
+        } catch (err) {
+            console.error('Copy failed:', err)
+        }
     } else {
         console.log(SUCCESS_COLOR, 'No Assets found')
     }
 }
 
-const createHtmlFiles = (data, viewsFolder, publicFolder) => {
-    if (fs.existsSync(viewsFolder)) {
-        data.pagesData.forEach(pageData => {
-            if (pageData.meta.layout) {
-                // Method to enable translations
-                data.t = key => data.app.translations
-                    ? data.app.translations[pageData.meta.lang || data.app.lang][key] || key
+export const createHtmlFiles = async (data, viewsFolder, publicFolder) => {
+    if (fssync.existsSync(viewsFolder)) {
+        for (const pageData of data.pagesData) {
+            data.t = (key) =>
+                data.app.translations
+                    ? data.app.translations[
+                        pageData.meta.lang || data.app.lang
+                    ]?.[key] || key
                     : key
 
-                const fn = pug.compileFile(`${viewsFolder}/${pageData.meta.layout}`)
-                const html = fn(Object.assign({}, data, pageData))
+            let html = pageData.content
 
-                fs.promises
-                    .mkdir(path.dirname(`${publicFolder}/${pageData.meta.htmlPathName}`), {
-                        recursive: true
-                    })
-                    .then(() => {
-                        fs.writeFileSync(
-                            `${publicFolder}/${pageData.meta.htmlPathName}`,
-                            pretty(html),
-                            'utf-8'
-                        )
-
-                        console.log(SUCCESS_COLOR, 'Html files created')
-                    })
+            if (pageData.meta.layout) {
+                const fn = pug.compileFile(
+                    `${viewsFolder}/${pageData.meta.layout}`
+                )
+                html = fn({ ...data, ...pageData })
             }
-        })
+
+            const htmlPath = path.join(
+                publicFolder,
+                pageData.meta.dirname.replace(/^\/+/, ''),
+                `${pageData.meta.filename}`
+            )
+
+            await fs.mkdir(path.dirname(htmlPath), { recursive: true })
+            await fs.writeFile(htmlPath, pretty(html), 'utf-8')
+
+            console.log(
+                SUCCESS_COLOR,
+                `HTML created: ${pageData.meta.dirname}`
+            )
+        }
     } else {
-        console.error('views folder not found')
+        console.error('Views folder not found')
     }
 }
 
-const deleteFolder = folder => {
-    if (fs.existsSync(folder)) {
+export const deleteFolder = async (folder) => {
+    if (fssync.existsSync(folder)) {
         try {
-            rimraf.sync(folder)
-
-            console.log(SUCCESS_COLOR, 'public folder removed')
+            await rimraf(folder)
+            console.log(SUCCESS_COLOR, 'Public folder removed')
         } catch (error) {
             console.error(error)
         }
     }
-}
-
-module.exports = {
-    copyFolder,
-    deleteFolder,
-    createHtmlFiles
 }
