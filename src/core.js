@@ -1,11 +1,11 @@
-import fs from 'fs';
-import path from 'path';
-import fsReaddirRecursive from 'fs-readdir-recursive';
-import meta from 'markdown-it-meta';
-import MarkdownIt from 'markdown-it';
-import yaml from 'yaml';
+import fs from 'fs'
+import path from 'path'
+import fsReaddirRecursive from 'fs-readdir-recursive'
+import meta from 'markdown-it-meta'
+import MarkdownIt from 'markdown-it'
+import yaml from 'yaml'
 
-const md = new MarkdownIt({ html: true }).use(meta);
+const md = new MarkdownIt({ html: true }).use(meta)
 
 export const defaultSettings = {
     folders: {
@@ -16,10 +16,10 @@ export const defaultSettings = {
         views: './views',
         plugins: './src/plugins',
     },
-};
+}
 
 export const loadAppData = (settings = defaultSettings) => {
-    let appConfig = {};
+    let appConfig = {}
 
     try {
         appConfig = yaml.parse(
@@ -27,9 +27,9 @@ export const loadAppData = (settings = defaultSettings) => {
                 path.join(settings.folders.config, 'app.yaml'),
                 'utf-8'
             ) || '{}'
-        );
+        )
     } catch (err) {
-        console.warn('Could not load app.yaml:', err.message);
+        console.warn('Could not load app.yaml:', err.message)
     }
 
     return {
@@ -39,24 +39,24 @@ export const loadAppData = (settings = defaultSettings) => {
         pages: fsReaddirRecursive(settings.folders.pages),
         plugins: [],
         pagesData: [],
-    };
-};
+    }
+}
 
 export const getPagesData = (
     pages,
     baseDir = defaultSettings.folders.pages
 ) => {
     return pages.map((page) => {
-        const fullPath = path.join(baseDir, page);
-        let content = '';
+        const fullPath = path.join(baseDir, page)
+        let content = ''
 
         try {
-            content = md.render(fs.readFileSync(fullPath, 'utf-8'));
+            content = md.render(fs.readFileSync(fullPath, 'utf-8'))
         } catch (err) {
-            console.warn('Failed to parse markdown for', fullPath, err.message);
+            console.warn('Failed to parse markdown for', fullPath, err.message)
         }
 
-        const wholeFilePathString = `/${page.split('.md')[0]}.html`;
+        const wholeFilePathString = `/${page.split('.md')[0]}.html`
 
         return {
             content,
@@ -68,6 +68,6 @@ export const getPagesData = (
                 dirname: path.dirname(wholeFilePathString),
                 filename: path.basename(wholeFilePathString),
             },
-        };
-    });
-};
+        }
+    })
+}

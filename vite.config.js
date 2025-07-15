@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vite'
 
 export default defineConfig({
     root: 'public',
@@ -13,4 +13,4 @@ export default defineConfig({
         outDir: '../dist',
         emptyOutDir: true,
     },
-});
+})
