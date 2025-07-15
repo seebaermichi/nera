@@ -3,7 +3,7 @@ import path from 'path'
 import fsReaddirRecursive from 'fs-readdir-recursive'
 import meta from 'markdown-it-meta'
 import MarkdownIt from 'markdown-it'
-import readYaml from 'read-yaml'
+import yaml from 'yaml'
 
 const md = new MarkdownIt({ html: true }).use(meta)
 
@@ -14,16 +14,19 @@ export const defaultSettings = {
         pages: './pages',
         dist: './public',
         views: './views',
-        plugins: './src/plugins'
-    }
+        plugins: './src/plugins',
+    },
 }
 
 export const loadAppData = (settings = defaultSettings) => {
     let appConfig = {}
 
     try {
-        appConfig = readYaml.sync(
-            path.join(settings.folders.config, 'app.yaml')
+        appConfig = yaml.parse(
+            fs.readFileSync(
+                path.join(settings.folders.config, 'app.yaml'),
+                'utf-8'
+            ) || '{}'
         )
     } catch (err) {
         console.warn('Could not load app.yaml:', err.message)
@@ -35,11 +38,14 @@ export const loadAppData = (settings = defaultSettings) => {
         meta: null,
         pages: fsReaddirRecursive(settings.folders.pages),
         plugins: [],
-        pagesData: []
+        pagesData: [],
     }
 }
 
-export const getPagesData = (pages, baseDir = defaultSettings.folders.pages) => {
+export const getPagesData = (
+    pages,
+    baseDir = defaultSettings.folders.pages
+) => {
     return pages.map((page) => {
         const fullPath = path.join(baseDir, page)
         let content = ''
@@ -60,8 +66,8 @@ export const getPagesData = (pages, baseDir = defaultSettings.folders.pages) => 
                 href: `/${page.replace(/\.md$/, '.html')}`,
                 fullPath: wholeFilePathString,
                 dirname: path.dirname(wholeFilePathString),
-                filename: path.basename(wholeFilePathString)
-            }
+                filename: path.basename(wholeFilePathString),
+            },
         }
     })
 }
