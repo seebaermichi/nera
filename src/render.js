@@ -24,11 +24,12 @@ const getIgnoredFiles = (basePath) => {
     return []
 }
 
-export function ignoreFiles (ignoreList, filePath, sourceRoot) {
+export function ignoreFiles(ignoreList, filePath, sourceRoot) {
     const relativePath = path.relative(sourceRoot, filePath).replace(/\\/g, '/')
 
-    return !ignoreList.some(pattern =>
-        relativePath === pattern || relativePath.startsWith(`${pattern}/`)
+    return !ignoreList.some(
+        (pattern) =>
+            relativePath === pattern || relativePath.startsWith(`${pattern}/`)
     )
 }
 
@@ -39,7 +40,7 @@ export const copyFolder = async (sourceFolder, targetFolder) => {
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {
                 parents: true,
-                filter: (file) => ignoreFiles(ignore, file.path, sourceFolder)
+                filter: (file) => ignoreFiles(ignore, file.path, sourceFolder),
             })
             console.log(SUCCESS_COLOR, 'Assets copied')
         } catch (err) {
@@ -53,35 +54,35 @@ export const copyFolder = async (sourceFolder, targetFolder) => {
 export const createHtmlFiles = async (data, viewsFolder, publicFolder) => {
     if (fssync.existsSync(viewsFolder)) {
         for (const pageData of data.pagesData) {
-            data.t = (key) =>
-                data.app.translations
-                    ? data.app.translations[
-                        pageData.meta.lang || data.app.lang
-                    ]?.[key] || key
-                    : key
-
-            let html = pageData.content
-
             if (pageData.meta.layout) {
+                data.t = (key) =>
+                    data.app.translations
+                        ? data.app.translations[
+                            pageData.meta.lang || data.app.lang
+                        ]?.[key] || key
+                        : key
+
+                let html = pageData.content
+
                 const fn = pug.compileFile(
                     `${viewsFolder}/${pageData.meta.layout}`
                 )
                 html = fn({ ...data, ...pageData })
+
+                const htmlPath = path.join(
+                    publicFolder,
+                    pageData.meta.dirname.replace(/^\/+/, ''),
+                    `${pageData.meta.filename}`
+                )
+
+                await fs.mkdir(path.dirname(htmlPath), { recursive: true })
+                await fs.writeFile(htmlPath, pretty(html), 'utf-8')
+
+                console.log(
+                    SUCCESS_COLOR,
+                    `HTML created: ${pageData.meta.dirname}`
+                )
             }
-
-            const htmlPath = path.join(
-                publicFolder,
-                pageData.meta.dirname.replace(/^\/+/, ''),
-                `${pageData.meta.filename}`
-            )
-
-            await fs.mkdir(path.dirname(htmlPath), { recursive: true })
-            await fs.writeFile(htmlPath, pretty(html), 'utf-8')
-
-            console.log(
-                SUCCESS_COLOR,
-                `HTML created: ${pageData.meta.dirname}`
-            )
         }
     } else {
         console.error('Views folder not found')
