@@ -1,6 +1,6 @@
 {
     "name": "nera",
-    "version": "4.0.1",
+    "version": "4.1.0",
     "description": "A simple static site generator",
     "main": "index.js",
     "scripts": {
@@ -14,7 +14,16 @@
         "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\""
     },
     "type": "module",
-    "keywords": [],
+    "keywords": [
+        "static-site-generator",
+        "markdown",
+        "pug",
+        "jamstack",
+        "blog",
+        "documentation",
+        "website",
+        "ssg"
+    ],
     "author": "Michael Becker <micha.becker79@gmail.com> (https://github.com/seebaermichi)",
     "license": "ISC",
     "engines": {

@@ -47,7 +47,7 @@ describe('getPluginsData', () => {
     it('loads plugins and updates data correctly', async () => {
         const data = {
             app: { siteName: 'Original' },
-            pagesData: []
+            pagesData: [],
         }
 
         const result = await getPluginsData(data, PLUGINS_DIR)
@@ -63,5 +63,14 @@ describe('getPluginsData', () => {
 
         expect(result.app).toBeTypeOf('object')
         expect(result.pagesData).toBeTypeOf('object')
+    })
+
+    it('handles non-existing plugin directory gracefully', async () => {
+        const data = { app: { test: true }, pagesData: [] }
+        const result = await getPluginsData(data, '/non/existing/path')
+
+        expect(result.app.test).toBe(true) // Original data should be preserved
+        expect(result.pagesData).toEqual([])
+        expect(result.plugins).toHaveLength(0) // No plugins loaded
     })
 })

@@ -42,8 +42,8 @@ describe('loadAppData', () => {
             folders: {
                 ...defaultSettings.folders,
                 config: CONFIG,
-                pages: PAGES
-            }
+                pages: PAGES,
+            },
         }
         const data = loadAppData(settings)
 
@@ -56,11 +56,23 @@ describe('loadAppData', () => {
             folders: {
                 ...defaultSettings.folders,
                 config: '/non/existing/path',
-                pages: PAGES
-            }
+                pages: PAGES,
+            },
         }
         const data = loadAppData(settings)
         expect(data.app).toEqual({})
+    })
+
+    it('handles missing pages directory gracefully', () => {
+        const settings = {
+            folders: {
+                ...defaultSettings.folders,
+                config: CONFIG,
+                pages: '/non/existing/path',
+            },
+        }
+        const data = loadAppData(settings)
+        expect(data.pages).toEqual([])
     })
 })
 
@@ -87,5 +99,10 @@ describe('getPagesData', () => {
     it('handles invalid markdown gracefully', () => {
         const result = getPagesData(['broken.md'], PAGES)
         expect(result[0].content).toContain('::::')
+    })
+
+    it('skips non-existing files', () => {
+        const result = getPagesData(['non-existing.md'], PAGES)
+        expect(result).toHaveLength(0) // File should be skipped, not included with empty content
     })
 })
