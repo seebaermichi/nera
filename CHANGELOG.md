@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2025-07-23
+
+### Added
+
+- Plugin execution order control via `config/plugin-order.yaml`
+- Support for `start` and `end` plugin groups with flexible ordering logic
+- Alphabetical fallback sorting for unspecified plugins
+
+### Changed
+
+- Internal plugin orchestration updated to allow manual ordering
+- `setup-plugins.js` fully rewritten for clarity and flexibility
+
+### Technical
+
+- Improved test coverage for plugin ordering edge cases
+- Updated test suite to isolate and verify execution sequences
+
+
 ## [4.1.0] - 2025-07-19
 
 ### Added

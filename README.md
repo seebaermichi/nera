@@ -131,7 +131,25 @@ You can place local plugins in `src/plugins/` or install official ones via npm:
 npm install @nera-static/plugin-navigation
 ```
 
-For usage, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
+For a complete list of existing plugins, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
+
+### ⚙️ Plugin Execution Order
+
+To control the **execution order** of plugins, you can define a `config/plugin-order.yaml` file like this:
+
+```yaml
+plugin-order:
+  - start:
+      - plugin-tags
+  - end:
+      - plugin-search
+```
+
+- `start`: plugins listed here will run first (in the order listed).
+- `end`: plugins listed here will run last (in the order listed).
+- Any other plugins not listed will be placed in the middle, sorted alphabetically.
+
+This is especially useful when some plugins (like `plugin-search`) rely on metadata added by earlier ones.
 
 ---
 
