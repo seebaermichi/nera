@@ -37,6 +37,12 @@ export const loadAppData = (settings = defaultSettings) => {
         console.warn('⚠️ Using empty configuration as fallback')
     }
 
+    // Ensure appConfig has folders defined
+    appConfig = {
+        folders: settings?.folders || defaultSettings.folders,
+        ...appConfig,
+    }
+
     // Load pages directory with error handling
     try {
         if (fs.existsSync(settings.folders.pages)) {

@@ -51,7 +51,7 @@ describe('loadAppData', () => {
         expect(data.pages).toContain('index.md')
     })
 
-    it('returns empty config if app.yaml is missing', () => {
+    it('returns config with folders even if app.yaml is missing', () => {
         const settings = {
             folders: {
                 ...defaultSettings.folders,
@@ -59,8 +59,12 @@ describe('loadAppData', () => {
                 pages: PAGES,
             },
         }
+
         const data = loadAppData(settings)
-        expect(data.app).toEqual({})
+
+        expect(data.app).toHaveProperty('folders')
+        expect(data.app.folders).toEqual(settings.folders)
+        expect(Object.keys(data.app)).toEqual(['folders']) // no other keys present
     })
 
     it('handles missing pages directory gracefully', () => {

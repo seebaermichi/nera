@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [4.2.1] - 2025-07-25
+
+### Changed
+  - loadAppData() now loads appConfig.folders into the app data
+
+
 ## [4.2.0] - 2025-07-23
 
 ### Added
@@ -55,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Improved test isolation and safety measures
 -   Enhanced plugin architecture consistency across all plugins
 
+
 ## [4.0.1] - 2025-07-19
 
 ### Fixed
@@ -70,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -   Migrated from deprecated ESLint configuration to flat config
 -   Updated build tools and development dependencies
+
 
 ## [4.0.0] - 2025-07-15
 
@@ -89,12 +98,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Fixed multiple security vulnerabilities
 -   Updated all dependencies to latest secure versions
 
+
 ## [3.2.0] - 2021-10-29
 
 ### Security
 
 -   Updated packages and fixed vulnerabilities
 -   Resolved multiple npm audit issues
+
 
 ## [3.0.0] - 2021-01-25
 
@@ -108,6 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -   Enhanced configuration system for internationalization
 -   Updated layout templates for translation support
+
 
 ## [2.0.0] - 2019-11-15
 
@@ -127,6 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Plugin API redesigned for better extensibility
 -   Core functionality split into focused modules
 
+
 ## [1.x] - 2019 and earlier
 
 ### Initial Development
@@ -140,4 +153,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Basic SEO features (meta descriptions, keywords)
 -   Sub-navigation support
 
-[4.1.0]: https://github.com/seebaermichi/nera/compare/v4.0.1...v4.1.0
+[4.2.1]: https://github.com/seebaermichi/nera/compare/v4.2.0...v4.2.1
