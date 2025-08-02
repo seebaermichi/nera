@@ -4,7 +4,7 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
 import dotenv from 'dotenv'
-import run from '../src/index.js'
+import run from '../index.js'
 
 dotenv.config()
 

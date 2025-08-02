@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
-import { copyFolder, createHtmlFiles, deleteFolder } from '../src/render.js'
+import { copyFolder, createHtmlFiles, deleteFolder } from '../render.js'
 import dotenv from 'dotenv'
 
 dotenv.config()

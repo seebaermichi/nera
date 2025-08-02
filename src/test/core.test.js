@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
-import { loadAppData, getPagesData, defaultSettings } from '../src/core'
+import { loadAppData, getPagesData, defaultSettings } from '../core'
 import dotenv from 'dotenv'
 
 dotenv.config()

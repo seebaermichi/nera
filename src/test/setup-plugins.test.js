@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import { fileURLToPath } from 'url'
-import { getPluginsData } from '../src/setup-plugins.js'
+import { getPluginsData } from '../setup-plugins.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
