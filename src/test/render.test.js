@@ -94,6 +94,40 @@ describe('createHtmlFiles', () => {
         await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
+    it('resolves absolute includes against the views folder', async () => {
+        // Plugin READMEs document `include /vendor/<plugin>/<template>`, which
+        // only compiles when pug is given a basedir.
+        const vendorDir = path.join(viewsDir, 'vendor', 'x')
+        await fs.mkdir(vendorDir, { recursive: true })
+        await fs.writeFile(path.join(vendorDir, 'y.pug'), 'p Vendor partial')
+        await fs.writeFile(
+            path.join(viewsDir, 'with-include.pug'),
+            'html\n  body\n    include /vendor/x/y.pug'
+        )
+
+        const data = {
+            app: {},
+            pagesData: [
+                {
+                    meta: {
+                        layout: 'with-include.pug',
+                        dirname: '/',
+                        filename: 'index.html',
+                        fullPath: '/index.html'
+                    }
+                }
+            ]
+        }
+
+        await createHtmlFiles(data, viewsDir, publicDir)
+
+        const content = await fs.readFile(
+            path.join(publicDir, 'index.html'),
+            'utf8'
+        )
+        expect(content).toContain('<p>Vendor partial</p>')
+    })
+
     it('renders HTML from Pug template and writes to public folder', async () => {
         const data = {
             app: { lang: 'en', translations: { en: { headline: 'Welcome!' } } },

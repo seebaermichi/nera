@@ -30,6 +30,9 @@ beforeAll(async () => {
     await fs.mkdir(path.join(PAGES, 'blog'), { recursive: true })
     await fs.writeFile(path.join(PAGES, 'blog/post.md'), '# Blog Post')
     await fs.writeFile(path.join(PAGES, 'broken.md'), '::::')
+    await fs.writeFile(path.join(PAGES, 'page.mdx'), '# MDX')
+    await fs.mkdir(path.join(PAGES, 'a.md.notes'), { recursive: true })
+    await fs.writeFile(path.join(PAGES, 'a.md.notes/b.md'), '# Notes')
 })
 
 afterAll(async () => {
@@ -103,6 +106,33 @@ describe('getPagesData', () => {
     it('handles invalid markdown gracefully', () => {
         const result = getPagesData(['broken.md'], PAGES)
         expect(result[0].content).toContain('::::')
+    })
+
+    it('keeps href and fullPath in agreement for a .mdx page', () => {
+        const [{ meta }] = getPagesData(['page.mdx'], PAGES)
+
+        // `page.split('.md')[0]` used to truncate this to `/page.html` while
+        // href kept `.mdx`, so the file landed where no link pointed.
+        expect(meta.fullPath).toBe(meta.href)
+        expect(meta.href).toBe('/page.mdx')
+    })
+
+    it('keeps href and fullPath in agreement when .md appears mid-path', () => {
+        const [{ meta }] = getPagesData([path.join('a.md.notes', 'b.md')], PAGES)
+
+        expect(meta.fullPath).toBe(meta.href)
+        expect(meta.href).toBe('/a.md.notes/b.html')
+        expect(meta.dirname).toBe('/a.md.notes')
+        expect(meta.filename).toBe('b.html')
+    })
+
+    it('emits forward-slash separated paths regardless of platform', () => {
+        const [{ meta }] = getPagesData([path.join('blog', 'post.md')], PAGES)
+
+        for (const value of [meta.href, meta.fullPath, meta.dirname]) {
+            expect(value).not.toContain('\\')
+        }
+        expect(meta.href).toBe('/blog/post.html')
     })
 
     it('skips non-existing files', () => {

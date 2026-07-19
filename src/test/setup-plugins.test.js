@@ -13,12 +13,13 @@ const TMP_DIR = path.resolve(
     process.env.TEST_TEMP_DIR || path.join(__dirname, '.test-temp')
 )
 const PLUGINS_DIR = path.join(TMP_DIR, 'src/plugins')
+const ASYNC_PLUGINS_DIR = path.join(TMP_DIR, 'src/async-plugins')
 const CONFIG_DIR = path.join(TMP_DIR, 'config')
 
 let originalCwd
 
-async function writePlugin(dir, code) {
-    const pluginDir = path.join(PLUGINS_DIR, dir)
+async function writePlugin(dir, code, base = PLUGINS_DIR) {
+    const pluginDir = path.join(base, dir)
     await fs.mkdir(pluginDir, { recursive: true })
     await fs.writeFile(path.join(pluginDir, 'index.js'), code, 'utf-8')
 }
@@ -77,6 +78,19 @@ beforeAll(async () => {
         }`
     )
 
+    // plugin-async: both hooks are async, as a real-world plugin may write them
+    await fs.mkdir(ASYNC_PLUGINS_DIR, { recursive: true })
+    await writePlugin(
+        'plugin-async',
+        `export async function getAppData(data) {
+            return { ...data.app, asyncApp: true }
+        }
+        export async function getMetaData(data) {
+            return [...data.pagesData, { title: 'from async plugin' }]
+        }`,
+        ASYNC_PLUGINS_DIR
+    )
+
     // No plugin-order.yaml by default; individual tests will create one if needed
 })
 
@@ -126,6 +140,24 @@ describe('getPluginsData', () => {
         expect(result.app.test).toBe(true) // preserves original
         expect(result.pagesData).toEqual([])
         expect(result.plugins).toHaveLength(0)
+    })
+
+    it('awaits async hooks instead of storing their Promise', async () => {
+        const data = {
+            app: { siteName: 'Original', lang: 'en' },
+            pagesData: [],
+        }
+
+        const result = await getPluginsData(data, ASYNC_PLUGINS_DIR)
+
+        // A Promise passes the `typeof === 'object' && !Array.isArray` check,
+        // so without `await` the whole app config is silently replaced by one.
+        expect(result.app).not.toBeInstanceOf(Promise)
+        expect(result.app.siteName).toBe('Original')
+        expect(result.app.lang).toBe('en')
+        expect(result.app.asyncApp).toBe(true)
+
+        expect(result.pagesData).toEqual([{ title: 'from async plugin' }])
     })
 
     it('respects plugin-order start and end', async () => {

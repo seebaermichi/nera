@@ -103,17 +103,25 @@ export const getPagesData = (
                 createdAt = new Date() // Fallback to current date
             }
 
-            const wholeFilePathString = `/${page.split('.md')[0]}.html`
+            // Single source of truth for the output path: separators are
+            // normalised to `/` so URLs are identical on every platform, and
+            // only a trailing `.md` is replaced so `.mdx` or a path
+            // containing `.md` mid-string cannot make href and fullPath
+            // disagree.
+            const wholeFilePathString = `/${page
+                .split(path.sep)
+                .join('/')
+                .replace(/\.md$/, '.html')}`
 
             results.push({
                 content,
                 meta: {
                     ...md.meta,
                     createdAt,
-                    href: `/${page.replace(/\.md$/, '.html')}`,
+                    href: wholeFilePathString,
                     fullPath: wholeFilePathString,
-                    dirname: path.dirname(wholeFilePathString),
-                    filename: path.basename(wholeFilePathString),
+                    dirname: path.posix.dirname(wholeFilePathString),
+                    filename: path.posix.basename(wholeFilePathString),
                 },
             })
 

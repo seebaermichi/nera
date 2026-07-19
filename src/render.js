@@ -65,7 +65,8 @@ export const createHtmlFiles = async (data, viewsFolder, publicFolder) => {
                 let html = pageData.content
 
                 const fn = pug.compileFile(
-                    `${viewsFolder}/${pageData.meta.layout}`
+                    `${viewsFolder}/${pageData.meta.layout}`,
+                    { basedir: viewsFolder }
                 )
                 html = fn({ ...data, ...pageData })
 

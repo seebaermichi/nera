@@ -189,7 +189,7 @@ export async function getPluginsData(
         const mod = plugin.module
 
         if (typeof mod.getAppData === 'function') {
-            const result = mod.getAppData({ app: appData, pagesData })
+            const result = await mod.getAppData({ app: appData, pagesData })
             if (result && typeof result === 'object' && !Array.isArray(result)) {
                 appData = result
             } else {
@@ -200,7 +200,7 @@ export async function getPluginsData(
         }
 
         if (typeof mod.getMetaData === 'function') {
-            const result = mod.getMetaData({ app: appData, pagesData })
+            const result = await mod.getMetaData({ app: appData, pagesData })
             if (Array.isArray(result)) {
                 pagesData = result
             } else {
