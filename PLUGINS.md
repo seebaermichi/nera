@@ -1,3 +1,12 @@
+<!--
+  MAINTENANCE: This is the canonical user-facing plugin catalog, linked from
+  README.md and pages/index.md (both point at .../blob/main/PLUGINS.md).
+  When a new @nera-static/plugin-* is published, add it here in alphabetical
+  order and bump the count in the heading below. List published PLUGINS only —
+  not @nera-static/plugin-utils (a library) or @nera-static/installer (the CLI),
+  and not the deprecated/archived `main-navigation`.
+-->
+
 # Nera plugins
 
 Static site generator Nera makes it easy to create plugins. There are already a couple available.
