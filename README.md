@@ -1,5 +1,7 @@
 # Nera – a lightweight static site generator
 
+[![Test](https://github.com/seebaermichi/nera/actions/workflows/test.yml/badge.svg)](https://github.com/seebaermichi/nera/actions/workflows/test.yml)
+
 **Nera** is a minimal static site generator that transforms Markdown content into fast, clean HTML pages using [Pug](https://pugjs.org/) templates. It is designed to be simple to use, yet extendable with plugins.
 
 > ⚠️ This project is under active development. Breaking changes may occur.
