@@ -13,9 +13,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # No cheerio here, so Node 18 is genuinely supported and
-                # matches the `engines` floor.
-                node-version: [18, 20, 22]
+                # Node 18 reached EOL 2025-04-30 and the toolchain
+                # (vitest 4 / vite 8 / eslint 10) requires Node 20+, so the
+                # floor is Node 20 to match the `engines` field.
+                node-version: [20, 22]
 
         steps:
             - uses: actions/checkout@v4

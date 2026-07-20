@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.0] - 2026-07-21
+
+### Changed
+
+-   minimum supported Node raised from 18 to 20; Node 18 reached
+    end-of-life on 2025-04-30 and the dev toolchain (vitest 4, vite 8,
+    eslint 10) requires Node 20+
+-   CI matrix now tests Node 20 and 22 (dropped 18)
+
+
 ## [4.3.0] - 2026-07-19
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
     "name": "nera",
-    "version": "4.3.0",
+    "version": "4.4.0",
     "description": "A simple static site generator",
     "main": "index.js",
     "scripts": {
@@ -28,7 +28,7 @@
     "author": "Michael Becker <micha.becker79@gmail.com> (https://github.com/seebaermichi)",
     "license": "MIT",
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=20.0.0"
     },
     "repository": {
         "type": "git",
