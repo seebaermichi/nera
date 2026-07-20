@@ -131,7 +131,7 @@ You can place local plugins in `src/plugins/` or install official ones via npm:
 npm install @nera-static/plugin-navigation
 ```
 
-For a complete list of existing plugins, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
+For a complete list of existing plugins, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md).
 
 ### ⚙️ Plugin Execution Order
 

@@ -60,7 +60,7 @@ The `src` directory includes the app itself. Here you find the `core.js`, `index
 
 ### Plugins
 The `src` folder also includes the `plugins` folder. In it you would place additional functionality.  
-Have a look at the current [collection of available plugins](https://github.com/seebaermichi/nera/blob/master/PLUGINS.md).
+Have a look at the current [collection of available plugins](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md).
 
 ### Views
 In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.  
