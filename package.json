@@ -11,7 +11,8 @@
         "preserve": "npm run render",
         "watch:assets": "node src/watch-assets.js",
         "test": "vitest",
-        "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\""
+        "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\"",
+        "prepare": "husky"
     },
     "type": "module",
     "keywords": [

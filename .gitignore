@@ -4,3 +4,5 @@ ISSUES.md
 .vscode/
 .env
 .vite
+# npm credentials — never commit
+.npmrc
