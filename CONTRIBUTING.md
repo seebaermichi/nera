@@ -72,19 +72,29 @@ Nera supports **npm-based plugins** that allow you to extend and customize the r
 
 ### 🔌 Plugin Basics
 
-A Nera plugin is a simple npm package that exports one or more of the following functions:
+A Nera plugin is a simple npm package that exports one or both of the following functions:
 
--   `getAppData(data)` – modify or enrich the global `app` data (e.g. add a tagCloud or navigation)
--   `getMetaData(data)` – modify or enrich individual page metadata (e.g. add slugs or tag links)
--   `getPagesData(data)` – modify or even _generate_ pages programmatically (e.g. create tag overview pages)
+-   `getAppData(data)` – modify or enrich the global `app` data (e.g. add a tagCloud or navigation). **Must return a plain object.**
+-   `getMetaData(data)` – modify or enrich page metadata, and optionally _generate_ pages by returning additional entries (e.g. tag overview pages). **Must return an array.**
 
-Each function receives a `data` object with:
+These are the only two hooks. Any other exported function is ignored.
+
+Each function receives a `data` object with exactly:
 
 -   `data.app`: the global app config
 -   `data.pagesData`: an array of all pages (`[{ content, meta }]`)
--   `data.meta`: the current page’s metadata (only in `getMetaData`)
 
-Plugins should return modified values, or the original input if unchanged.
+`getAppData` runs first, and `getMetaData` then sees the `app` it returned.
+
+Return the **whole** value, not a fragment — `getAppData` must spread the
+incoming app (`{ ...data.app, myKey }`), or every other plugin's data is
+discarded. If a hook returns the wrong type it is skipped with a console
+warning and the build continues, so a plugin that "does nothing" is usually a
+return-type problem — check the console.
+
+Write hooks **synchronously**. Both hooks are awaited as of generator 4.3.0,
+but the generator is distributed by clone, so an `async` hook breaks any site
+running an older copy.
 
 ### 📦 Installing Plugins
 
@@ -94,11 +104,19 @@ To use a plugin, simply install it via npm:
 npm install @nera-static/plugin-navigation
 ```
 
-Nera automatically discovers and loads installed packages that follow this naming pattern:
+Nera discovers plugins from two places:
 
--   `@nera-static/*`
+-   any dependency in the generator's `package.json` named `@nera-static/*`
+-   local directories under `src/plugins/*/index.js`
 
-There’s no need to import or configure them manually — they’ll be applied in the order npm resolves them.
+There’s no need to import them manually. They run in this order:
+
+1. names listed under `start:` in `config/plugin-order.yaml`
+2. everything else, alphabetically
+3. names listed under `end:`
+
+Order matters when one plugin consumes data another produces — `plugin-search`,
+for example, should run last so it indexes pages other plugins have generated.
 
 ### 🧪 Example Plugin: Tags
 
@@ -106,7 +124,8 @@ A plugin like `@nera-static/plugin-tags` might do the following:
 
 -   Add a `tagCloud` to the `app` object using `getAppData`
 -   Add `tagLinks` to each tagged page using `getMetaData`
--   Generate overview pages for each tag using `getMetaData` or `getPagesData`
+-   Generate an overview page per tag by returning them alongside the authored
+    pages from `getMetaData` (`return [...authoredPages, ...tagPages]`)
 
 This makes it easy to create dynamic, content-driven pages based on frontmatter metadata.
 
