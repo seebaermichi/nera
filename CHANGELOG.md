@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.1] - 2026-07-21
+
+### Fixed
+
+-   installed `@nera-static/*` plugins are now discovered from the project
+    being built (`process.cwd()`) rather than from a path resolved relative
+    to `src/setup-plugins.js`. Every other lookup in the pipeline is already
+    cwd-relative — `config/plugin-order.yaml`, and core's `./config`,
+    `./pages`, `./views` — so plugin discovery was the one place that ignored
+    the working directory. Rendering a site is unaffected, since `npm run
+    render` runs from the project root and both paths resolve to the same
+    directory; what it fixes is any tooling that points cwd at another
+    project, which previously kept loading the wrong dependency list
+
+### Added
+
+-   a regression test covering the above. This repo declares no
+    `@nera-static` dependencies of its own, so the defect was invisible to
+    the suite until a fixture project declared one
+
+
 ## [4.4.0] - 2026-07-21
 
 ### Changed

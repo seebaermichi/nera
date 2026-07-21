@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
@@ -178,5 +178,41 @@ describe('getPluginsData', () => {
 
         // plugin-b adds page (still last)
         expect(result.pagesData).toEqual([{ title: 'from plugin B' }])
+    })
+
+    it('reads the npm plugin list from the project being built, not from the generator', async () => {
+        // This repo declares no @nera-static dependencies of its own, so a
+        // discovery bug here is invisible unless the fixture project declares
+        // one. Naming a package that cannot resolve is enough: the loader has
+        // to have read *this* package.json to attempt it at all.
+        await fs.writeFile(
+            path.join(TMP_DIR, 'package.json'),
+            JSON.stringify({
+                name: 'fixture-project',
+                dependencies: { '@nera-static/plugin-not-installed': '^1.0.0' },
+            })
+        )
+
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+        try {
+            const data = { app: {}, pagesData: [] }
+            const result = await getPluginsData(data, PLUGINS_DIR)
+
+            const attempted = warn.mock.calls.some((args) =>
+                args.some(
+                    (a) =>
+                        typeof a === 'string' &&
+                        a.includes('plugin-not-installed')
+                )
+            )
+            expect(attempted).toBe(true)
+
+            // The unresolvable plugin is skipped rather than aborting the run.
+            expect(Array.isArray(result.pagesData)).toBe(true)
+        } finally {
+            warn.mockRestore()
+            await fs.rm(path.join(TMP_DIR, 'package.json'), { force: true })
+        }
     })
 })

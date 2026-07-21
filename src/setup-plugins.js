@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { fileURLToPath, pathToFileURL } from 'url'
+import { pathToFileURL } from 'url'
 import YAML from 'yaml'
 
 /**
@@ -119,8 +119,12 @@ export async function getPluginsData(
     //
     console.log('📦 Loading npm plugins...')
     try {
-        const __dirname = path.dirname(fileURLToPath(import.meta.url))
-        const pkgJsonPath = path.resolve(__dirname, '../package.json')
+        // Resolved from the project root (cwd), like every other lookup here:
+        // config/plugin-order.yaml below, and core.js's ./config, ./pages, etc.
+        // Resolving relative to this file instead made plugin discovery ignore
+        // the working directory, so a test that pointed cwd at a fixture
+        // project still loaded the real site's dependencies.
+        const pkgJsonPath = path.resolve(process.cwd(), 'package.json')
         const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'))
         const deps = Object.keys(pkgJson.dependencies || {}).filter((name) =>
             name.startsWith('@nera-static/')
