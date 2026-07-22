@@ -70,6 +70,48 @@ describe('loadAppData', () => {
         expect(Object.keys(data.app)).toEqual(['folders']) // no other keys present
     })
 
+    // A `folders` block in app.yaml used to be honoured by anything reading
+    // `app.folders` — every plugin — while the render pipeline kept using the
+    // defaults, so plugin output and the copied folder could disagree.
+    describe('folders from app.yaml', () => {
+        const CONFIG_WITH_FOLDERS = path.join(TMP_DIR, 'config-folders')
+
+        beforeAll(async () => {
+            await fs.mkdir(CONFIG_WITH_FOLDERS, { recursive: true })
+            await fs.writeFile(
+                path.join(CONFIG_WITH_FOLDERS, 'app.yaml'),
+                `name: TestSite\nfolders:\n  assets: ./static\n  pages: ${PAGES}\n`
+            )
+        })
+
+        const load = () =>
+            loadAppData({
+                folders: {
+                    ...defaultSettings.folders,
+                    config: CONFIG_WITH_FOLDERS,
+                },
+            })
+
+        it('overrides the default for a key app.yaml names', () => {
+            expect(load().app.folders.assets).toBe('./static')
+        })
+
+        it('keeps the defaults for every key it does not name', () => {
+            const { folders } = load().app
+
+            expect(folders.dist).toBe(defaultSettings.folders.dist)
+            expect(folders.views).toBe(defaultSettings.folders.views)
+        })
+
+        it('lists pages from the configured folder', () => {
+            expect(load().pages).toContain('index.md')
+        })
+
+        it('never lets app.yaml redirect the config folder it was read from', () => {
+            expect(load().app.folders.config).toBe(CONFIG_WITH_FOLDERS)
+        })
+    })
+
     it('handles missing pages directory gracefully', () => {
         const settings = {
             folders: {

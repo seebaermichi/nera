@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.5.0] - 2026-07-22
+
+### Fixed
+
+-   a `folders` block in `config/app.yaml` now actually takes effect. It was
+    merged into the app data, so every plugin read the configured value, but
+    the render pipeline kept using the built-in defaults — `run()` destructured
+    `settings.folders`, and `index.js` calls `run()` with no argument. Setting
+    `folders.assets: ./static` therefore had `@nera-static/plugin-search` write
+    its index to `static/`, while the render logged `No Assets found` and
+    copied nothing into `public/`: the built site 404'd on an index that
+    existed on disk. Any plugin writing into the assets folder had the same
+    split
+-   a `folders` block naming only some keys no longer blanks the rest. The
+    merge replaced the whole object, so `folders: { assets: ./static }` left
+    `dist`, `views` and `pages` undefined for anything reading `app.folders`.
+    Keys are now merged individually over the defaults
+-   `folders.pages` is honoured when the page list is built, not just when it
+    is read back
+
+### Changed
+
+-   folders are resolved once, in `loadAppData`, and every later stage reads
+    the result from `data.app.folders`. `folders.config` remains the one key
+    that can only come from the caller — app.yaml is found through it
+
+### Added
+
+-   tests covering per-key merging, the configured pages folder, and that
+    app.yaml cannot redirect the config folder it was itself read from
+
+
 ## [4.4.1] - 2026-07-21
 
 ### Fixed

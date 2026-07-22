@@ -37,20 +37,30 @@ export const loadAppData = (settings = defaultSettings) => {
         console.warn('⚠️ Using empty configuration as fallback')
     }
 
-    // Ensure appConfig has folders defined
+    // Resolve the folders once, here, so every later stage reads the same
+    // answer. Merged per key rather than replaced wholesale: a `folders` block
+    // in app.yaml that names only `assets` must keep the defaults for `dist`,
+    // `views` and the rest, not blank them.
+    //
+    // `folders.config` is the exception it has to be — app.yaml is found
+    // through it, so it can only come from `settings`.
     appConfig = {
-        folders: settings?.folders || defaultSettings.folders,
         ...appConfig,
+        folders: {
+            ...(settings?.folders || defaultSettings.folders),
+            ...(appConfig.folders || {}),
+            config: (settings?.folders || defaultSettings.folders).config,
+        },
     }
 
     // Load pages directory with error handling
     try {
-        if (fs.existsSync(settings.folders.pages)) {
-            pages = fsReaddirRecursive(settings.folders.pages)
+        if (fs.existsSync(appConfig.folders.pages)) {
+            pages = fsReaddirRecursive(appConfig.folders.pages)
             console.log(`✅ Found ${pages.length} page(s) to process`)
         } else {
             console.warn(
-                `⚠️ Pages directory not found: ${settings.folders.pages}`
+                `⚠️ Pages directory not found: ${appConfig.folders.pages}`
             )
         }
     } catch (err) {

@@ -1,6 +1,6 @@
 {
     "name": "nera",
-    "version": "4.4.1",
+    "version": "4.5.0",
     "description": "A simple static site generator",
     "main": "index.js",
     "scripts": {
