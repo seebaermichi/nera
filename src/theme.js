@@ -4,11 +4,10 @@ import { createRequire } from 'module'
 
 // Theme discovery (ROADMAP-themes.md §1).
 //
-// `app.theme` accepts three forms, and every one resolves to a PACKAGE ROOT
-// whose payload lives under a `theme/` wrapper folder (§1b). Appending the
-// wrapper here — rather than treating the spec as the payload itself — is what
-// keeps all three forms resolving through one identical join, so a local theme
-// and an installed one cannot drift:
+// `app.theme` accepts three forms, and every one resolves to a THEME ROOT whose
+// payload — `views/`, `assets/`, `config/` — sits directly at that root, with no
+// inner `theme/` wrapper (§1b, revised 2026-07-23). A theme package contains
+// nothing but the theme, so its package root already *is* the theme root:
 //
 //   docs                 → @nera-static/theme-docs   (bare name, scoped prefix)
 //   @acme/my-theme       → verbatim                   (contains `/` or `@`)
@@ -27,10 +26,9 @@ export function resolveTheme({ app, cwd = process.cwd() } = {}) {
         ? path.resolve(cwd, spec)
         : resolvePackageRoot(spec, cwd)
 
-    // Payload always under the `theme/` wrapper — see the note above.
-    const payloadRoot = path.join(root, 'theme')
-    const viewsRoot = path.join(payloadRoot, 'views')
-    const assetsRoot = path.join(payloadRoot, 'assets')
+    // The theme root IS the payload root — no wrapper to append (§1b, revised).
+    const viewsRoot = path.join(root, 'views')
+    const assetsRoot = path.join(root, 'assets')
 
     if (!fs.existsSync(viewsRoot)) {
         throw new Error(
@@ -38,7 +36,7 @@ export function resolveTheme({ app, cwd = process.cwd() } = {}) {
         )
     }
 
-    return { name: spec, package: isLocal ? null : packageName(spec), root, payloadRoot, viewsRoot, assetsRoot }
+    return { name: spec, package: isLocal ? null : packageName(spec), root, viewsRoot, assetsRoot }
 }
 
 // A bare name is expanded to the @nera-static/theme-<name> convention; anything
@@ -51,8 +49,9 @@ function packageName(spec) {
 
 // Locate an installed theme on disk. A theme has no JS entry point, so it cannot
 // be import()ed; instead resolve its package.json from the site's node_modules
-// and take the directory. Theme packages expose "./package.json" in exports (or
-// omit exports entirely) precisely so this resolves (§1b).
+// and take the directory — that dirname is the theme root directly (§1b). Theme
+// packages expose "./package.json" in exports (or omit exports entirely)
+// precisely so this resolves.
 function resolvePackageRoot(spec, cwd) {
     const pkg = packageName(spec)
     // Resolve from the site (cwd), like every other lookup in the pipeline —

@@ -10,27 +10,38 @@ deferred). **Implementation in progress on `feat/themes-slice-1`.**
 > original wrapper-in-package design that the rest of this file and the shipped
 > code were built on. Consequences:
 >
-> - It makes the generator change **breaking (major)**, not additive/minor — see
->   Semver and Acceptance criteria, both revised below.
-> - **Slice 1 and Slice 2 as shipped, and the `@nera-static/theme-example` repo,
->   still use the old `theme/` wrapper.** They must be refactored to the revised
->   model. Do not treat the "Shipped" bullets below as matching the current
->   design until that refactor lands.
+> - The folder move alone would be **breaking (major)**, but the **deprecated
+>   root fallback** (§1b note) keeps the introducing release **non-breaking
+>   (minor)** — see Semver and Acceptance criteria, both revised below.
+> - **The §1b refactor has now landed** (2026-07-23): `theme.js` drops the
+>   wrapper, `core.js` probes for `<site>/theme/` with a deprecated root
+>   fallback, and `@nera-static/theme-example` moved its payload to the package
+>   root. The "Shipped" bullets below now match the revised design.
 
-Shipped so far (against the **superseded** wrapper model — pending refactor),
-proven end to end against `@nera-static/theme-example` (`../nera-theme-example`,
-installed via a `file:` dependency):
+Shipped so far, proven end to end against `@nera-static/theme-example`
+(`../nera-theme-example`, installed via a `file:` dependency):
 
 - **Slice 1** — layered view resolution: layouts and partials resolve through
-  `[site, theme]`, site overrides per file (`render.js` `makeLayeredResolver` /
-  `resolveEntry`; `theme.js` `resolveTheme`).
+  `[<site>/theme-or-root, <theme pkg>]`, site overrides per file (`render.js`
+  `makeLayeredResolver` / `resolveEntry`; `theme.js` `resolveTheme`).
 - **Slice 2** — themes as real npm packages: bare-name and `@scope` resolution
   from `node_modules`, the plugin-loader prefix skip (§1d), and two-pass asset
   copy with the site winning collisions (§2).
+- **§1b folder-layout refactor** — theme payload at the package root (no
+  wrapper); a site groups its own presentation under `<site>/theme/`, with a
+  probe in `core.js` (`loadAppData`) that falls back to the legacy root
+  `views/`/`assets/` — deprecated, with a one-time warning — so existing sites
+  render byte-identically. `nera-installer`'s `nera update` backs up/restores
+  whichever layout the site has.
+- **Generator scaffold migrated** — the generator's own presentation moved from
+  root `views/`/`assets/` to `theme/views/`/`theme/assets/`, so `nera new`
+  (which git-clones the generator) now produces `theme/`-shaped sites that are
+  *not* born deprecated. `src/watch-assets.js` and the installer's test fixture
+  follow. This stays **minor**: the deprecated root fallback still covers every
+  unmigrated site out there.
 
-Still open: **the §1b folder-layout refactor of the shipped code + theme repo**,
-`config/theme.yaml` merge + `app.theme.config` exposure (§1c), compatibility
-checks (§5), caching (§6).
+Still open: `config/theme.yaml` merge + `app.theme.config` exposure (§1c),
+compatibility checks (§5), caching (§6).
 
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
@@ -673,12 +684,16 @@ root `views/`/`assets/` and renders exactly as today, with a deprecation warning
 New and migrated sites use `<site>/theme/`.
 
 The break is therefore **deferred**, not avoided: a **later major** removes the
-root fallback. At that point existing sites must have migrated (`views/` →
-`theme/views/`, `assets/` → `theme/assets/`), and `nera new` scaffolds the new
-shape while `nera update` handles its `views`/`assets` path lists (§7). Sequencing:
+root fallback. Sequencing:
 
-- **minor** — introduce `<site>/theme/` resolution + the deprecated root fallback
-- **major** (later) — remove the fallback; require `<site>/theme/`
+- **minor** — introduce `<site>/theme/` resolution + the deprecated root
+  fallback; the generator scaffolds the new shape, so `nera new` produces
+  `theme/`-shaped sites (not born deprecated); `nera update` handles both
+  layouts (§7). This is non-breaking because the fallback still renders every
+  unmigrated site byte-identically, with a deprecation warning.
+- **major** (later) — remove the fallback; require `<site>/theme/`. By then
+  existing sites must have migrated (`views/` → `theme/views/`, `assets/` →
+  `theme/assets/`); `nera update` drops its legacy `views`/`assets` path lists.
 
 The installer gaining a `--theme` flag is a separate, additive change — nearly
 free, since `create.js:28` already accepts a `repoUrl` option and
@@ -698,35 +713,38 @@ platform existing. It can ship first, on its own merits.
 
 ## Acceptance criteria
 
-The `[x]` items below were implemented and verified against the **superseded**
-wrapper layout (§1b, pre-revision). **The §1b revision invalidates the folder
-paths in several of them**, so they are re-marked `[ ]` pending the refactor —
-the *mechanism* (layered resolution, per-file override, npm resolution, plugin
-skip) is proven and carries over; only the paths and the byte-identical
-assumption change.
+The `[x]` items below are implemented and verified against the **revised** §1b
+layout (the refactor landed 2026-07-23): the theme payload sits at the package
+root, the site groups its presentation under `<site>/theme/`, and a deprecated
+root fallback keeps existing sites byte-identical. The remaining `[ ]` items are
+genuinely unimplemented (§1c config merge, §5 compatibility, §6 caching) or not
+yet exercised by an actual `npm update`.
 
-- [ ] A site renders from `<site>/theme/` when that folder exists; a site with
+- [x] A site renders from `<site>/theme/` when that folder exists; a site with
   neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
   and renders **byte-identically to today**, with a one-time deprecation warning
-  *(§1b root fallback — the non-breaking path)*
-- [ ] A themed site resolves layouts/partials through `[<site>/theme-or-root, <pkg>]`,
-  the package providing them from its root *(mechanism proven; path refactor
-  pending)*
+  *(§1b root fallback — verified e2e: re-homing the same content under `theme/`
+  with no `theme:` key produced byte-identical output and suppressed the warning)*
+- [x] A themed site resolves layouts/partials through `[<site>/theme-or-root, <pkg>]`,
+  the package providing them from its root *(verified e2e against
+  `@nera-static/theme-example`)*
 - [x] `theme: docs`, `theme: @acme/my-theme` and a local path all resolve, and a
-  local theme behaves identically to an installed one *(mechanism; resolver
-  target dir changes with §1b)*
+  local theme behaves identically to an installed one *(resolver now targets the
+  package root directly — §1b refactor landed)*
 - [x] A `theme:` naming a package that is not installed fails loudly with an
   actionable message and a non-zero exit code — it does not render an unstyled site
 - [ ] A site `config/theme.yaml` setting one key inherits every other key from the
   theme's own defaults *(§1c — not yet implemented)*
-- [ ] A file placed in the site's `theme/views/` overrides the theme package's
-  copy of that file, and only that file *(mechanism proven; path is now
-  `theme/views/`)*
+- [x] A file placed in the site's `theme/views/` overrides the theme package's
+  copy of that file, and only that file *(verified e2e: a site
+  `theme/views/partials/header.pug` won while the layout and footer fell through
+  to the theme package)*
 - [ ] `npm update` of the theme package changes the rendered output for
   non-overridden files, and does not change it for overridden ones *(follows from
   the resolution model; not yet exercised by an actual `npm update`)*
-- [ ] Assets from the theme reach `public/`, with site assets winning on conflict
-  *(mechanism proven; theme assets now at `<pkg>/assets`, site at `theme/assets`)*
+- [x] Assets from the theme reach `public/`, with site assets winning on conflict
+  *(verified: theme `main.css` reached `public/css/`; unit test confirms the
+  site's `theme/assets` wins a same-path collision)*
 - [ ] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
   it copied, and the theme's `main.css` still updates via `npm update`
 - [ ] The site's `.neraignore` filters its own assets, and a theme's assets are

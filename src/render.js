@@ -61,9 +61,11 @@ const defaultResolvePath = (filename, source, options) => {
     return path.join(base, name)
 }
 
-// First-match-wins resolution across an ordered chain of view roots (site
-// first, theme second), so a site file overrides the theme's copy of the same
-// path while everything else falls through to the theme (ROADMAP-themes.md).
+// First-match-wins resolution across an ordered chain of view roots — the
+// site's own presentation first (`<site>/theme/views`, or the deprecated root
+// `<site>/views`), the resolved theme package second — so a site file overrides
+// the theme's copy of the same path while everything else falls through to the
+// theme (ROADMAP-themes.md §1b).
 //
 // The trick that makes it root-agnostic: resolve as pug normally would, then
 // re-root that path relative to whichever chain root it fell under, and retry

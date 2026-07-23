@@ -31,10 +31,11 @@ describe('resolveTheme', () => {
         expect(resolveTheme({ app: { theme: undefined } })).toBeNull()
     })
 
-    it('resolves a local theme to the views root under its theme/ wrapper', async () => {
-        // The spec names the package root; payload lives under <root>/theme/
-        // (§1b). Here the package root is a subfolder, so `./my-theme`.
-        await fs.mkdir(path.join(tmpRoot, 'my-theme', 'theme', 'views'), {
+    it('resolves a local theme to the views root at the package root', async () => {
+        // The spec names the theme root; payload sits directly at that root, no
+        // `theme/` wrapper (§1b, revised). Here the root is a subfolder, so
+        // `./my-theme`.
+        await fs.mkdir(path.join(tmpRoot, 'my-theme', 'views'), {
             recursive: true
         })
 
@@ -45,31 +46,30 @@ describe('resolveTheme', () => {
 
         expect(theme.name).toBe('./my-theme')
         expect(theme.root).toBe(path.join(tmpRoot, 'my-theme'))
-        expect(theme.viewsRoot).toBe(
-            path.join(tmpRoot, 'my-theme', 'theme', 'views')
-        )
+        expect(theme.viewsRoot).toBe(path.join(tmpRoot, 'my-theme', 'views'))
     })
 
-    it('resolves `theme: .` for a theme developed in place', async () => {
-        // Package root is the cwd itself; payload under <cwd>/theme/, alongside
-        // the site's own <cwd>/views (no collision) — the §1b local diagram.
-        await fs.mkdir(path.join(tmpRoot, 'theme', 'views'), { recursive: true })
+    it('resolves `theme: .` — the theme root is the cwd itself', async () => {
+        // Package root is the cwd, so the payload is <cwd>/views directly (§1b,
+        // revised — no wrapper).
+        await fs.mkdir(path.join(tmpRoot, 'views'), { recursive: true })
 
         const theme = resolveTheme({ app: { theme: '.' }, cwd: tmpRoot })
 
-        expect(theme.viewsRoot).toBe(path.join(tmpRoot, 'theme', 'views'))
+        expect(theme.viewsRoot).toBe(path.join(tmpRoot, 'views'))
     })
 
     it('resolves a bare name to @nera-static/theme-<name> in node_modules', async () => {
         // Simulate an installed package: <cwd>/node_modules/@nera-static/
-        // theme-docs with the theme/ payload and a package.json exposing itself.
+        // theme-docs with its payload at the package root and a package.json
+        // exposing itself.
         const pkgRoot = path.join(
             tmpRoot,
             'node_modules',
             '@nera-static',
             'theme-docs'
         )
-        await fs.mkdir(path.join(pkgRoot, 'theme', 'views'), {
+        await fs.mkdir(path.join(pkgRoot, 'views'), {
             recursive: true
         })
         await fs.writeFile(
@@ -92,8 +92,8 @@ describe('resolveTheme', () => {
         // through it too (macOS /var → /private/var).
         const realPkgRoot = await fs.realpath(pkgRoot)
         expect(theme.package).toBe('@nera-static/theme-docs')
-        expect(theme.viewsRoot).toBe(path.join(realPkgRoot, 'theme', 'views'))
-        expect(theme.assetsRoot).toBe(path.join(realPkgRoot, 'theme', 'assets'))
+        expect(theme.viewsRoot).toBe(path.join(realPkgRoot, 'views'))
+        expect(theme.assetsRoot).toBe(path.join(realPkgRoot, 'assets'))
     })
 
     it('fails loudly when a bare-name theme is not installed', async () => {
@@ -265,11 +265,14 @@ describe('createHtmlFiles resolves extends across the chain', () => {
 describe('run() with a theme (assets layering)', () => {
     let tmpRoot, prevCwd
 
-    // run() resolves the theme from process.cwd(), so this test chdir's into a
-    // throwaway project and restores cwd afterwards. It builds a `theme: .`
-    // in-place theme and asserts the two-pass asset copy (§2): theme assets
-    // reach public/, a site-only asset is added, and a same-path asset is won
-    // by the site.
+    // Revised §1b layout: the site's own presentation lives under `<site>/theme/`
+    // (the core.js probe points views/assets there), and `theme: ./base` names an
+    // installed base theme whose views/assets sit directly at its own root. The
+    // chain is therefore [<site>/theme, <base>]. run() resolves everything from
+    // process.cwd(), so this chdir's into a throwaway project and restores cwd
+    // afterwards, then asserts the two-pass asset copy (§2): base-theme assets
+    // reach public/, a site-only asset is added, and a colliding asset is won by
+    // the site's own `theme/` layer.
     beforeEach(async () => {
         prevCwd = process.cwd()
         tmpRoot = createTempPath()
@@ -277,10 +280,12 @@ describe('run() with a theme (assets layering)', () => {
         const mk = (...p) => fs.mkdir(path.join(tmpRoot, ...p), { recursive: true })
         await mk('config')
         await mk('pages')
-        await mk('views')
-        await mk('assets', 'css')
-        await mk('theme', 'views', 'layouts')
+        // the site's own presentation, grouped under theme/
+        await mk('theme', 'views')
         await mk('theme', 'assets', 'css')
+        // the installed base theme — payload directly at its root, no wrapper
+        await mk('base', 'views', 'layouts')
+        await mk('base', 'assets', 'css')
 
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
@@ -288,31 +293,33 @@ describe('run() with a theme (assets layering)', () => {
         )
         await fs.writeFile(
             path.join(tmpRoot, 'config', 'app.yaml'),
-            'name: Demo\nlang: en\ntheme: .'
+            'name: Demo\nlang: en\ntheme: ./base'
         )
         await fs.writeFile(
             path.join(tmpRoot, 'pages', 'index.md'),
             '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n'
         )
+        // The layout is provided only by the base theme; the site does not
+        // override it, so it must resolve through the chain from base/views.
         await fs.writeFile(
-            path.join(tmpRoot, 'theme', 'views', 'layouts', 'layout.pug'),
+            path.join(tmpRoot, 'base', 'views', 'layouts', 'layout.pug'),
             'doctype html\nhtml\n  body\n    != content'
         )
-        // theme-only, site-only, and a colliding asset the site must win.
+        // base(theme)-only, site-only, and a colliding asset the site must win.
         await fs.writeFile(
-            path.join(tmpRoot, 'theme', 'assets', 'css', 'main.css'),
+            path.join(tmpRoot, 'base', 'assets', 'css', 'main.css'),
             'THEME main'
         )
         await fs.writeFile(
-            path.join(tmpRoot, 'theme', 'assets', 'css', 'shared.css'),
+            path.join(tmpRoot, 'base', 'assets', 'css', 'shared.css'),
             'THEME shared'
         )
         await fs.writeFile(
-            path.join(tmpRoot, 'assets', 'css', 'custom.css'),
+            path.join(tmpRoot, 'theme', 'assets', 'css', 'custom.css'),
             'SITE custom'
         )
         await fs.writeFile(
-            path.join(tmpRoot, 'assets', 'css', 'shared.css'),
+            path.join(tmpRoot, 'theme', 'assets', 'css', 'shared.css'),
             'SITE shared'
         )
 
@@ -325,12 +332,15 @@ describe('run() with a theme (assets layering)', () => {
     })
 
     it('copies theme assets then site assets, with the site winning collisions', async () => {
+        // views/assets point at the site's own `theme/` layer (what the core.js
+        // probe resolves them to — see core.test.js for the probe itself). Paths
+        // are absolute so `cpy`'s dest is unambiguous under a symlinked tmpdir.
         await run({
             folders: {
                 config: path.join(tmpRoot, 'config'),
                 pages: path.join(tmpRoot, 'pages'),
-                views: path.join(tmpRoot, 'views'),
-                assets: path.join(tmpRoot, 'assets'),
+                views: path.join(tmpRoot, 'theme', 'views'),
+                assets: path.join(tmpRoot, 'theme', 'assets'),
                 dist: path.join(tmpRoot, 'public'),
                 plugins: path.join(tmpRoot, 'src/plugins')
             }
