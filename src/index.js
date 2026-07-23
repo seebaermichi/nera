@@ -27,14 +27,15 @@ const run = async (settings = defaultSettings) => {
 
     // Assets layer like views: theme first, site second, so a site file with
     // the same path overwrites the theme's (§2). A theme that ships no assets
-    // is fine — copyFolder no-ops on a missing source. The theme pass reads no
-    // .neraignore of its own (copyFolder derives it from the source's parent,
-    // which is the theme package, not the site), so the site's .neraignore
-    // stays authoritative and only filters the site pass (§2d).
+    // is fine — copyFolder no-ops on a missing source. The theme pass passes
+    // `null` so it is unfiltered — a theme package's payload is author-controlled
+    // and must not be dropped by anyone's .neraignore (§2d). The site pass reads
+    // the site's own .neraignore from the site root ('.'), so it keeps filtering
+    // the site's assets even though they now live under `theme/assets`.
     if (theme) {
-        await copyFolder(theme.assetsRoot, dist)
+        await copyFolder(theme.assetsRoot, dist, null)
     }
-    await copyFolder(assets, dist)
+    await copyFolder(assets, dist, '.')
 }
 
 export default run

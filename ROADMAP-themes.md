@@ -428,14 +428,15 @@ drop unused theme assets. Rejected: the benefit is disk space rather than
 correctness, and excluding an asset the theme's CSS references produces a silent
 404. Revisit only if a real site actually needs it.
 
-One implementation footgun to avoid: `getIgnoredFiles` derives its location from
-`path.dirname(sourceFolder)` (`render.js:36`), so calling `copyFolder` on the
-installed theme's `<pkg>/assets` as-is would read `<pkg>/.neraignore` and apply it
-to that pass — undocumented behaviour nobody asked for. Pass the ignore list in,
-or skip it for the theme pass. Note too that under the revised layout (§1b) the
-site's assets are `<site>/theme/assets`, so its `.neraignore` is read from
-`<site>/theme/` — settle the exact site-root-vs-`theme/` location during the
-refactor.
+**Settled 2026-07-23 (with the scaffold migration).** `copyFolder` gained an
+optional `ignoreBase` argument (`render.js`): the site assets pass passes the
+**site root** (`'.'`), so a site's `.neraignore` stays at the project root and
+keeps filtering its assets even though they moved to `<site>/theme/assets`; the
+theme pass passes `null`, so it is **unfiltered** — a theme package's payload is
+author-controlled via `files:` and must not be dropped by anyone's `.neraignore`.
+This both keeps the documented "`.neraignore` at the project root" contract and
+closes the footgun where the theme pass would otherwise read `<pkg>/.neraignore`
+off `path.dirname(sourceFolder)`. `watch-assets.js` reads from the site root too.
 
 ### 3. What else layers, and what doesn't — **DECIDED 2026-07-22**
 
@@ -747,8 +748,9 @@ yet exercised by an actual `npm update`.
   site's `theme/assets` wins a same-path collision)*
 - [ ] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
   it copied, and the theme's `main.css` still updates via `npm update`
-- [ ] The site's `.neraignore` filters its own assets, and a theme's assets are
-  copied whole *(location moves with the assets folder — §2d)*
+- [x] The site's `.neraignore` filters its own assets, and a theme's assets are
+  copied whole *(§2d settled: `.neraignore` stays at the site root; the theme
+  pass is unfiltered — verified in render.test.js and theme.test.js)*
 - [ ] A theme whose `nera.generator` range excludes the running generator fails the
   build with a clear message; a theme whose plugin `peerDependencies` are
   unsatisfied warns and renders *(§5 — not yet implemented)*

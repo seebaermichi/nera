@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
+import fssync from 'fs'
 import os from 'os'
 import { resolveTheme } from '../theme.js'
 import { createHtmlFiles } from '../render.js'
@@ -323,6 +324,22 @@ describe('run() with a theme (assets layering)', () => {
             'SITE shared'
         )
 
+        // §2d wiring: a site-root .neraignore excludes a site asset; the base
+        // theme ships its own .neraignore that must NOT filter its payload.
+        await fs.writeFile(
+            path.join(tmpRoot, 'theme', 'assets', 'css', 'skip.css'),
+            'SITE skip'
+        )
+        await fs.writeFile(path.join(tmpRoot, '.neraignore'), 'css/skip.css\n')
+        await fs.writeFile(
+            path.join(tmpRoot, 'base', 'assets', 'css', 'keep.css'),
+            'THEME keep'
+        )
+        await fs.writeFile(
+            path.join(tmpRoot, 'base', '.neraignore'),
+            'css/keep.css\n'
+        )
+
         process.chdir(tmpRoot)
     })
 
@@ -352,5 +369,27 @@ describe('run() with a theme (assets layering)', () => {
         expect(await read('main.css')).toBe('THEME main') // theme-only
         expect(await read('custom.css')).toBe('SITE custom') // site-only
         expect(await read('shared.css')).toBe('SITE shared') // site wins
+    })
+
+    it('honours the site-root .neraignore but leaves the theme pass unfiltered', async () => {
+        await run({
+            folders: {
+                config: path.join(tmpRoot, 'config'),
+                pages: path.join(tmpRoot, 'pages'),
+                views: path.join(tmpRoot, 'theme', 'views'),
+                assets: path.join(tmpRoot, 'theme', 'assets'),
+                dist: path.join(tmpRoot, 'public'),
+                plugins: path.join(tmpRoot, 'src/plugins')
+            }
+        })
+
+        const cssDir = path.join(tmpRoot, 'public', 'css')
+
+        // site asset dropped by the site's own .neraignore
+        expect(fssync.existsSync(path.join(cssDir, 'skip.css'))).toBe(false)
+        // theme payload copied whole — the theme's .neraignore does not filter it
+        expect(await fs.readFile(path.join(cssDir, 'keep.css'), 'utf8')).toBe(
+            'THEME keep'
+        )
     })
 })

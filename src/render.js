@@ -33,9 +33,18 @@ export function ignoreFiles(ignoreList, filePath, sourceRoot) {
     )
 }
 
-export const copyFolder = async (sourceFolder, targetFolder) => {
+// `ignoreBase` is the directory to read `.neraignore` from:
+//   - omitted → the source's parent (back-compat with the pre-theme layout,
+//     where `assets/` sat at the site root so its parent *was* the root)
+//   - a path → read `.neraignore` there (pass the site root so a site's ignore
+//     list keeps filtering its assets after they move under `theme/`, §2d)
+//   - null → skip ignore entirely, as the theme pass does: a theme package's
+//     payload is author-controlled (`files:`), so nobody's `.neraignore` filters it
+export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
     if (fssync.existsSync(sourceFolder)) {
-        const ignore = getIgnoredFiles(path.dirname(sourceFolder))
+        const base =
+            ignoreBase === undefined ? path.dirname(sourceFolder) : ignoreBase
+        const ignore = base === null ? [] : getIgnoredFiles(base)
 
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {

@@ -14,12 +14,16 @@ const sourceFolder = fs.existsSync('theme')
     : path.resolve('assets')
 const distFolder = path.resolve('public')
 
+// Read the site's .neraignore from the site root ('.'), matching the render
+// pipeline — it stays there even though assets now live under theme/assets.
+const initialCopy = () => copyFolder(sourceFolder, distFolder, '.')
+
 // Initial copy
-await copyFolder(sourceFolder, distFolder)
+await initialCopy()
 
 chokidar
     .watch(sourceFolder, { ignoreInitial: true })
     .on('all', async (event, filePath) => {
         console.log(`[watch-assets] ${event} → ${filePath}`)
-        await copyFolder(sourceFolder, distFolder)
+        await initialCopy()
     })
