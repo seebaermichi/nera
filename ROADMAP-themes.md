@@ -3,8 +3,23 @@
 **Status:** design settled (2026-07-22, sections 1–5, 7, 8; section 6 caching
 deferred). **Implementation in progress on `feat/themes-slice-1`.**
 
-Shipped so far, proven end to end against `@nera-static/theme-example`
-(`../nera-theme-example`, installed via a `file:` dependency):
+> **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
+> payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
+> `theme/` wrapper**, and a **site groups its own presentation under
+> `<site>/theme/`** (no more root `views/`/`assets/`). This **supersedes** the
+> original wrapper-in-package design that the rest of this file and the shipped
+> code were built on. Consequences:
+>
+> - It makes the generator change **breaking (major)**, not additive/minor — see
+>   Semver and Acceptance criteria, both revised below.
+> - **Slice 1 and Slice 2 as shipped, and the `@nera-static/theme-example` repo,
+>   still use the old `theme/` wrapper.** They must be refactored to the revised
+>   model. Do not treat the "Shipped" bullets below as matching the current
+>   design until that refactor lands.
+
+Shipped so far (against the **superseded** wrapper model — pending refactor),
+proven end to end against `@nera-static/theme-example` (`../nera-theme-example`,
+installed via a `file:` dependency):
 
 - **Slice 1** — layered view resolution: layouts and partials resolve through
   `[site, theme]`, site overrides per file (`render.js` `makeLayeredResolver` /
@@ -13,8 +28,9 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
   from `node_modules`, the plugin-loader prefix skip (§1d), and two-pass asset
   copy with the site winning collisions (§2).
 
-Still open: `config/theme.yaml` merge + `app.theme.config` exposure (§1c),
-compatibility checks (§5), caching (§6).
+Still open: **the §1b folder-layout refactor of the shipped code + theme repo**,
+`config/theme.yaml` merge + `app.theme.config` exposure (§1c), compatibility
+checks (§5), caching (§6).
 
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
@@ -113,19 +129,23 @@ a site-level fact like `lang` — so it belongs in the one config file every sit
 has. A bare name is expanded to `@nera-static/theme-<name>`, but the key accepts
 three forms:
 
-| value | resolves to (a **package root**) |
+| value | resolves to (a **theme root**) |
 |---|---|
 | `docs` | `@nera-static/theme-docs` |
 | `@acme/my-theme` — contains `/` or starts with `@` | verbatim package name |
-| `.` — starts with `.` | path relative to `process.cwd()` |
+| `./path/to/it` — starts with `.` | path relative to `process.cwd()` |
 
-Every form resolves to a **package root**, never to the payload directly. The
-payload always lives under the root's `theme/` wrapper (§1b), so resolution
-appends `theme/views`, `theme/assets`, `theme/config/theme.yaml` in all three
-cases. That symmetry is the point: local and npm themes resolve through the exact
-same join, so they cannot drift. Developing a theme in place therefore uses
-`theme: .` (payload at `<cwd>/theme/`, alongside the site's own `<cwd>/views/`);
-a private theme vendored into a subfolder uses `theme: ./path/to/it`.
+Every form resolves to a **theme root** whose `views/`, `assets/` and
+`config/theme.yaml` sit **directly** at that root — no `theme/` wrapper to
+append (§1b, revised 2026-07-23). The resolution chain is then
+`[<site>/theme, <resolved theme root>]`, first match wins per file, so the site's
+own `<site>/theme/` layer overrides the installed theme.
+
+Developing a theme in place no longer needs a `theme:` value at all: the site's
+own `<site>/theme/` **is** a theme, so you edit it directly. A `theme:` key names
+an *additional* base theme to layer under it — a published package (`docs`), or a
+local package directory whose `views/`/`assets/` sit at its root
+(`./path/to/it`).
 
 Accepting a full package name matters: short-form-only would make third-party
 themes impossible by construction, which is too large a limitation to bake in for
@@ -142,42 +162,71 @@ class of silent failure as the pre-4.3.0 async-hook bug. Error with an
 actionable message (`run: npm install @nera-static/theme-docs`) and exit
 non-zero.
 
-#### 1b. Package layout — payload under `theme/`
+#### 1b. Folder layout — package root is the theme root; the site groups its own under `theme/` — **REVISED 2026-07-23**
 
-The theme's payload lives in a `theme/` folder, not at the package root:
+> Supersedes the original design, in which the payload lived under an inner
+> `theme/` wrapper *inside the package* (`<pkg>/theme/views`). That produced a
+> redundant `theme/theme/` for packages and is dropped. The shipped code and the
+> `theme-example` repo still use the old wrapper and must be refactored.
+
+A theme **package** puts its payload directly at its **root** — a theme package
+contains nothing *but* the theme, so its root already is the theme root:
 
 ```
-# installed                              # local (in development, or private)
-node_modules/@nera-static/theme-docs/    <site>/
-  theme/                                   theme/
-    views/                                   views/
-    assets/                                  assets/
-    config/theme.yaml                        config/theme.yaml
-  package.json                             package.json
+node_modules/@nera-static/theme-docs/
+    views/
+    assets/
+    config/theme.yaml
+    package.json
 ```
 
-The wrapper folder is what makes the local case possible at all — at the package
-root, `views/` would collide with the site's own `views/`. With `theme/`, both
-cases have an identical shape, so there is one resolution chain and no branching:
-site `views/` → theme `theme/views/`, site `assets/` → theme `theme/assets/`.
-This mirrors the generator's existing dual discovery for plugins (`src/plugins/*`
-local, `@nera-static/*` from npm), and it means developing a theme against a real
-site no longer requires `npm link`.
+A **site** groups its *own* presentation under a single `theme/` folder, and no
+longer keeps `views/` or `assets/` at the root:
 
-It also separates payload from package furniture (README, tests, eslint config,
-`.github/`) and makes `files: ["theme"]` a single entry.
+```
+<site>/
+    theme/
+        views/         ← the site's own layouts/partials, and any overrides
+        assets/        ← the site's own css/js
+    pages/             ← content            (unchanged, at site root)
+    config/            ← app.yaml, theme.yaml, …  (unchanged, at site root)
+    public/            ← rendered output    (unchanged)
+    package.json
+```
+
+Resolution is the chain `[<site>/theme, <resolved theme root>]`, first match wins
+per file:
+
+- views: `<site>/theme/views/…` over `<pkg>/views/…`
+- assets: `<site>/theme/assets/…` over `<pkg>/assets/…`
+
+**Why the asymmetry** — site wraps its presentation in `theme/`, a package does
+not: a site has other top-level folders (`pages/`, `config/`, `public/`), so
+grouping presentation under `theme/` keeps it a distinct, overridable unit — and
+gives the site's own layer and an installed theme the identical `{views, assets}`
+shape the chain relies on. A package is *only* a theme, so a wrapper there would
+be `theme/theme/` for nothing.
+
+**This is a breaking change for existing sites.** Today a site's presentation is
+at root `views/`/`assets/`; this moves it to `<site>/theme/`. Existing sites need
+a one-time migration (`views/` → `theme/views/`, `assets/` → `theme/assets/`),
+`nera new` must scaffold the new shape, and `nera update`'s backup/restore lists
+(§7) change from `views`/`assets` to `theme/`. Hence **major**, not minor
+(Semver, revised). A transitional read-from-root fallback could soften the
+migration, but the decision is to move, not to keep both indefinitely.
 
 **Locating an installed theme on disk:** a theme has no JS entry point, so
-`import()` is not available. Resolve `<pkg>/package.json` and take its dirname.
-Theme packages must therefore either omit `exports` or explicitly include
-`"./package.json"` in it — a constraint for the theme-authoring contract, worth
-writing down before the first theme exists.
+`import()` is not available. Resolve `<pkg>/package.json` and take its dirname —
+that dirname is the theme root **directly** (nothing to append). Theme packages
+must therefore either omit `exports` or explicitly include `"./package.json"`,
+and ship `files: ["views", "assets", "config"]` (not `["theme"]`).
 
 #### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults
 
-The theme ships `theme/config/theme.yaml` containing real defaults; the site's
-`config/theme.yaml` is optional and deep-merges over it. Objects merge per key,
-arrays are replaced wholesale, the site wins at the leaf.
+The theme package ships `config/theme.yaml` (at its root) containing real
+defaults; the site's `config/theme.yaml` (at the site root — config stays out of
+`theme/`) is optional and deep-merges over it. Objects merge per key, arrays are
+replaced wholesale, the site wins at the leaf.
 
 ```yaml
 # <site>/config/theme.yaml — overrides two tokens, inherits the rest
@@ -241,7 +290,7 @@ Stated below in terms of CSS; 2c covers how it differs for JS.
 
 
 ```
-<site>/assets/css/custom.css        # new file, no theme counterpart
+<site>/theme/assets/css/custom.css        # new file, no theme counterpart
 ```
 
 The site's `custom.css` is loaded *after* the theme's `main.css`, so ordinary
@@ -278,8 +327,9 @@ pattern, one file further down.
 
 #### 2c. JavaScript: same mechanism, weaker escape hatch
 
-Everything in 2a applies unchanged to JS. The site adds `assets/js/custom.js`,
-does not override the theme's `main.js`, and gets it in via the same two routes —
+Everything in 2a applies unchanged to JS. The site adds
+`theme/assets/js/custom.js`, does not override the theme's `main.js`, and gets it
+in via the same two routes —
 an overridden `partials/scripts.pug`, or a theme-provided key. The seam pattern
 is the same: a `scripts.pug` before `</body>` that includes an empty
 `partials/scripts-extra.pug`. Nera has no bundler and no build step, so assets
@@ -317,7 +367,7 @@ an IIFE that fires on load, take it or leave it. A theme that instead ships
 the entry — ten lines — and compose the theme's own modules itself:
 
 ```js
-// <site>/assets/js/main.js  — overrides the theme's entry file, and only that
+// <site>/theme/assets/js/main.js  — overrides the theme's entry file, and only that
 import { initNav, initSearch } from './modules/nav.js'  // theme's, unmodified
 initNav({ sticky: false })
 // initSearch() deliberately not called
@@ -335,8 +385,8 @@ that auto-runs on import cannot be opted out of by a site that imports it.
 
 `.neraignore` exists so a site can keep *its own* junk out of `public/`: design
 sources, unoptimised originals, `.DS_Store`. A theme is a published package whose
-author already controls its payload through `files: ["theme"]`, so if a theme
-ships a file it is meant to be served.
+author already controls its payload through `files: ["views", "assets",
+"config"]`, so if a theme ships a file it is meant to be served.
 
 Decision: **no change.** The site's `.neraignore` filters the site's assets pass,
 exactly as today; the theme's pass is unfiltered.
@@ -348,23 +398,29 @@ correctness, and excluding an asset the theme's CSS references produces a silent
 
 One implementation footgun to avoid: `getIgnoredFiles` derives its location from
 `path.dirname(sourceFolder)` (`render.js:36`), so calling `copyFolder` on the
-theme root as-is would read `<pkg>/theme/.neraignore` and apply it to that pass —
-undocumented behaviour nobody asked for. Pass the ignore list in, or skip it for
-the theme pass.
+installed theme's `<pkg>/assets` as-is would read `<pkg>/.neraignore` and apply it
+to that pass — undocumented behaviour nobody asked for. Pass the ignore list in,
+or skip it for the theme pass. Note too that under the revised layout (§1b) the
+site's assets are `<site>/theme/assets`, so its `.neraignore` is read from
+`<site>/theme/` — settle the exact site-root-vs-`theme/` location during the
+refactor.
 
 ### 3. What else layers, and what doesn't — **DECIDED 2026-07-22**
 
 Settled as a consequence of 1–5 rather than on its own.
 
+Paths below are the **site side** (`<site>/theme/…`); the theme package provides
+each from its own root (`<pkg>/…`), per §1b.
+
 | Artifact | Layers? | Reasoning |
 |---|---|---|
-| `views/**/*.pug` | **yes**, per file | the core of this proposal |
-| `assets/` | **yes**, per file | same rule as views; token-based CSS is an authoring recommendation, not a mechanism (§2) |
-| `views/vendor/**` | **n/a** | a theme never ships it (§4); the site's copies are the only ones that exist |
-| `config/theme.yaml` | **yes**, deep-merged | the theme's defaults, overridden per key by the site (§1c) |
+| `theme/views/**/*.pug` | **yes**, per file | the core of this proposal |
+| `theme/assets/` | **yes**, per file | same rule as views; token-based CSS is an authoring recommendation, not a mechanism (§2) |
+| `theme/views/vendor/**` | **n/a** | a theme never ships it (§4); the site's copies are the only ones that exist |
+| `config/theme.yaml` | **yes**, deep-merged | the theme's defaults, overridden per key by the site (§1c); config stays at the site root, not under `theme/` |
 | `config/cms.yaml` | **yes** | if adopted, the editing schema is part of the theme |
 | `config/<plugin>.yaml` | **no** | `getConfig` reads the site's file wholesale; merging would change documented behaviour |
-| `pages/` | **no** | seed content, copied once at scaffold |
+| `pages/` | **no** | seed content, copied once at scaffold; stays at the site root |
 
 Note the deliberate asymmetry between the two `config/` rows: `theme.yaml` merges
 and `<plugin>.yaml` does not. The reasoning is in §1c — it is intentional, not an
@@ -380,7 +436,7 @@ not an update channel, and no plugin template could fit an arbitrary theme
 anyway. Its "already exists, skipping" behaviour is correct for a scaffolder:
 declining to clobber a file you have since edited is the right call.
 
-#### A theme must never ship `theme/views/vendor/`
+#### A theme must never ship `views/vendor/`
 
 This is a hard rule, not a preference.
 
@@ -514,8 +570,9 @@ touch themes.** A theme is an npm package; that is the entire point of the
 design, and duplicating the update path in the installer would only create a
 second way to get it wrong.
 
-Verified against `nera-installer/src/update.js` — all four things that could have
-broken this already work, with no installer change required:
+Verified against `nera-installer/src/update.js` — for the *old* root-`views/`
+layout, all four things that could have broken this worked with no installer
+change (the §1b revision changes this; see the revised note after the table):
 
 | Behaviour | Effect on a themed site |
 |---|---|
@@ -524,10 +581,13 @@ broken this already work, with no installer change required:
 | `assets/` backed up and restored | the site's assets survive |
 | `dependencies` merged `{...current, ...new}` (`update.js:251`) | the theme dependency survives |
 
-The `views/` exclusion deserves a note: its existing rationale ("a Nera site is a
-clone of the generator, so `views/layouts/layout.pug` is the user's own site
-layout") still holds under themes, and gets *stronger* — on a themed site
-`views/` contains nothing but deliberate overrides.
+**REVISED 2026-07-23:** under the §1b layout the site's presentation is
+`<site>/theme/` rather than root `views/`/`assets/`, so `update.js`'s hardcoded
+`views`/`assets` paths in its backup, restore and "don't update" lists must all
+change to `theme/`. That was true-as-written for the old layout; the installer
+now needs a matching change, so this section is no longer "no installer change
+required." The *rationale* still holds and gets stronger — on a themed site
+`theme/` contains nothing but the site's own layer and deliberate overrides.
 
 **One behaviour to pin down deliberately:** the final step is `npm install`, not
 `npm update` (`update.js:11`). With a lockfile present that respects the
@@ -581,15 +641,26 @@ this. The requirement it places on section 5 is only this: design the
 
 ---
 
-## Semver
+## Semver — **REVISED 2026-07-23**
 
-The generator change is **additive**: a site with no theme configured resolves
-exactly as today, from its own `views/` only. That makes it a **minor** bump,
-with no migration required.
+The layered *resolution* is additive, but the §1b folder move is not: relocating a
+site's presentation from root `views/`/`assets/` to `<site>/theme/` changes the
+layout every existing site depends on. That makes the generator change
+**breaking — major**, and it requires a one-time migration for existing sites
+(move `views/` → `theme/views/`, `assets/` → `theme/assets/`), plus matching
+changes to `nera new` (scaffold the new shape) and `nera update` (its `views`/
+`assets` path lists, §7).
 
-The installer gaining a `--theme` flag is likewise **minor** — and nearly free,
-since `create.js:28` already accepts a `repoUrl` option and clones-then-strips
-`.git`.
+> The original design was scoped as **minor / no migration**, on the assumption a
+> site kept root `views/`/`assets/` and a theme was purely additive. The §1b
+> revision trades that additivity for a single, consistent presentation layout.
+> A transitional "read `theme/` if present, else root" fallback could keep the
+> first release non-breaking and defer the migration — worth weighing when the
+> refactor is scheduled.
+
+The installer gaining a `--theme` flag is a separate, additive change — nearly
+free, since `create.js:28` already accepts a `repoUrl` option and
+clones-then-strips `.git`.
 
 ---
 
@@ -605,28 +676,38 @@ platform existing. It can ship first, on its own merits.
 
 ## Acceptance criteria
 
-Checked items are implemented and verified (test + end-to-end against
-`@nera-static/theme-example`).
+The `[x]` items below were implemented and verified against the **superseded**
+wrapper layout (§1b, pre-revision). **The §1b revision invalidates the folder
+paths in several of them**, so they are re-marked `[ ]` pending the refactor —
+the *mechanism* (layered resolution, per-file override, npm resolution, plugin
+skip) is proven and carries over; only the paths and the byte-identical
+assumption change.
 
-- [x] A site with no `theme:` configured renders byte-identically to today —
-  including when a `./theme` folder happens to exist
-- [x] A site with a theme renders layouts and partials from the theme package
-- [x] `theme: docs`, `theme: @acme/my-theme` and `theme: .` all resolve, and a
-  locally-developed theme behaves identically to an installed one
+- [ ] A site renders from `<site>/theme/` — a site with no `theme:` package
+  configured renders from its own `theme/` layer only *(revised: no longer "root
+  `views/`", no longer "byte-identical to today" — §1b makes this breaking)*
+- [ ] A themed site resolves layouts/partials through `[<site>/theme, <pkg>]`,
+  the package providing them from its root *(mechanism proven; path refactor
+  pending)*
+- [x] `theme: docs`, `theme: @acme/my-theme` and a local path all resolve, and a
+  local theme behaves identically to an installed one *(mechanism; resolver
+  target dir changes with §1b)*
 - [x] A `theme:` naming a package that is not installed fails loudly with an
   actionable message and a non-zero exit code — it does not render an unstyled site
 - [ ] A site `config/theme.yaml` setting one key inherits every other key from the
   theme's own defaults *(§1c — not yet implemented)*
-- [x] A file placed in the site's `views/` overrides the theme's copy of that file,
-  and only that file
+- [ ] A file placed in the site's `theme/views/` overrides the theme package's
+  copy of that file, and only that file *(mechanism proven; path is now
+  `theme/views/`)*
 - [ ] `npm update` of the theme package changes the rendered output for
   non-overridden files, and does not change it for overridden ones *(follows from
   the resolution model; not yet exercised by an actual `npm update`)*
-- [x] Assets from the theme reach `public/`, with site assets winning on conflict
-- [x] A site adding `assets/css/custom.css` with no theme counterpart gets it
-  copied, and the theme's `main.css` still updates via `npm update`
-- [x] The site's `.neraignore` filters its own assets exactly as today, and a
-  theme's assets are copied whole
+- [ ] Assets from the theme reach `public/`, with site assets winning on conflict
+  *(mechanism proven; theme assets now at `<pkg>/assets`, site at `theme/assets`)*
+- [ ] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
+  it copied, and the theme's `main.css` still updates via `npm update`
+- [ ] The site's `.neraignore` filters its own assets, and a theme's assets are
+  copied whole *(location moves with the assets folder — §2d)*
 - [ ] A theme whose `nera.generator` range excludes the running generator fails the
   build with a clear message; a theme whose plugin `peerDependencies` are
   unsatisfied warns and renders *(§5 — not yet implemented)*
