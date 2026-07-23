@@ -126,8 +126,16 @@ export async function getPluginsData(
         // project still loaded the real site's dependencies.
         const pkgJsonPath = path.resolve(process.cwd(), 'package.json')
         const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'))
-        const deps = Object.keys(pkgJson.dependencies || {}).filter((name) =>
-            name.startsWith('@nera-static/')
+        // Theme packages (@nera-static/theme-*) are dependencies too, but they
+        // have no JS entry point — import()ing one would fail and log a scary
+        // "❌ Failed to load npm plugin theme-…" on every build (§1d). Skip the
+        // prefix. This is sufficient on its own: the loader only ever considers
+        // @nera-static/ deps, so a third-party theme (a different scope) is
+        // never a candidate here and needs no exact-name skip.
+        const deps = Object.keys(pkgJson.dependencies || {}).filter(
+            (name) =>
+                name.startsWith('@nera-static/') &&
+                !name.startsWith('@nera-static/theme-')
         )
 
         for (const fullName of deps) {

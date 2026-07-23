@@ -101,11 +101,19 @@ a site-level fact like `lang` — so it belongs in the one config file every sit
 has. A bare name is expanded to `@nera-static/theme-<name>`, but the key accepts
 three forms:
 
-| value | resolves to |
+| value | resolves to (a **package root**) |
 |---|---|
 | `docs` | `@nera-static/theme-docs` |
 | `@acme/my-theme` — contains `/` or starts with `@` | verbatim package name |
-| `./theme` — starts with `.` | path relative to `process.cwd()` |
+| `.` — starts with `.` | path relative to `process.cwd()` |
+
+Every form resolves to a **package root**, never to the payload directly. The
+payload always lives under the root's `theme/` wrapper (§1b), so resolution
+appends `theme/views`, `theme/assets`, `theme/config/theme.yaml` in all three
+cases. That symmetry is the point: local and npm themes resolve through the exact
+same join, so they cannot drift. Developing a theme in place therefore uses
+`theme: .` (payload at `<cwd>/theme/`, alongside the site's own `<cwd>/views/`);
+a private theme vendored into a subfolder uses `theme: ./path/to/it`.
 
 Accepting a full package name matters: short-form-only would make third-party
 themes impossible by construction, which is too large a limitation to bake in for

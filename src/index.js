@@ -24,6 +24,16 @@ const run = async (settings = defaultSettings) => {
 
     await deleteFolder(dist)
     await createHtmlFiles(data, views, dist, theme)
+
+    // Assets layer like views: theme first, site second, so a site file with
+    // the same path overwrites the theme's (§2). A theme that ships no assets
+    // is fine — copyFolder no-ops on a missing source. The theme pass reads no
+    // .neraignore of its own (copyFolder derives it from the source's parent,
+    // which is the theme package, not the site), so the site's .neraignore
+    // stays authoritative and only filters the site pass (§2d).
+    if (theme) {
+        await copyFolder(theme.assetsRoot, dist)
+    }
     await copyFolder(assets, dist)
 }
 
