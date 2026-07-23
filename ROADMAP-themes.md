@@ -1,8 +1,20 @@
 # Roadmap — installable, updatable themes
 
-**Status:** design settled, nothing implemented. Written 2026-07-22; sections
-1–5, 7 and 8 decided the same day. Section 6 (caching) is an implementation
-detail, deliberately deferred to the implementation branch.
+**Status:** design settled (2026-07-22, sections 1–5, 7, 8; section 6 caching
+deferred). **Implementation in progress on `feat/themes-slice-1`.**
+
+Shipped so far, proven end to end against `@nera-static/theme-example`
+(`../nera-theme-example`, installed via a `file:` dependency):
+
+- **Slice 1** — layered view resolution: layouts and partials resolve through
+  `[site, theme]`, site overrides per file (`render.js` `makeLayeredResolver` /
+  `resolveEntry`; `theme.js` `resolveTheme`).
+- **Slice 2** — themes as real npm packages: bare-name and `@scope` resolution
+  from `node_modules`, the plugin-loader prefix skip (§1d), and two-pass asset
+  copy with the site winning collisions (§2).
+
+Still open: `config/theme.yaml` merge + `app.theme.config` exposure (§1c),
+compatibility checks (§5), caching (§6).
 
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
@@ -192,14 +204,17 @@ as keys no theme author could ever use.
 
 #### 1d. Plugin-loader skip
 
-Do both, belt and braces:
+**Shipped (slice 2): a single prefix skip is sufficient.** The original plan was
+belt-and-braces — skip the configured package by exact name *and* skip the
+`@nera-static/theme-*` prefix. Implementation showed the exact-name skip is moot:
+the plugin loader only ever considers dependencies under `@nera-static/`
+(`setup-plugins.js:129`), so a third-party theme in another scope is never a
+candidate for loading in the first place, and the only theme that can collide is
+one matching the `@nera-static/theme-*` prefix. Skipping that prefix is therefore
+complete on its own, and needs no knowledge of which theme is configured.
 
-- skip the resolved theme package by exact name — catches a third-party theme
-  that does not follow the `theme-` convention
-- skip any `@nera-static/theme-*` prefix — catches a stray or unused theme
-  dependency that is not the configured one
-
-Neither should produce a `❌ Failed to load npm plugin` line.
+Verified end to end: an installed `@nera-static/theme-example` produces
+`0 loaded, 0 failed` with no `❌ Failed to load npm plugin` line.
 
 #### 1e. A theme is not a plugin
 
@@ -590,26 +605,31 @@ platform existing. It can ship first, on its own merits.
 
 ## Acceptance criteria
 
-- A site with no `theme:` configured renders byte-identically to today — including
-  when a `./theme` folder happens to exist
-- A site with a theme renders layouts and partials from the theme package
-- `theme: docs`, `theme: @acme/my-theme` and `theme: ./theme` all resolve, and a
+Checked items are implemented and verified (test + end-to-end against
+`@nera-static/theme-example`).
+
+- [x] A site with no `theme:` configured renders byte-identically to today —
+  including when a `./theme` folder happens to exist
+- [x] A site with a theme renders layouts and partials from the theme package
+- [x] `theme: docs`, `theme: @acme/my-theme` and `theme: .` all resolve, and a
   locally-developed theme behaves identically to an installed one
-- A `theme:` naming a package that is not installed fails loudly with an
+- [x] A `theme:` naming a package that is not installed fails loudly with an
   actionable message and a non-zero exit code — it does not render an unstyled site
-- A site `config/theme.yaml` setting one key inherits every other key from the
-  theme's own defaults
-- A file placed in the site's `views/` overrides the theme's copy of that file,
+- [ ] A site `config/theme.yaml` setting one key inherits every other key from the
+  theme's own defaults *(§1c — not yet implemented)*
+- [x] A file placed in the site's `views/` overrides the theme's copy of that file,
   and only that file
-- `npm update` of the theme package changes the rendered output for
-  non-overridden files, and does not change it for overridden ones
-- Assets from the theme reach `public/`, with site assets winning on conflict
-- A site adding `assets/css/custom.css` with no theme counterpart gets it copied,
-  and the theme's `main.css` still updates via `npm update`
-- The site's `.neraignore` filters its own assets exactly as today, and a theme's
-  assets are copied whole
-- A theme whose `nera.generator` range excludes the running generator fails the
+- [ ] `npm update` of the theme package changes the rendered output for
+  non-overridden files, and does not change it for overridden ones *(follows from
+  the resolution model; not yet exercised by an actual `npm update`)*
+- [x] Assets from the theme reach `public/`, with site assets winning on conflict
+- [x] A site adding `assets/css/custom.css` with no theme counterpart gets it
+  copied, and the theme's `main.css` still updates via `npm update`
+- [x] The site's `.neraignore` filters its own assets exactly as today, and a
+  theme's assets are copied whole
+- [ ] A theme whose `nera.generator` range excludes the running generator fails the
   build with a clear message; a theme whose plugin `peerDependencies` are
-  unsatisfied warns and renders
-- No `❌ Failed to load npm plugin` line appears for the theme package
-- Build time for `nera-website` does not regress measurably
+  unsatisfied warns and renders *(§5 — not yet implemented)*
+- [x] No `❌ Failed to load npm plugin` line appears for the theme package
+- [ ] Build time for `nera-website` does not regress measurably *(§6 — needs a
+  baseline before caching work)*
