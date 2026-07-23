@@ -221,6 +221,27 @@ that dirname is the theme root **directly** (nothing to append). Theme packages
 must therefore either omit `exports` or explicitly include `"./package.json"`,
 and ship `files: ["views", "assets", "config"]` (not `["theme"]`).
 
+> **NOTE — deprecated root fallback (generator concern). DECIDED 2026-07-23.**
+>
+> To avoid a hard break, the generator resolves the site's own presentation root
+> by **probing**: if `<site>/theme/` exists, use `<site>/theme/{views,assets}`;
+> **otherwise fall back to the legacy root `<site>/views` and `<site>/assets`**.
+> The legacy root is treated exactly as the site's own layer would be — it is the
+> first element of the resolution chain `[<site>/theme-or-root, <installed theme>]`,
+> so a legacy site that also installs a theme package still overrides it per file.
+>
+> **The root layout is deprecated, not removed.** When the generator falls back
+> to root `views/`/`assets/`, it emits a one-time deprecation warning pointing to
+> the migration (`views/` → `theme/views/`, `assets/` → `theme/assets/`). It is
+> removed in a later major once sites have had time to move.
+>
+> This is what keeps the **introducing** release non-breaking (see Semver): an
+> existing site with no `theme/` folder renders exactly as today. An explicit
+> `folders:` block in `app.yaml` still wins over the probe, as it does now.
+>
+> This lives entirely in the generator's folder resolution (`core.js`
+> `loadAppData` / `defaultSettings`); the installer is not involved.
+
 #### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults
 
 The theme package ships `config/theme.yaml` (at its root) containing real
@@ -583,11 +604,13 @@ change (the §1b revision changes this; see the revised note after the table):
 
 **REVISED 2026-07-23:** under the §1b layout the site's presentation is
 `<site>/theme/` rather than root `views/`/`assets/`, so `update.js`'s hardcoded
-`views`/`assets` paths in its backup, restore and "don't update" lists must all
-change to `theme/`. That was true-as-written for the old layout; the installer
-now needs a matching change, so this section is no longer "no installer change
-required." The *rationale* still holds and gets stronger — on a themed site
-`theme/` contains nothing but the site's own layer and deliberate overrides.
+`views`/`assets` paths in its backup, restore and "don't update" lists need
+updating. During the deprecation window (Semver) a site may have **either**
+layout, so the installer should back up/restore whichever exists — root
+`views/`+`assets/` **or** `theme/` — and switch fully to `theme/` when the root
+fallback is removed at the later major. So this section is no longer "no installer
+change required." The *rationale* still holds and gets stronger — on a themed
+site `theme/` contains nothing but the site's own layer and deliberate overrides.
 
 **One behaviour to pin down deliberately:** the final step is `npm install`, not
 `npm update` (`update.js:11`). With a lockfile present that respects the
@@ -643,20 +666,19 @@ this. The requirement it places on section 5 is only this: design the
 
 ## Semver — **REVISED 2026-07-23**
 
-The layered *resolution* is additive, but the §1b folder move is not: relocating a
-site's presentation from root `views/`/`assets/` to `<site>/theme/` changes the
-layout every existing site depends on. That makes the generator change
-**breaking — major**, and it requires a one-time migration for existing sites
-(move `views/` → `theme/views/`, `assets/` → `theme/assets/`), plus matching
-changes to `nera new` (scaffold the new shape) and `nera update` (its `views`/
-`assets` path lists, §7).
+The layered *resolution* is additive. The §1b folder move would be breaking on its
+own — but the **deprecated root fallback** (§1b note) keeps the introducing
+release **non-breaking (minor)**: a site with no `theme/` folder falls back to
+root `views/`/`assets/` and renders exactly as today, with a deprecation warning.
+New and migrated sites use `<site>/theme/`.
 
-> The original design was scoped as **minor / no migration**, on the assumption a
-> site kept root `views/`/`assets/` and a theme was purely additive. The §1b
-> revision trades that additivity for a single, consistent presentation layout.
-> A transitional "read `theme/` if present, else root" fallback could keep the
-> first release non-breaking and defer the migration — worth weighing when the
-> refactor is scheduled.
+The break is therefore **deferred**, not avoided: a **later major** removes the
+root fallback. At that point existing sites must have migrated (`views/` →
+`theme/views/`, `assets/` → `theme/assets/`), and `nera new` scaffolds the new
+shape while `nera update` handles its `views`/`assets` path lists (§7). Sequencing:
+
+- **minor** — introduce `<site>/theme/` resolution + the deprecated root fallback
+- **major** (later) — remove the fallback; require `<site>/theme/`
 
 The installer gaining a `--theme` flag is a separate, additive change — nearly
 free, since `create.js:28` already accepts a `repoUrl` option and
@@ -683,10 +705,11 @@ the *mechanism* (layered resolution, per-file override, npm resolution, plugin
 skip) is proven and carries over; only the paths and the byte-identical
 assumption change.
 
-- [ ] A site renders from `<site>/theme/` — a site with no `theme:` package
-  configured renders from its own `theme/` layer only *(revised: no longer "root
-  `views/`", no longer "byte-identical to today" — §1b makes this breaking)*
-- [ ] A themed site resolves layouts/partials through `[<site>/theme, <pkg>]`,
+- [ ] A site renders from `<site>/theme/` when that folder exists; a site with
+  neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
+  and renders **byte-identically to today**, with a one-time deprecation warning
+  *(§1b root fallback — the non-breaking path)*
+- [ ] A themed site resolves layouts/partials through `[<site>/theme-or-root, <pkg>]`,
   the package providing them from its root *(mechanism proven; path refactor
   pending)*
 - [x] `theme: docs`, `theme: @acme/my-theme` and a local path all resolve, and a
