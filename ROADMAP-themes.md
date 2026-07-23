@@ -43,6 +43,15 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
 Still open: `config/theme.yaml` merge + `app.theme.config` exposure (§1c),
 compatibility checks (§5), caching (§6).
 
+**Deliberately not migrated yet: `nera-website`.** The docs site carries its own
+vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
+so moving its `views/`/`assets/` to `theme/` would render an empty site. It can
+only migrate *after* the theme-aware generator is merged to `main` and released,
+via `nera update` (which replaces its vendored `src/`) followed by the folder
+move — decided 2026-07-23 rather than couple the dogfood site to unreleased
+generator code. It renders fine today and emits no deprecation warning (its 4.4.0
+generator has none).
+
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
 
