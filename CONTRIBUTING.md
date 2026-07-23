@@ -201,7 +201,7 @@ Before submitting a PR:
 
 ## 🙋 Need Help?
 
--   Check open [Issues](https://github.com/YOUR_USERNAME/nera/issues)
+-   Check open [Issues](https://github.com/seebaermichi/nera/issues)
 -   Or open a new issue with questions, feature requests, or bug reports
 
 ---
