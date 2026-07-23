@@ -31,7 +31,6 @@ npm start
 
 ## Directory and file structure
 ```
-|-- assets/
 |-- config/
     |-- app.yaml
 |-- pages/
@@ -42,12 +41,14 @@ npm start
     |-- index.js
     |-- render.js
     |-- setup-plugins.js
-|-- views/
+|-- theme/
+    |-- assets/
+    |-- views/
 |-- index.js
 ```
 
 ### Assets
-Are all CSS, JavaScript, font and image files which are used on your website. During the render process all assets are copied to the `public` directory.
+Are all CSS, JavaScript, font and image files which are used on your website. They live in `theme/assets/`, and during the render process all assets are copied to the `public` directory.
 
 ### Config
 Here you can define global settings for your website. All the global settings should got to the `config/app.yaml`. Like lang, name, etc. They will be available in the `data.app` object within source or plugin files or as `app` object within the view files.
@@ -63,7 +64,7 @@ The `src` folder also includes the `plugins` folder. In it you would place addit
 Have a look at the current [collection of available plugins](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md).
 
 ### Views
-In the views directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.  
+In the `theme/views` directory you put all the layout files. We use [pug](https://pugjs.org/api/getting-started.html) as a templating framework.  
 In addition to the content of the markdown file there is also more data available. There is one `app` object, which includes all the properties from the `config/app.yaml` file. The other object is the `meta` object. Where `app` includes data relevant or usable on every page the `meta` object only includes data for the page itself. Therefore it includes by default all the properties and values you define in the meta section of the markdown file. In addition it includes  
 
 __`createdAt`__  
