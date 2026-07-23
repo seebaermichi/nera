@@ -190,6 +190,78 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
     })
 })
 
+describe('createHtmlFiles resolves extends across the chain', () => {
+    let tmpRoot, siteViews, themeViews, publicDir
+
+    // A page template (views/pages/home.pug) extends a base shell
+    // (views/layouts/base.pug) that includes a partial. The site overrides only
+    // the partial. This exercises the `extends` resolution path — distinct from
+    // `include` — through the layered resolver, plus a cross-chain override
+    // reached via extends.
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        siteViews = path.join(tmpRoot, 'views')
+        themeViews = path.join(tmpRoot, 'theme', 'views')
+        publicDir = path.join(tmpRoot, 'public')
+
+        await fs.mkdir(path.join(themeViews, 'layouts'), { recursive: true })
+        await fs.mkdir(path.join(themeViews, 'pages'), { recursive: true })
+        await fs.mkdir(path.join(themeViews, 'partials'), { recursive: true })
+        await fs.mkdir(path.join(siteViews, 'partials'), { recursive: true })
+
+        await fs.writeFile(
+            path.join(themeViews, 'layouts', 'base.pug'),
+            'html\n  body\n    include ../partials/header.pug\n    main\n      block content'
+        )
+        await fs.writeFile(
+            path.join(themeViews, 'pages', 'home.pug'),
+            'extends ../layouts/base.pug\n\nblock content\n  p PAGE home'
+        )
+        await fs.writeFile(
+            path.join(themeViews, 'partials', 'header.pug'),
+            'h1 THEME header'
+        )
+        await fs.writeFile(
+            path.join(siteViews, 'partials', 'header.pug'),
+            'h1 SITE header'
+        )
+    })
+
+    afterEach(async () => {
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    it('extends a theme base and honours a site partial override', async () => {
+        await createHtmlFiles(
+            {
+                app: {},
+                pagesData: [
+                    {
+                        content: '',
+                        meta: {
+                            layout: 'pages/home.pug',
+                            dirname: '/',
+                            filename: 'index.html'
+                        }
+                    }
+                ]
+            },
+            siteViews,
+            publicDir,
+            { viewsRoot: themeViews }
+        )
+
+        const html = await fs.readFile(
+            path.join(publicDir, 'index.html'),
+            'utf8'
+        )
+
+        expect(html).toContain('PAGE home') // block filled → extends resolved
+        expect(html).toContain('SITE header') // partial overridden via extends
+        expect(html).not.toContain('THEME header')
+    })
+})
+
 describe('run() with a theme (assets layering)', () => {
     let tmpRoot, prevCwd
 
