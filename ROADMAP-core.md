@@ -197,8 +197,13 @@ preserve.
    the installer's scaffolding/update roles folded in; `nera update` →
    npm-update + `--migrate` legacy-clone conversion; `dev` orchestrated in code
    (vite + chokidar, lazily imported) instead of the `concurrently` npm script.
-3. **`@nera-static/validate`** — the validator library over `core` (platform
-   M1.2), and the `nera validate` subcommand delegating to it.
+3. **`@nera-static/validate`** ✅ (shipped 1.0.0, `nera-validate/`) — the
+   validator library over `core` (platform M1.2): `validateSite({ cwd })` returns
+   structured `{file,line,severity,rule,message}`, resolving layouts/includes via
+   the canonical resolver imported from `core` (no mirror). Checks layout
+   present/resolves (theme-aware), includes/extends resolve, YAML parses, theme
+   resolves. Ships a `nera-validate` bin; the `nera validate` subcommand delegates
+   to it.
 4. **Migrate `nera-website`** to `@nera-static/core`; update deployment/README
    docs; **deprecate `@nera-static/installer`**; refresh memory.
 
