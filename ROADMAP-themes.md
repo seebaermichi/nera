@@ -1,7 +1,9 @@
 # Roadmap — installable, updatable themes
 
 **Status:** design settled (2026-07-22, sections 1–5, 7, 8; section 6 caching
-deferred). **Implementation in progress on `feat/themes-slice-1`.**
+deferred). **Implementation in progress on `feat/themes-slice-1`** — slices 1–2,
+§1b, §2d, and §1c (config merge + `app.theme` exposure) have landed; §5
+compatibility checks and §6 caching remain.
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
@@ -39,9 +41,20 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
   *not* born deprecated. `src/watch-assets.js` and the installer's test fixture
   follow. This stays **minor**: the deprecated root fallback still covers every
   unmigrated site out there.
+- **§1c `config/theme.yaml` merge + `app.theme.config` exposure** — the theme
+  package's `config/theme.yaml` defaults deep-merge with the site's optional
+  `config/theme.yaml` (objects per key, arrays replaced wholesale, site wins at
+  the leaf), and the result is exposed to templates as
+  `app.theme = { name, package, config }` (`theme.js` `resolveTheme` /
+  `deepMerge`; attached in the pipeline in `src/index.js`). Additive — a
+  themeless site gets no `app.theme` and is unaffected; a missing site
+  `config/theme.yaml` inherits every default. Proven end to end against
+  `@nera-static/theme-example` (file: install): `theme: example` +
+  a site `config/theme.yaml` overriding `colors.primary` rendered
+  `app.theme.config.colors.primary` = the site value while `label` fell through
+  to the theme's own default.
 
-Still open: `config/theme.yaml` merge + `app.theme.config` exposure (§1c),
-compatibility checks (§5), caching (§6).
+Still open: compatibility checks (§5), caching (§6).
 
 **Deliberately not migrated yet: `nera-website`.** The docs site carries its own
 vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
@@ -262,7 +275,17 @@ and ship `files: ["views", "assets", "config"]` (not `["theme"]`).
 > This lives entirely in the generator's folder resolution (`core.js`
 > `loadAppData` / `defaultSettings`); the installer is not involved.
 
-#### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults
+#### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults — **SHIPPED 2026-07-23**
+
+> **Landed 2026-07-23.** `theme.js` `resolveTheme` now returns a `config` field —
+> the theme root's `config/theme.yaml` deep-merged with the site's optional
+> `config/theme.yaml` via `deepMerge` (objects per key, arrays replaced, site
+> wins at the leaf; pure and synchronous, tolerant of either file being absent or
+> malformed). `src/index.js` attaches `app.theme = { name, package, config }`
+> right after resolution, before the plugin pass, so it threads through the app
+> object like `lang`/`name`. Covered by `deepMerge` unit tests, `resolveTheme`
+> fixture tests, and a `run()` e2e; validated against `@nera-static/theme-example`
+> as above.
 
 The theme package ships `config/theme.yaml` (at its root) containing real
 defaults; the site's `config/theme.yaml` (at the site root — config stays out of
@@ -727,8 +750,8 @@ The `[x]` items below are implemented and verified against the **revised** §1b
 layout (the refactor landed 2026-07-23): the theme payload sits at the package
 root, the site groups its presentation under `<site>/theme/`, and a deprecated
 root fallback keeps existing sites byte-identical. The remaining `[ ]` items are
-genuinely unimplemented (§1c config merge, §5 compatibility, §6 caching) or not
-yet exercised by an actual `npm update`.
+genuinely unimplemented (§5 compatibility, §6 caching) or not yet exercised by an
+actual `npm update`.
 
 - [x] A site renders from `<site>/theme/` when that folder exists; a site with
   neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
@@ -743,8 +766,11 @@ yet exercised by an actual `npm update`.
   package root directly — §1b refactor landed)*
 - [x] A `theme:` naming a package that is not installed fails loudly with an
   actionable message and a non-zero exit code — it does not render an unstyled site
-- [ ] A site `config/theme.yaml` setting one key inherits every other key from the
-  theme's own defaults *(§1c — not yet implemented)*
+- [x] A site `config/theme.yaml` setting one key inherits every other key from the
+  theme's own defaults, exposed to templates as `app.theme.config` *(§1c —
+  verified e2e against `@nera-static/theme-example`: a site override of
+  `colors.primary` won while `label` fell through to the theme default; unit +
+  fixture + `run()` tests cover the merge semantics)*
 - [x] A file placed in the site's `theme/views/` overrides the theme package's
   copy of that file, and only that file *(verified e2e: a site
   `theme/views/partials/header.pug` won while the layout and footer fell through
