@@ -1,7 +1,7 @@
 import { loadAppData, getPagesData, defaultSettings } from './core.js'
 import { getPluginsData } from './setup-plugins.js'
 import { copyFolder, deleteFolder, createHtmlFiles } from './render.js'
-import { resolveTheme } from './theme.js'
+import { resolveTheme, checkThemeCompatibility } from './theme.js'
 
 const run = async (settings = defaultSettings) => {
     let data = loadAppData(settings)
@@ -9,6 +9,14 @@ const run = async (settings = defaultSettings) => {
     // Discover the configured theme (ROADMAP-themes.md §1). Null when no
     // `theme:` key is set, in which case render behaves exactly as before.
     const theme = resolveTheme({ app: data.app })
+
+    // Verify the theme's compatibility declarations before doing any work (§5):
+    // a nera.generator range that excludes THIS generator fails the build (a
+    // newer theme may use an app.* key or behaviour that does not exist here),
+    // while an unsatisfied plugin peerDependency only warns (the plugin still
+    // renders correct markup; the theme just may lack CSS for it). Synchronous;
+    // a theme declaring neither field, or a themeless site, is unaffected.
+    checkThemeCompatibility(theme)
 
     // Expose the theme to templates as one namespaced object (§1c), so a layout
     // reads `app.theme.config.colors.primary`. `config` is the theme's own

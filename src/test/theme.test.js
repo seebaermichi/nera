@@ -1,9 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
-import { resolveTheme, deepMerge } from '../theme.js'
+import {
+    resolveTheme,
+    deepMerge,
+    checkThemeCompatibility,
+    readGeneratorVersion
+} from '../theme.js'
 import { createHtmlFiles } from '../render.js'
 import run from '../index.js'
 
@@ -508,6 +514,256 @@ describe('run() with a theme (assets layering)', () => {
         expect(await fs.readFile(path.join(cssDir, 'keep.css'), 'utf8')).toBe(
             'THEME keep'
         )
+    })
+})
+
+describe('checkThemeCompatibility (§5)', () => {
+    let tmpRoot, themeRoot
+
+    // A theme root is just a folder with a package.json declaring compatibility;
+    // checkThemeCompatibility only reads `theme.root` and `theme.name`, so the
+    // fixtures stay minimal.
+    const writeThemePkg = (obj) =>
+        fs.writeFile(
+            path.join(themeRoot, 'package.json'),
+            JSON.stringify(obj)
+        )
+
+    const themeObj = () => ({ name: '@nera-static/theme-x', root: themeRoot })
+
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        themeRoot = path.join(tmpRoot, 'theme-pkg')
+        await fs.mkdir(themeRoot, { recursive: true })
+        // The site needs a package.json for createRequire's base (peer lookups).
+        await fs.writeFile(
+            path.join(tmpRoot, 'package.json'),
+            JSON.stringify({ name: 'site' })
+        )
+    })
+
+    afterEach(async () => {
+        vi.restoreAllMocks()
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    // Install a fake plugin into the site's node_modules at a given version, so
+    // the peer check can resolve its package.json exactly as it would in a real
+    // site (resolved from cwd).
+    const installPlugin = async (name, version) => {
+        const pkgDir = path.join(tmpRoot, 'node_modules', ...name.split('/'))
+        await fs.mkdir(pkgDir, { recursive: true })
+        await fs.writeFile(
+            path.join(pkgDir, 'package.json'),
+            JSON.stringify({ name, version })
+        )
+    }
+
+    describe('generator compatibility (fails the build)', () => {
+        it('passes when the running generator satisfies nera.generator', async () => {
+            await writeThemePkg({ nera: { generator: '>=4.0.0' } })
+            expect(() =>
+                checkThemeCompatibility(themeObj(), {
+                    cwd: tmpRoot,
+                    generatorVersion: '4.6.0'
+                })
+            ).not.toThrow()
+        })
+
+        it('throws with an actionable message when the range excludes this generator', async () => {
+            await writeThemePkg({ nera: { generator: '>=5.0.0' } })
+            expect(() =>
+                checkThemeCompatibility(themeObj(), {
+                    cwd: tmpRoot,
+                    generatorVersion: '4.6.0'
+                })
+            ).toThrow(/requires Nera generator >=5\.0\.0.*4\.6\.0/s)
+        })
+
+        it('does nothing when the theme declares no nera.generator', async () => {
+            await writeThemePkg({ name: '@nera-static/theme-x' })
+            expect(() =>
+                checkThemeCompatibility(themeObj(), {
+                    cwd: tmpRoot,
+                    generatorVersion: '4.6.0'
+                })
+            ).not.toThrow()
+        })
+
+        it('warns and continues on a malformed range rather than bricking the build', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({ nera: { generator: 'not-a-range' } })
+            expect(() =>
+                checkThemeCompatibility(themeObj(), {
+                    cwd: tmpRoot,
+                    generatorVersion: '4.6.0'
+                })
+            ).not.toThrow()
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringMatching(/invalid nera\.generator range/)
+            )
+        })
+
+        it('passes when the theme has no package.json at all (bare local folder)', async () => {
+            // No package.json written to themeRoot.
+            expect(() =>
+                checkThemeCompatibility(themeObj(), {
+                    cwd: tmpRoot,
+                    generatorVersion: '4.6.0'
+                })
+            ).not.toThrow()
+        })
+    })
+
+    describe('plugin compatibility (warns, never fails)', () => {
+        it('warns when an installed plugin is outside the declared range', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+            })
+            await installPlugin('@nera-static/plugin-tags', '4.1.0')
+
+            checkThemeCompatibility(themeObj(), {
+                cwd: tmpRoot,
+                generatorVersion: '4.6.0'
+            })
+
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringMatching(
+                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s
+                )
+            )
+        })
+
+        it('is silent when the installed plugin satisfies the range', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+            })
+            await installPlugin('@nera-static/plugin-tags', '3.2.0')
+
+            checkThemeCompatibility(themeObj(), {
+                cwd: tmpRoot,
+                generatorVersion: '4.6.0'
+            })
+
+            expect(warn).not.toHaveBeenCalled()
+        })
+
+        it('is silent when the plugin is not installed at all', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+            })
+            // plugin-tags deliberately not installed
+
+            checkThemeCompatibility(themeObj(), {
+                cwd: tmpRoot,
+                generatorVersion: '4.6.0'
+            })
+
+            expect(warn).not.toHaveBeenCalled()
+        })
+
+        it('does nothing when the theme declares no peerDependencies', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({ name: '@nera-static/theme-x' })
+
+            checkThemeCompatibility(themeObj(), {
+                cwd: tmpRoot,
+                generatorVersion: '4.6.0'
+            })
+
+            expect(warn).not.toHaveBeenCalled()
+        })
+    })
+
+    it('is a no-op for a themeless site (null theme)', () => {
+        expect(() => checkThemeCompatibility(null)).not.toThrow()
+    })
+})
+
+describe('readGeneratorVersion (§5)', () => {
+    it('reads the generator\'s own package.json version, not the site\'s', () => {
+        // The version the generator reports about itself is the ground truth for
+        // the compat check; it must come from the generator's manifest so the
+        // §5 "trap" (site version ≠ generator version after §8) cannot bite.
+        const genPkgPath = path.resolve(
+            path.dirname(fileURLToPath(import.meta.url)),
+            '..',
+            '..',
+            'package.json'
+        )
+        const version = JSON.parse(fssync.readFileSync(genPkgPath, 'utf-8'))
+            .version
+        expect(readGeneratorVersion()).toBe(version)
+    })
+})
+
+describe('run() with an incompatible theme (§5, generator check fails the build)', () => {
+    let tmpRoot, prevCwd
+
+    // A local base theme whose nera.generator range excludes any real generator
+    // must abort run() — proving the check fires through the real pipeline with
+    // the generator's own version, and produces a rejected promise (→ non-zero
+    // exit via index.js's uncaught rejection, the same path as a missing theme).
+    beforeEach(async () => {
+        prevCwd = process.cwd()
+        tmpRoot = createTempPath()
+
+        const mk = (...p) =>
+            fs.mkdir(path.join(tmpRoot, ...p), { recursive: true })
+        await mk('config')
+        await mk('pages')
+        await mk('theme', 'views')
+        await mk('base', 'views', 'layouts')
+
+        await fs.writeFile(
+            path.join(tmpRoot, 'package.json'),
+            JSON.stringify({ name: 'demo', private: true })
+        )
+        // The base theme demands a generator far beyond anything real.
+        await fs.writeFile(
+            path.join(tmpRoot, 'base', 'package.json'),
+            JSON.stringify({
+                name: 'base',
+                nera: { generator: '>=999.0.0' }
+            })
+        )
+        await fs.writeFile(
+            path.join(tmpRoot, 'config', 'app.yaml'),
+            'name: Demo\nlang: en\ntheme: ./base'
+        )
+        await fs.writeFile(
+            path.join(tmpRoot, 'pages', 'index.md'),
+            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n'
+        )
+        await fs.writeFile(
+            path.join(tmpRoot, 'base', 'views', 'layouts', 'layout.pug'),
+            'doctype html\nhtml\n  body\n    != content'
+        )
+
+        process.chdir(tmpRoot)
+    })
+
+    afterEach(async () => {
+        process.chdir(prevCwd)
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    it('aborts the build with an actionable message', async () => {
+        await expect(
+            run({
+                folders: {
+                    config: path.join(tmpRoot, 'config'),
+                    pages: path.join(tmpRoot, 'pages'),
+                    views: path.join(tmpRoot, 'theme', 'views'),
+                    assets: path.join(tmpRoot, 'theme', 'assets'),
+                    dist: path.join(tmpRoot, 'public'),
+                    plugins: path.join(tmpRoot, 'src/plugins')
+                }
+            })
+        ).rejects.toThrow(/requires Nera generator >=999\.0\.0/)
     })
 })
 
