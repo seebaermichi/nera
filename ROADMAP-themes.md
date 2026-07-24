@@ -5,10 +5,10 @@
 exposure), §5 (compatibility declarations), and §6 (caching — profiled 2026-07-24,
 template cache shipped) have all landed. The theme feature is versioned as
 generator **4.6.0** (bumped with §5 — the range `@nera-static/theme-example`
-already targets, `nera.generator: ">=4.6.0"`). All acceptance criteria that can be
-verified without an actual `npm update` are met; the branch is ready to merge to
-`main` and release once the remaining `npm update`-lifecycle criteria are exercised
-(see Acceptance criteria).
+already targets, `nera.generator: ">=4.6.0"`). **Every acceptance criterion is
+met** — including the two `npm update` lifecycle checks, exercised 2026-07-24 with
+a real install→update dry-run. The branch is ready to merge to `main` and release
+4.6.0.
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
@@ -828,9 +828,10 @@ layout (the refactor landed 2026-07-23): the theme payload sits at the package
 root, the site groups its presentation under `<site>/theme/`, and a deprecated
 root fallback keeps existing sites byte-identical, §5 compatibility landed
 2026-07-24 (generator 4.6.0), and §6 caching was profiled and its template cache
-shipped the same day. The only remaining `[ ]` items are the two that need an
-actual `npm update` to exercise — the mechanism they test is already proven by the
-resolution model, but no live `npm update` has been run against them yet.
+shipped the same day. **Every criterion is now met** — the two `npm update`
+lifecycle items were exercised 2026-07-24 with a real install→update dry-run (a
+`@demo/theme` v1→v2 installed as successive packed tarballs, the node_modules swap
+a registry `npm update` produces).
 
 - [x] A site renders from `<site>/theme/` when that folder exists; a site with
   neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
@@ -854,14 +855,20 @@ resolution model, but no live `npm update` has been run against them yet.
   copy of that file, and only that file *(verified e2e: a site
   `theme/views/partials/header.pug` won while the layout and footer fell through
   to the theme package)*
-- [ ] `npm update` of the theme package changes the rendered output for
-  non-overridden files, and does not change it for overridden ones *(follows from
-  the resolution model; not yet exercised by an actual `npm update`)*
+- [x] `npm update` of the theme package changes the rendered output for
+  non-overridden files, and does not change it for overridden ones *(verified
+  2026-07-24 via an install→update dry-run: a theme bumped v1→v2 and reinstalled as
+  a packed tarball updated the non-overridden `footer.pug` and `main.css` in the
+  output, while the site's overridden `header.pug` stayed the site's version — even
+  though the theme changed its own `header.pug` too)*
 - [x] Assets from the theme reach `public/`, with site assets winning on conflict
   *(verified: theme `main.css` reached `public/css/`; unit test confirms the
   site's `theme/assets` wins a same-path collision)*
-- [ ] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
-  it copied, and the theme's `main.css` still updates via `npm update`
+- [x] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
+  it copied, and the theme's `main.css` still updates via `npm update` *(verified
+  2026-07-24 in the same dry-run: the site-only `custom.css` was copied to
+  `public/css/` on both builds, while the un-overridden theme `main.css` updated
+  v1→v2)*
 - [x] The site's `.neraignore` filters its own assets, and a theme's assets are
   copied whole *(§2d settled: `.neraignore` stays at the site root; the theme
   pass is unfiltered — verified in render.test.js and theme.test.js)*
