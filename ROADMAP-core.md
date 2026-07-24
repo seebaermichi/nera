@@ -204,8 +204,14 @@ preserve.
    present/resolves (theme-aware), includes/extends resolve, YAML parses, theme
    resolves. Ships a `nera-validate` bin; the `nera validate` subcommand delegates
    to it.
-4. **Migrate `nera-website`** to `@nera-static/core`; update deployment/README
-   docs; **deprecate `@nera-static/installer`**; refresh memory.
+4. **Migrate `nera-website`** ✅ — now depends on `@nera-static/nera` instead of
+   vendoring `src/`; the migrated build is **byte-for-byte identical** (129 files)
+   and `nera validate` reports it clean. Local plugin `tutorials-list` moved to
+   `plugins/` (`folders.plugins: ./plugins`); `deploy.yml` renders with
+   `npm run build`. `@nera-static/installer` **deprecated** (README banner; the
+   `npm deprecate` call is a maintainer step). Trilingual docs (getting-started,
+   CLI, deployment, two tutorials — en/de/es) rewritten to the `nera` CLI flow.
+   Held from push until the packages publish (`npm ci` needs them on npm).
 
 ## Open questions
 
@@ -236,9 +242,23 @@ Still open:
 
 ## Acceptance criteria
 
-- [ ] `@nera-static/core` published; `import { run, makeLayeredResolver, resolveEntry } from '@nera-static/core'` works; the generator's own `nera-website` fresh build is byte-identical to before the extraction.
-- [ ] `@nera-static/validate` imports the resolver from `core` (no mirror) and flags a deliberately-broken page (missing/unresolvable layout, unresolved include, bad YAML) with structured `{file,line,severity,message,rule}`.
-- [ ] `npx @nera-static/nera new mysite` scaffolds a thin site whose `package.json` has one dependency; `cd mysite && nera build` renders `public/`; `nera dev` serves with live reload.
-- [ ] `nera update` migrates an existing cloned site to the thin model and leaves it building.
-- [ ] `nera validate` on the scaffold exits 0; on a broken page exits 1 with the structured errors.
-- [ ] `@nera-static/installer` deprecated on npm, pointing at `@nera-static/nera`.
+Code-complete and verified locally (via `npm link` / real-path copies, since the
+packages are not on npm yet); the `published`/`npm deprecate` halves are the
+maintainer's bootstrap steps.
+
+- [x] `import { run, makeLayeredResolver, resolveEntry } from '@nera-static/core'` works; `nera-website`'s build via `core` is **byte-identical** to the vendored-engine build (129 files). *(publish: pending bootstrap)*
+- [x] `@nera-static/validate` imports the resolver from `core` (no mirror) and flags a deliberately-broken page (missing/unresolvable layout, unresolved include, bad YAML) with structured `{file,line,severity,message,rule}`.
+- [x] `npx @nera-static/nera new mysite` scaffolds a thin site whose `package.json` has one dependency; `nera build` renders `public/`. (`nera dev` live reload implemented; not automatically tested.)
+- [x] `nera update --migrate` converts a cloned site to the thin model (adds the dep, rewrites scripts, moves `src/plugins`, removes `src/`) and installs — covered by tests.
+- [x] `nera validate` on the scaffold exits 0; on a broken page exits 1 with the structured errors.
+- [x] `@nera-static/installer` deprecated (README banner pointing at `@nera-static/nera`). *(the `npm deprecate` registry call is a maintainer step)*
+
+## Maintainer bootstrap (post-code, in order)
+
+The three new packages are not on npm yet, so their first publish is manual, and
+**order matters** (each depends on the one before):
+
+1. Create GitHub remotes: `seebaermichi/nera-cli`, `seebaermichi/nera-validate` (the generator repo already exists).
+2. Bootstrap-publish, in order: **`@nera-static/core`** → **`@nera-static/validate`** → **`@nera-static/nera`** (npm has nothing to attach a Trusted Publisher to until the first publish; CI OIDC takes over afterward).
+3. In `nera-website`: `npm install` (regenerate the lockfile against the now-published deps), commit the lockfile, then push — its CI `npm ci` then works.
+4. `npm deprecate @nera-static/installer "use @nera-static/nera"`.
