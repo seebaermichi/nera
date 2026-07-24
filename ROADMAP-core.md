@@ -185,38 +185,49 @@ preserve.
 
 ## Slice plan (each slice is independently reviewable)
 
-0. **This spec** + the pointer from `ROADMAP-themes.md §8`. ← sign-off gate
-1. **`@nera-static/core`** — publishable engine identity: scoped name, `files`
-   scoped to `src/`+`index.js`, export the resolver helpers + a site-model loader.
-   Additive; the generator still renders as today. Parity tests pin resolver
-   behaviour (theme override, absolute vs relative includes, `.pug` auto-append).
-2. **`@nera-static/nera`** — the CLI: `new`/`build`/`dev`/`serve`/`update` over
-   `core`; the thin scaffold template; fold in the installer's logic; `nera update`
-   → npm-update + legacy-clone migration; orchestrate `dev` (vite + watch +
-   re-render) in code instead of the `concurrently` npm incantation.
+0. **This spec** + the pointer from `ROADMAP-themes.md §8`. ← sign-off gate ✅
+1. **`@nera-static/core`** ✅ (shipped 4.9.0/4.9.1) — publishable engine identity:
+   scoped name, `files` scoped to `src/*.js`+`index.js`, exported resolver
+   (`src/resolve.js`) + site-model loader (`src/site-model.js`) + API barrel.
+   Additive; the generator renders as today. Parity tests pin resolver behaviour.
+   4.9.1 fixed plugin discovery to `@nera-static/plugin-*` only (the thin model
+   depends on `@nera-static/nera` directly).
+2. **`@nera-static/nera`** ✅ (shipped 1.0.0, `nera-cli/`) — the CLI:
+   `new`/`build`/`dev`/`serve`/`update` over `core`; the thin scaffold template;
+   the installer's scaffolding/update roles folded in; `nera update` →
+   npm-update + `--migrate` legacy-clone conversion; `dev` orchestrated in code
+   (vite + chokidar, lazily imported) instead of the `concurrently` npm script.
 3. **`@nera-static/validate`** — the validator library over `core` (platform
    M1.2), and the `nera validate` subcommand delegating to it.
 4. **Migrate `nera-website`** to `@nera-static/core`; update deployment/README
    docs; **deprecate `@nera-static/installer`**; refresh memory.
 
-## Open questions (decide during the slice they touch)
+## Open questions
 
-- **Home for a site's own local plugins.** `setup-plugins.js` today discovers
-  `src/plugins/*/index.js` *and* `@nera-static/*` dependencies. A thin site has no
-  `src/`. Proposal: discover local plugins from a site-root `plugins/` folder
-  (configurable via `folders.plugins`, which already exists), resolved by `core`.
-  Confirm in Slice 1/2.
-- **Where the scaffold template lives.** Proposal: `template/` inside
-  `@nera-static/nera` (scaffolding is the CLI's job). Alternative: a dedicated
-  `create-nera` package — rejected as more packages for no developer benefit.
-- **`dev` orchestration.** The current `dev` is a `concurrently` script chaining
-  `render` + `vite` + `watch-assets` + `nodemon`. In the CLI it becomes code that
-  runs an initial `run()`, starts vite over `public/`, and re-renders on
-  `pages/`/`theme/`/`config/` changes. Keep vite/nodemon/chokidar as CLI deps.
+Resolved in Slice 2:
+
+- **Home for a site's own local plugins → `plugins/` at the site root.** A thin
+  site has no `src/`. Local plugins live in a site-root `plugins/` folder,
+  selected via `folders.plugins` in `config/app.yaml` (already merged by
+  `loadAppData`, so no `core` change was needed — `core`'s default stays
+  `./src/plugins` for back-compat). `nera update --migrate` moves a legacy
+  `src/plugins/` → `plugins/` and tells the user to set `folders.plugins`.
+- **Scaffold template → `template/` inside `@nera-static/nera`.** Shipped in the
+  package `files`; `nera new` copies it and renames `_gitignore` → `.gitignore`
+  (npm strips a literal `.gitignore` from tarballs). A `create-nera` package was
+  rejected as more packages for no developer benefit.
+- **`dev` orchestration → code, not `concurrently`.** `nera dev` runs an initial
+  `run()`, serves `public/` with Vite, and re-renders on `pages/`/`config/`/
+  `theme/` changes (coalescing mid-build changes). Vite and chokidar are CLI
+  runtime deps, imported **lazily** so loading the modules (and the tests) does
+  not require them.
+
+Still open:
+
 - **`nera add`** (plugin/theme wiring) is explicitly **later** — listed in the
   command surface for shape, not built in this milestone.
-- **`core` vs `nera` version coupling.** Whether the CLI pins `core` with a caret
-  or an exact range, and whether `nera update` bumps them together.
+- **`core` vs `nera` version coupling.** The CLI pins `core` with a caret
+  (`^4.9.0`); whether `nera update` should bump the pair in lockstep is TBD.
 
 ## Acceptance criteria
 
