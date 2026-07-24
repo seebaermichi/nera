@@ -71,6 +71,35 @@ describe('copyFolder', () => {
         expect(files).not.toContain('ignore.txt')
         expect(files).not.toContain(path.join('css', 'ignore.css'))
     })
+
+    // §2d: the theme asset pass passes `null` so a theme package's payload is
+    // never filtered by a .neraignore — author-controlled via `files:`.
+    it('skips the ignore list entirely when ignoreBase is null', async () => {
+        await copyFolder(srcDir, publicDir, null)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        expect(files).toContain('include.txt')
+        expect(files).toContain('ignore.txt') // not filtered
+        expect(files).toContain(path.join('css', 'ignore.css'))
+    })
+
+    // §2d: the site asset pass passes the site root, so a site's .neraignore
+    // keeps filtering its assets even though they moved under theme/assets and
+    // the source folder's parent is no longer the site root.
+    it('reads .neraignore from an explicit base directory', async () => {
+        const base = path.join(tmpRoot, 'siteroot')
+        await fs.mkdir(base, { recursive: true })
+        await fs.writeFile(path.join(base, '.neraignore'), 'include.txt\n')
+
+        await copyFolder(srcDir, publicDir, base)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        // the explicit base's list wins; the parent's src/.neraignore is not read
+        expect(files).not.toContain('include.txt')
+        expect(files).toContain('ignore.txt')
+    })
 })
 
 describe('createHtmlFiles', () => {

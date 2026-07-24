@@ -6,6 +6,61 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.6.0] - 2026-07-24
+
+The installable, updatable theme system (`ROADMAP-themes.md`). A theme is an npm
+package (`@nera-static/theme-<name>`) that provides base `views/` and `assets/`;
+the site overrides them per file, WordPress child-theme style, and everything it
+has not overridden keeps updating via `npm update`. All additive — a site with no
+`theme:` key and no `theme/` folder renders byte-identically to 4.5.0.
+
+### Added
+
+-   layered view resolution: a `theme:` key in `config/app.yaml` (`docs` →
+    `@nera-static/theme-docs`, a verbatim `@scope/name`, or a local `./path`)
+    layers the resolved theme under the site's own presentation. Layouts and
+    partials resolve through `[<site>/theme-or-root, <theme pkg>]`, first match
+    wins per file, via Pug's `resolve` hook — so a site file overrides only that
+    file. A `theme:` that cannot be resolved fails the build with an actionable
+    message and a non-zero exit rather than rendering an unstyled site
+-   the `theme/` folder layout: a site groups its own presentation under
+    `<site>/theme/{views,assets}`; a theme package puts its payload at its own
+    root. `core.js` probes for `<site>/theme/` and, when absent, falls back to the
+    legacy root `views/`/`assets/` with a one-time deprecation warning — so every
+    existing site keeps rendering unchanged
+-   `config/theme.yaml` merge: the theme's `config/theme.yaml` defaults
+    deep-merge with the site's optional `config/theme.yaml` (objects per key,
+    arrays replaced, site wins at the leaf), exposed to templates as
+    `app.theme = { name, package, config }`
+-   two-pass asset copy (theme first, site second, site wins on collision); the
+    site's `.neraignore` filters only the site pass, the theme pass is unfiltered
+-   **compatibility declarations** (§5). A theme declares what it supports, and a
+    mismatch is surfaced at build time rather than rendering subtly-broken output:
+    -   `nera.generator` — a plain semver range in the theme package's
+        `package.json`, checked against the version the generator reports about
+        **itself** (`readGeneratorVersion`, from the generator's own manifest — not
+        the site's `version`, a clone-flow artefact). A range that excludes the
+        running generator **fails the build** with a clear message and a non-zero
+        exit, because a theme built against a newer generator may use an `app.*`
+        key or resolution behaviour that does not exist here
+    -   `peerDependencies` — the plugins whose BEM class names the theme's CSS
+        targets. A plugin installed at a version outside the declared range only
+        **warns** (the plugin still renders correct markup; the theme just may lack
+        CSS for it), and a plugin the site does not install is silent
+-   `semver` is now a runtime dependency, used only for the compatibility checks
+
+### Changed
+
+-   the generator's own scaffold moved its presentation from root `views/`/
+    `assets/` to `theme/views/`/`theme/assets/`, so `nera new` produces
+    `theme/`-shaped sites that are not born deprecated
+-   `createHtmlFiles` now compiles each distinct layout once per build and reuses
+    the compiled template across every page that uses it, instead of re-running
+    `pug.compileFile` per page. Sites share a handful of layouts, so this is a
+    large win (~72× on 69 pages, ~500× on 500 in profiling) and takes a 69-page
+    render from ~225 ms to ~22 ms. Output is byte-identical; the cache is a plain
+    `Map` scoped to each build, with no process-global state
+
 ## [4.5.0] - 2026-07-22
 
 ### Fixed

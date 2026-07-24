@@ -44,14 +44,38 @@ export const loadAppData = (settings = defaultSettings) => {
     //
     // `folders.config` is the exception it has to be — app.yaml is found
     // through it, so it can only come from `settings`.
-    appConfig = {
-        ...appConfig,
-        folders: {
-            ...(settings?.folders || defaultSettings.folders),
-            ...(appConfig.folders || {}),
-            config: (settings?.folders || defaultSettings.folders).config,
-        },
+    const baseFolders = settings?.folders || defaultSettings.folders
+    const folders = {
+        ...baseFolders,
+        ...(appConfig.folders || {}),
+        config: baseFolders.config,
     }
+
+    // Revised theme layout (ROADMAP-themes.md §1b, 2026-07-23): a site groups
+    // its own presentation under `theme/{views,assets}`. When that folder
+    // exists — and views/assets are still the defaults nobody overrode — point
+    // them there. Otherwise render from the legacy root `views/`/`assets/`,
+    // which is DEPRECATED but kept so an existing site renders byte-identically
+    // to today, with a one-time deprecation warning. An explicit `folders:`
+    // block in app.yaml always wins over this probe. This runs once per build
+    // (loadAppData is called once), so the warning is naturally one-time.
+    const themeFolderExists = fs.existsSync('theme')
+    const usesDefault = (key) =>
+        folders[key] === defaultSettings.folders[key] &&
+        appConfig.folders?.[key] === undefined
+
+    if (themeFolderExists) {
+        if (usesDefault('views')) folders.views = './theme/views'
+        if (usesDefault('assets')) folders.assets = './theme/assets'
+    } else if (usesDefault('views')) {
+        console.warn(
+            '⚠️ Nera: rendering from the legacy root `views/`/`assets/` is ' +
+                'deprecated — move your presentation to `theme/views/` and ' +
+                '`theme/assets/` (see ROADMAP-themes.md §1b).'
+        )
+    }
+
+    appConfig = { ...appConfig, folders }
 
     // Load pages directory with error handling
     try {

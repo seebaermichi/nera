@@ -1,6 +1,6 @@
 {
     "name": "nera",
-    "version": "4.5.0",
+    "version": "4.6.0",
     "description": "A simple static site generator",
     "main": "index.js",
     "scripts": {
@@ -43,6 +43,7 @@
         "pretty": "^2.0.0",
         "pug": "^3.0.2",
         "rimraf": "^6.0.1",
+        "semver": "^7.8.5",
         "yaml": "^2.4.1"
     },
     "devDependencies": {

@@ -37,7 +37,6 @@ npm run dev
 
 ```bash
 my-nera-site/
-├── assets/              # CSS, JS, images, fonts – copied to /public
 ├── config/
 │   └── app.yaml         # Global site config (name, lang, translations, etc.)
 ├── pages/               # Markdown content with frontmatter metadata
@@ -48,9 +47,18 @@ my-nera-site/
 │   ├── index.js
 │   ├── render.js
 │   └── setup-plugins.js
-├── views/               # Pug templates (layouts and partials)
+├── theme/               # Your site's presentation (layered over an installed theme)
+│   ├── assets/          # CSS, JS, images, fonts – copied to /public
+│   └── views/           # Pug templates (layouts and partials)
 └── .neraignore          # List of asset files or folders to ignore during render
 ```
+
+> **Presentation lives under `theme/`.** Your site's `theme/views/` and
+> `theme/assets/` are yours to edit; if you also set `theme: <name>` in
+> `config/app.yaml`, an installed theme package is layered *under* them and your
+> files override it per file. Sites created before this layout keep their
+> `views/`/`assets/` at the project root — that still works (with a deprecation
+> warning), but move them to `theme/views/` and `theme/assets/` when you can.
 
 ---
 
@@ -72,7 +80,7 @@ This content will be injected into the layout file defined above.
 
 ---
 
-## 🎨 Templates (`views/`)
+## 🎨 Templates (`theme/views/`)
 
 Nera uses [Pug](https://pugjs.org/) for layout rendering. You have access to:
 
@@ -157,14 +165,14 @@ This is especially useful when some plugins (like `plugin-search`) rely on metad
 
 ## 📁 Asset Handling
 
-All files in the `assets/` directory will be copied to `/public` during render. You can exclude files using `.neraignore`. Example:
+All files in the `theme/assets/` directory will be copied to `/public` during render. You can exclude files using a `.neraignore` at the project root. Example:
 
 ```
 ignore.txt
 css/dev-only.css
 ```
 
-Supports nested paths relative to `assets/`.
+Supports nested paths relative to `theme/assets/`.
 
 ---
 

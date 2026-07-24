@@ -1,8 +1,98 @@
 # Roadmap — installable, updatable themes
 
-**Status:** design settled, nothing implemented. Written 2026-07-22; sections
-1–5, 7 and 8 decided the same day. Section 6 (caching) is an implementation
-detail, deliberately deferred to the implementation branch.
+**Status:** design settled (2026-07-22) and **feature-complete on
+`feat/themes-slice-1`** — slices 1–2, §1b, §2d, §1c (config merge + `app.theme`
+exposure), §5 (compatibility declarations), and §6 (caching — profiled 2026-07-24,
+template cache shipped) have all landed. The theme feature is versioned as
+generator **4.6.0** (bumped with §5 — the range `@nera-static/theme-example`
+already targets, `nera.generator: ">=4.6.0"`). **Every acceptance criterion is
+met** — including the two `npm update` lifecycle checks, exercised 2026-07-24 with
+a real install→update dry-run. The branch is ready to merge to `main` and release
+4.6.0.
+
+> **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
+> payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
+> `theme/` wrapper**, and a **site groups its own presentation under
+> `<site>/theme/`** (no more root `views/`/`assets/`). This **supersedes** the
+> original wrapper-in-package design that the rest of this file and the shipped
+> code were built on. Consequences:
+>
+> - The folder move alone would be **breaking (major)**, but the **deprecated
+>   root fallback** (§1b note) keeps the introducing release **non-breaking
+>   (minor)** — see Semver and Acceptance criteria, both revised below.
+> - **The §1b refactor has now landed** (2026-07-23): `theme.js` drops the
+>   wrapper, `core.js` probes for `<site>/theme/` with a deprecated root
+>   fallback, and `@nera-static/theme-example` moved its payload to the package
+>   root. The "Shipped" bullets below now match the revised design.
+
+Shipped so far, proven end to end against `@nera-static/theme-example`
+(`../nera-theme-example`, installed via a `file:` dependency):
+
+- **Slice 1** — layered view resolution: layouts and partials resolve through
+  `[<site>/theme-or-root, <theme pkg>]`, site overrides per file (`render.js`
+  `makeLayeredResolver` / `resolveEntry`; `theme.js` `resolveTheme`).
+- **Slice 2** — themes as real npm packages: bare-name and `@scope` resolution
+  from `node_modules`, the plugin-loader prefix skip (§1d), and two-pass asset
+  copy with the site winning collisions (§2).
+- **§1b folder-layout refactor** — theme payload at the package root (no
+  wrapper); a site groups its own presentation under `<site>/theme/`, with a
+  probe in `core.js` (`loadAppData`) that falls back to the legacy root
+  `views/`/`assets/` — deprecated, with a one-time warning — so existing sites
+  render byte-identically. `nera-installer`'s `nera update` backs up/restores
+  whichever layout the site has.
+- **Generator scaffold migrated** — the generator's own presentation moved from
+  root `views/`/`assets/` to `theme/views/`/`theme/assets/`, so `nera new`
+  (which git-clones the generator) now produces `theme/`-shaped sites that are
+  *not* born deprecated. `src/watch-assets.js` and the installer's test fixture
+  follow. This stays **minor**: the deprecated root fallback still covers every
+  unmigrated site out there.
+- **§1c `config/theme.yaml` merge + `app.theme.config` exposure** — the theme
+  package's `config/theme.yaml` defaults deep-merge with the site's optional
+  `config/theme.yaml` (objects per key, arrays replaced wholesale, site wins at
+  the leaf), and the result is exposed to templates as
+  `app.theme = { name, package, config }` (`theme.js` `resolveTheme` /
+  `deepMerge`; attached in the pipeline in `src/index.js`). Additive — a
+  themeless site gets no `app.theme` and is unaffected; a missing site
+  `config/theme.yaml` inherits every default. Proven end to end against
+  `@nera-static/theme-example` (file: install): `theme: example` +
+  a site `config/theme.yaml` overriding `colors.primary` rendered
+  `app.theme.config.colors.primary` = the site value while `label` fell through
+  to the theme's own default.
+- **§5 compatibility declarations** — two mechanisms, two severities, both
+  synchronous and both no-ops for a theme (or site) that declares nothing. A
+  theme's `nera.generator` semver range is checked against the version the
+  generator reports about **itself** (`readGeneratorVersion`, read from the
+  generator's own `package.json`, *not* the site's `version`) and a mismatch
+  **fails the build** with a clear message and non-zero exit. A theme's
+  `peerDependencies` (the plugins its CSS targets) are checked against what the
+  site has installed, and a version outside the declared range only **warns** —
+  silent when the plugin is not installed at all. `checkThemeCompatibility` in
+  `theme.js`, called from `src/index.js` right after `resolveTheme`, before any
+  work. Proven end to end against `@nera-static/theme-example` (file: install):
+  its `nera.generator: ">=4.6.0"` builds under the 4.6.0 generator, fails cleanly
+  when checked against a simulated 4.5.0, and an injected `peerDependencies`
+  against a mismatched `plugin-tags@4` warned while `plugin-tags@3` was silent.
+  `semver` added as a runtime dependency for standard npm range semantics.
+- **§6 caching** — profiled on the branch (2026-07-24). The resolve hook proved
+  to be within noise (~1% at nera-website's 69 pages), so the build-time criterion
+  was already met; the dominant cost was `createHtmlFiles` recompiling the Pug tree
+  per page. A per-build, per-call template cache (`Map<entry, compiledFn>` in
+  `render.js`) now compiles each distinct layout once (~72× on 69 pages, ~500× on
+  500), theme-independent and byte-identical. No resolve-hook probe memoisation was
+  needed — the compile cache incidentally cut per-build `existsSync` to once per
+  layout. See §6 for the numbers.
+
+Nothing open — the design is fully implemented (only `npm update`-lifecycle
+acceptance checks remain to be exercised).
+
+**Deliberately not migrated yet: `nera-website`.** The docs site carries its own
+vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
+so moving its `views/`/`assets/` to `theme/` would render an empty site. It can
+only migrate *after* the theme-aware generator is merged to `main` and released,
+via `nera update` (which replaces its vendored `src/`) followed by the folder
+move — decided 2026-07-23 rather than couple the dogfood site to unreleased
+generator code. It renders fine today and emits no deprecation warning (its 4.4.0
+generator has none).
 
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
@@ -79,7 +169,8 @@ mechanism and it is confirmed.
 
 Sections marked **DECIDED** are settled; do not re-litigate them without a
 reason, and where a rejected alternative is recorded, it is recorded so it does
-not get re-proposed. Section 6 remains genuinely open.
+not get re-proposed. Section 6 (caching) was the last open section and is now
+measured and shipped.
 
 ### 1. Discovery — **DECIDED 2026-07-22**
 
@@ -101,11 +192,23 @@ a site-level fact like `lang` — so it belongs in the one config file every sit
 has. A bare name is expanded to `@nera-static/theme-<name>`, but the key accepts
 three forms:
 
-| value | resolves to |
+| value | resolves to (a **theme root**) |
 |---|---|
 | `docs` | `@nera-static/theme-docs` |
 | `@acme/my-theme` — contains `/` or starts with `@` | verbatim package name |
-| `./theme` — starts with `.` | path relative to `process.cwd()` |
+| `./path/to/it` — starts with `.` | path relative to `process.cwd()` |
+
+Every form resolves to a **theme root** whose `views/`, `assets/` and
+`config/theme.yaml` sit **directly** at that root — no `theme/` wrapper to
+append (§1b, revised 2026-07-23). The resolution chain is then
+`[<site>/theme, <resolved theme root>]`, first match wins per file, so the site's
+own `<site>/theme/` layer overrides the installed theme.
+
+Developing a theme in place no longer needs a `theme:` value at all: the site's
+own `<site>/theme/` **is** a theme, so you edit it directly. A `theme:` key names
+an *additional* base theme to layer under it — a published package (`docs`), or a
+local package directory whose `views/`/`assets/` sit at its root
+(`./path/to/it`).
 
 Accepting a full package name matters: short-form-only would make third-party
 themes impossible by construction, which is too large a limitation to bake in for
@@ -122,42 +225,102 @@ class of silent failure as the pre-4.3.0 async-hook bug. Error with an
 actionable message (`run: npm install @nera-static/theme-docs`) and exit
 non-zero.
 
-#### 1b. Package layout — payload under `theme/`
+#### 1b. Folder layout — package root is the theme root; the site groups its own under `theme/` — **REVISED 2026-07-23**
 
-The theme's payload lives in a `theme/` folder, not at the package root:
+> Supersedes the original design, in which the payload lived under an inner
+> `theme/` wrapper *inside the package* (`<pkg>/theme/views`). That produced a
+> redundant `theme/theme/` for packages and is dropped. The shipped code and the
+> `theme-example` repo still use the old wrapper and must be refactored.
+
+A theme **package** puts its payload directly at its **root** — a theme package
+contains nothing *but* the theme, so its root already is the theme root:
 
 ```
-# installed                              # local (in development, or private)
-node_modules/@nera-static/theme-docs/    <site>/
-  theme/                                   theme/
-    views/                                   views/
-    assets/                                  assets/
-    config/theme.yaml                        config/theme.yaml
-  package.json                             package.json
+node_modules/@nera-static/theme-docs/
+    views/
+    assets/
+    config/theme.yaml
+    package.json
 ```
 
-The wrapper folder is what makes the local case possible at all — at the package
-root, `views/` would collide with the site's own `views/`. With `theme/`, both
-cases have an identical shape, so there is one resolution chain and no branching:
-site `views/` → theme `theme/views/`, site `assets/` → theme `theme/assets/`.
-This mirrors the generator's existing dual discovery for plugins (`src/plugins/*`
-local, `@nera-static/*` from npm), and it means developing a theme against a real
-site no longer requires `npm link`.
+A **site** groups its *own* presentation under a single `theme/` folder, and no
+longer keeps `views/` or `assets/` at the root:
 
-It also separates payload from package furniture (README, tests, eslint config,
-`.github/`) and makes `files: ["theme"]` a single entry.
+```
+<site>/
+    theme/
+        views/         ← the site's own layouts/partials, and any overrides
+        assets/        ← the site's own css/js
+    pages/             ← content            (unchanged, at site root)
+    config/            ← app.yaml, theme.yaml, …  (unchanged, at site root)
+    public/            ← rendered output    (unchanged)
+    package.json
+```
+
+Resolution is the chain `[<site>/theme, <resolved theme root>]`, first match wins
+per file:
+
+- views: `<site>/theme/views/…` over `<pkg>/views/…`
+- assets: `<site>/theme/assets/…` over `<pkg>/assets/…`
+
+**Why the asymmetry** — site wraps its presentation in `theme/`, a package does
+not: a site has other top-level folders (`pages/`, `config/`, `public/`), so
+grouping presentation under `theme/` keeps it a distinct, overridable unit — and
+gives the site's own layer and an installed theme the identical `{views, assets}`
+shape the chain relies on. A package is *only* a theme, so a wrapper there would
+be `theme/theme/` for nothing.
+
+**This is a breaking change for existing sites.** Today a site's presentation is
+at root `views/`/`assets/`; this moves it to `<site>/theme/`. Existing sites need
+a one-time migration (`views/` → `theme/views/`, `assets/` → `theme/assets/`),
+`nera new` must scaffold the new shape, and `nera update`'s backup/restore lists
+(§7) change from `views`/`assets` to `theme/`. Hence **major**, not minor
+(Semver, revised). A transitional read-from-root fallback could soften the
+migration, but the decision is to move, not to keep both indefinitely.
 
 **Locating an installed theme on disk:** a theme has no JS entry point, so
-`import()` is not available. Resolve `<pkg>/package.json` and take its dirname.
-Theme packages must therefore either omit `exports` or explicitly include
-`"./package.json"` in it — a constraint for the theme-authoring contract, worth
-writing down before the first theme exists.
+`import()` is not available. Resolve `<pkg>/package.json` and take its dirname —
+that dirname is the theme root **directly** (nothing to append). Theme packages
+must therefore either omit `exports` or explicitly include `"./package.json"`,
+and ship `files: ["views", "assets", "config"]` (not `["theme"]`).
 
-#### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults
+> **NOTE — deprecated root fallback (generator concern). DECIDED 2026-07-23.**
+>
+> To avoid a hard break, the generator resolves the site's own presentation root
+> by **probing**: if `<site>/theme/` exists, use `<site>/theme/{views,assets}`;
+> **otherwise fall back to the legacy root `<site>/views` and `<site>/assets`**.
+> The legacy root is treated exactly as the site's own layer would be — it is the
+> first element of the resolution chain `[<site>/theme-or-root, <installed theme>]`,
+> so a legacy site that also installs a theme package still overrides it per file.
+>
+> **The root layout is deprecated, not removed.** When the generator falls back
+> to root `views/`/`assets/`, it emits a one-time deprecation warning pointing to
+> the migration (`views/` → `theme/views/`, `assets/` → `theme/assets/`). It is
+> removed in a later major once sites have had time to move.
+>
+> This is what keeps the **introducing** release non-breaking (see Semver): an
+> existing site with no `theme/` folder renders exactly as today. An explicit
+> `folders:` block in `app.yaml` still wins over the probe, as it does now.
+>
+> This lives entirely in the generator's folder resolution (`core.js`
+> `loadAppData` / `defaultSettings`); the installer is not involved.
 
-The theme ships `theme/config/theme.yaml` containing real defaults; the site's
-`config/theme.yaml` is optional and deep-merges over it. Objects merge per key,
-arrays are replaced wholesale, the site wins at the leaf.
+#### 1c. `config/theme.yaml` — optional, and **merged** with the theme's defaults — **SHIPPED 2026-07-23**
+
+> **Landed 2026-07-23.** `theme.js` `resolveTheme` now returns a `config` field —
+> the theme root's `config/theme.yaml` deep-merged with the site's optional
+> `config/theme.yaml` via `deepMerge` (objects per key, arrays replaced, site
+> wins at the leaf; pure and synchronous, tolerant of either file being absent or
+> malformed). `src/index.js` attaches `app.theme = { name, package, config }`
+> right after resolution, before the plugin pass, so it threads through the app
+> object like `lang`/`name`. Covered by `deepMerge` unit tests, `resolveTheme`
+> fixture tests, and a `run()` e2e; validated against `@nera-static/theme-example`
+> as above.
+
+The theme package ships `config/theme.yaml` (at its root) containing real
+defaults; the site's `config/theme.yaml` (at the site root — config stays out of
+`theme/`) is optional and deep-merges over it. Objects merge per key, arrays are
+replaced wholesale, the site wins at the leaf.
 
 ```yaml
 # <site>/config/theme.yaml — overrides two tokens, inherits the rest
@@ -184,14 +347,17 @@ as keys no theme author could ever use.
 
 #### 1d. Plugin-loader skip
 
-Do both, belt and braces:
+**Shipped (slice 2): a single prefix skip is sufficient.** The original plan was
+belt-and-braces — skip the configured package by exact name *and* skip the
+`@nera-static/theme-*` prefix. Implementation showed the exact-name skip is moot:
+the plugin loader only ever considers dependencies under `@nera-static/`
+(`setup-plugins.js:129`), so a third-party theme in another scope is never a
+candidate for loading in the first place, and the only theme that can collide is
+one matching the `@nera-static/theme-*` prefix. Skipping that prefix is therefore
+complete on its own, and needs no knowledge of which theme is configured.
 
-- skip the resolved theme package by exact name — catches a third-party theme
-  that does not follow the `theme-` convention
-- skip any `@nera-static/theme-*` prefix — catches a stray or unused theme
-  dependency that is not the configured one
-
-Neither should produce a `❌ Failed to load npm plugin` line.
+Verified end to end: an installed `@nera-static/theme-example` produces
+`0 loaded, 0 failed` with no `❌ Failed to load npm plugin` line.
 
 #### 1e. A theme is not a plugin
 
@@ -218,7 +384,7 @@ Stated below in terms of CSS; 2c covers how it differs for JS.
 
 
 ```
-<site>/assets/css/custom.css        # new file, no theme counterpart
+<site>/theme/assets/css/custom.css        # new file, no theme counterpart
 ```
 
 The site's `custom.css` is loaded *after* the theme's `main.css`, so ordinary
@@ -255,8 +421,9 @@ pattern, one file further down.
 
 #### 2c. JavaScript: same mechanism, weaker escape hatch
 
-Everything in 2a applies unchanged to JS. The site adds `assets/js/custom.js`,
-does not override the theme's `main.js`, and gets it in via the same two routes —
+Everything in 2a applies unchanged to JS. The site adds
+`theme/assets/js/custom.js`, does not override the theme's `main.js`, and gets it
+in via the same two routes —
 an overridden `partials/scripts.pug`, or a theme-provided key. The seam pattern
 is the same: a `scripts.pug` before `</body>` that includes an empty
 `partials/scripts-extra.pug`. Nera has no bundler and no build step, so assets
@@ -294,7 +461,7 @@ an IIFE that fires on load, take it or leave it. A theme that instead ships
 the entry — ten lines — and compose the theme's own modules itself:
 
 ```js
-// <site>/assets/js/main.js  — overrides the theme's entry file, and only that
+// <site>/theme/assets/js/main.js  — overrides the theme's entry file, and only that
 import { initNav, initSearch } from './modules/nav.js'  // theme's, unmodified
 initNav({ sticky: false })
 // initSearch() deliberately not called
@@ -312,8 +479,8 @@ that auto-runs on import cannot be opted out of by a site that imports it.
 
 `.neraignore` exists so a site can keep *its own* junk out of `public/`: design
 sources, unoptimised originals, `.DS_Store`. A theme is a published package whose
-author already controls its payload through `files: ["theme"]`, so if a theme
-ships a file it is meant to be served.
+author already controls its payload through `files: ["views", "assets",
+"config"]`, so if a theme ships a file it is meant to be served.
 
 Decision: **no change.** The site's `.neraignore` filters the site's assets pass,
 exactly as today; the theme's pass is unfiltered.
@@ -323,25 +490,32 @@ drop unused theme assets. Rejected: the benefit is disk space rather than
 correctness, and excluding an asset the theme's CSS references produces a silent
 404. Revisit only if a real site actually needs it.
 
-One implementation footgun to avoid: `getIgnoredFiles` derives its location from
-`path.dirname(sourceFolder)` (`render.js:36`), so calling `copyFolder` on the
-theme root as-is would read `<pkg>/theme/.neraignore` and apply it to that pass —
-undocumented behaviour nobody asked for. Pass the ignore list in, or skip it for
-the theme pass.
+**Settled 2026-07-23 (with the scaffold migration).** `copyFolder` gained an
+optional `ignoreBase` argument (`render.js`): the site assets pass passes the
+**site root** (`'.'`), so a site's `.neraignore` stays at the project root and
+keeps filtering its assets even though they moved to `<site>/theme/assets`; the
+theme pass passes `null`, so it is **unfiltered** — a theme package's payload is
+author-controlled via `files:` and must not be dropped by anyone's `.neraignore`.
+This both keeps the documented "`.neraignore` at the project root" contract and
+closes the footgun where the theme pass would otherwise read `<pkg>/.neraignore`
+off `path.dirname(sourceFolder)`. `watch-assets.js` reads from the site root too.
 
 ### 3. What else layers, and what doesn't — **DECIDED 2026-07-22**
 
 Settled as a consequence of 1–5 rather than on its own.
 
+Paths below are the **site side** (`<site>/theme/…`); the theme package provides
+each from its own root (`<pkg>/…`), per §1b.
+
 | Artifact | Layers? | Reasoning |
 |---|---|---|
-| `views/**/*.pug` | **yes**, per file | the core of this proposal |
-| `assets/` | **yes**, per file | same rule as views; token-based CSS is an authoring recommendation, not a mechanism (§2) |
-| `views/vendor/**` | **n/a** | a theme never ships it (§4); the site's copies are the only ones that exist |
-| `config/theme.yaml` | **yes**, deep-merged | the theme's defaults, overridden per key by the site (§1c) |
+| `theme/views/**/*.pug` | **yes**, per file | the core of this proposal |
+| `theme/assets/` | **yes**, per file | same rule as views; token-based CSS is an authoring recommendation, not a mechanism (§2) |
+| `theme/views/vendor/**` | **n/a** | a theme never ships it (§4); the site's copies are the only ones that exist |
+| `config/theme.yaml` | **yes**, deep-merged | the theme's defaults, overridden per key by the site (§1c); config stays at the site root, not under `theme/` |
 | `config/cms.yaml` | **yes** | if adopted, the editing schema is part of the theme |
 | `config/<plugin>.yaml` | **no** | `getConfig` reads the site's file wholesale; merging would change documented behaviour |
-| `pages/` | **no** | seed content, copied once at scaffold |
+| `pages/` | **no** | seed content, copied once at scaffold; stays at the site root |
 
 Note the deliberate asymmetry between the two `config/` rows: `theme.yaml` merges
 and `<plugin>.yaml` does not. The reasoning is in §1c — it is intentional, not an
@@ -357,7 +531,7 @@ not an update channel, and no plugin template could fit an arbitrary theme
 anyway. Its "already exists, skipping" behaviour is correct for a scaffolder:
 declining to clobber a file you have since edited is the right call.
 
-#### A theme must never ship `theme/views/vendor/`
+#### A theme must never ship `views/vendor/`
 
 This is a hard rule, not a preference.
 
@@ -390,7 +564,31 @@ site's `views/` — so you fork what you were actually rendering — remains wor
 having for the theme's **own** views. It is no longer entangled with plugins, and
 it is not a v1 blocker.
 
-### 5. Compatibility declarations — **DECIDED 2026-07-22**
+### 5. Compatibility declarations — **DECIDED 2026-07-22, SHIPPED 2026-07-24**
+
+> **Landed 2026-07-24 (generator 4.6.0).** `checkThemeCompatibility(theme)` in
+> `theme.js` runs from `src/index.js` immediately after `resolveTheme`, before any
+> rendering. The generator check throws (fail-loud, non-zero exit — the same path
+> as a missing theme); the plugin check `console.warn`s and never aborts. Both are
+> synchronous and both short-circuit when the field is absent, so a theme
+> declaring neither, or a themeless site, is untouched. `nera.generator` is
+> compared against `readGeneratorVersion()` — the generator's **own**
+> `package.json` version — deliberately *not* the site's `version` (the §5 trap
+> below). Ranges use `semver` (new runtime dependency) for standard npm semantics,
+> so the field moves verbatim into `peerDependencies` the day the generator is
+> published (§8). A malformed range warns and is ignored rather than bricking the
+> build. Covered by unit + `run()` e2e tests and proven against
+> `@nera-static/theme-example`.
+>
+> **The `nera update`-time check shipped separately in `@nera-static/installer`
+> 2.2.0** (2026-07-24). `nera update` is the moment the generator version
+> changes, so after the update it warns when the just-installed generator falls
+> outside an installed theme's `nera.generator` range — a **warning, not a
+> failure**, since this build-time check is the hard gate and the core update
+> itself is legitimate. It reads the version from the freshly cloned generator's
+> own `package.json` (not the site's — the same trap), scans the project's
+> dependencies for any package declaring `nera.generator` (no YAML parsing, no
+> `theme:` knowledge needed), and shares `semver` semantics with this check.
 
 A theme's CSS targets plugin BEM class names, and `CLAUDE.md` classifies those
 changes as **major**. So a theme must declare what it supports, and a mismatch
@@ -433,7 +631,8 @@ It needs a field the generator itself reads, e.g.:
 
 checked at build time by the generator, and at update time by `nera update`,
 which is the moment the generator version actually changes. Two mechanisms for
-two different things, each in the only place that can see them. To settle.
+two different things, each in the only place that can see them. **Both shipped**
+— build-time in generator 4.6.0, update-time in installer 2.2.0.
 
 #### Designing `nera.generator` to survive section 8
 
@@ -469,20 +668,51 @@ Same string. npm takes over enforcement, the generator's own check becomes
 duplicate work that can be deprecated whenever convenient, and every existing
 theme keeps working untouched.
 
-### 6. Caching — **OPEN**
+### 6. Caching — **MEASURED + SHIPPED 2026-07-24**
 
-The only section still open, and deliberately so: it is an implementation
-detail, best settled with a profiler on the implementation branch rather than on
-paper.
+> **Profiled and settled 2026-07-24.** The baseline showed the resolve hook is
+> *not* the cost; the per-page recompile was. A template cache landed
+> (`render.js` `createHtmlFiles`); no resolve-hook memoisation was warranted.
 
-The `resolve` hook fires for every `include`/`extends` in every page. It must
-memoise, and it must not stat the filesystem repeatedly. Note `createHtmlFiles`
-already re-runs `pug.compileFile` per page with no template cache — worth
-measuring together rather than separately.
+Settled with a profiler on the branch, as planned. Two things were measured
+(`createHtmlFiles`, median of 7 builds, on the `@nera-static/theme-example`
+templates — a layout + ~6 partials, nera-website's shape):
 
-Constraint from the acceptance criteria: build time for `nera-website` must not
-regress measurably. Take a baseline measurement *before* the first resolve hook
-lands, or there is nothing to compare against.
+**1. The theme resolve hook is within noise.** Themed (2-root chain,
+site-miss→theme-hit — the worst case for probing) vs the pre-theme single-root
+path:
+
+| pages | themeless | themed | delta |
+|---|---|---|---|
+| 69 (nera-website's count) | 224.8 ms | 227.0 ms | **+2.2 ms (~1%)** |
+| 500 (stress) | 1513 ms | 1549 ms | **+35.7 ms (~2.4%)** |
+
+So the acceptance criterion — *`nera-website` build time must not regress
+measurably* — is met by the shipped resolution code with no caching at all. The
+hook's `existsSync` probes (1105/build at 69 pages, ~2 ms total, warm) were **not**
+worth memoising on their own.
+
+**2. The real cost was the per-page recompile, and it is now cached.**
+`createHtmlFiles` re-ran `pug.compileFile` for every page with no template cache,
+recompiling the same tree dozens of times. Since a site's pages share a handful of
+layouts, compiling each distinct layout **once per build** and reusing the template
+function is a large, theme-independent win:
+
+| pages | before | after | speedup |
+|---|---|---|---|
+| 69 | ~196 ms | ~2.7 ms | **~72×** |
+| 500 | ~1273 ms | ~2.5 ms | **~500×** |
+
+End to end (`createHtmlFiles`, including markdown + file writes) this took a
+69-page build from ~225 ms to ~22 ms. Implemented as a **local `Map<entry,
+compiledFn>` scoped to each call** — a fresh cache per build, no process-global
+`pug.cache` to leak between `run()`s or tests. Keyed on the resolved entry path,
+so different layouts stay separate and, under a theme, a layout resolved from the
+theme caches independently of one resolved from the site. Output is byte-identical
+(all 62 tests green); with the cache the resolve hook fires once per distinct
+layout rather than per page, so per-build `existsSync` also dropped (1105 → 153 at
+69 pages) as a side effect — the memoisation §6 called for, achieved by caching the
+compile rather than the probe.
 
 ### 7. Interaction with `nera update` — **DECIDED 2026-07-22**
 
@@ -491,8 +721,9 @@ touch themes.** A theme is an npm package; that is the entire point of the
 design, and duplicating the update path in the installer would only create a
 second way to get it wrong.
 
-Verified against `nera-installer/src/update.js` — all four things that could have
-broken this already work, with no installer change required:
+Verified against `nera-installer/src/update.js` — for the *old* root-`views/`
+layout, all four things that could have broken this worked with no installer
+change (the §1b revision changes this; see the revised note after the table):
 
 | Behaviour | Effect on a themed site |
 |---|---|
@@ -501,10 +732,15 @@ broken this already work, with no installer change required:
 | `assets/` backed up and restored | the site's assets survive |
 | `dependencies` merged `{...current, ...new}` (`update.js:251`) | the theme dependency survives |
 
-The `views/` exclusion deserves a note: its existing rationale ("a Nera site is a
-clone of the generator, so `views/layouts/layout.pug` is the user's own site
-layout") still holds under themes, and gets *stronger* — on a themed site
-`views/` contains nothing but deliberate overrides.
+**REVISED 2026-07-23:** under the §1b layout the site's presentation is
+`<site>/theme/` rather than root `views/`/`assets/`, so `update.js`'s hardcoded
+`views`/`assets` paths in its backup, restore and "don't update" lists need
+updating. During the deprecation window (Semver) a site may have **either**
+layout, so the installer should back up/restore whichever exists — root
+`views/`+`assets/` **or** `theme/` — and switch fully to `theme/` when the root
+fallback is removed at the later major. So this section is no longer "no installer
+change required." The *rationale* still holds and gets stronger — on a themed
+site `theme/` contains nothing but the site's own layer and deliberate overrides.
 
 **One behaviour to pin down deliberately:** the final step is `npm install`, not
 `npm update` (`update.js:11`). With a lockfile present that respects the
@@ -521,7 +757,10 @@ express plugin compatibility through `peerDependencies`, but has no way whatsoev
 to express "requires generator >= 5.0" through npm.
 
 That check has to live outside npm, and `nera update` — the command that changes
-the generator version — is exactly when it matters. See section 5.
+the generator version — is exactly when it matters. See section 5. **Shipped in
+`@nera-static/installer` 2.2.0** (2026-07-24): after an update it warns (does not
+fail) when the just-installed generator falls outside an installed theme's
+`nera.generator` range.
 
 ### 8. Adjacent: should the generator itself be an npm package?
 
@@ -558,15 +797,29 @@ this. The requirement it places on section 5 is only this: design the
 
 ---
 
-## Semver
+## Semver — **REVISED 2026-07-23**
 
-The generator change is **additive**: a site with no theme configured resolves
-exactly as today, from its own `views/` only. That makes it a **minor** bump,
-with no migration required.
+The layered *resolution* is additive. The §1b folder move would be breaking on its
+own — but the **deprecated root fallback** (§1b note) keeps the introducing
+release **non-breaking (minor)**: a site with no `theme/` folder falls back to
+root `views/`/`assets/` and renders exactly as today, with a deprecation warning.
+New and migrated sites use `<site>/theme/`.
 
-The installer gaining a `--theme` flag is likewise **minor** — and nearly free,
-since `create.js:28` already accepts a `repoUrl` option and clones-then-strips
-`.git`.
+The break is therefore **deferred**, not avoided: a **later major** removes the
+root fallback. Sequencing:
+
+- **minor** — introduce `<site>/theme/` resolution + the deprecated root
+  fallback; the generator scaffolds the new shape, so `nera new` produces
+  `theme/`-shaped sites (not born deprecated); `nera update` handles both
+  layouts (§7). This is non-breaking because the fallback still renders every
+  unmigrated site byte-identically, with a deprecation warning.
+- **major** (later) — remove the fallback; require `<site>/theme/`. By then
+  existing sites must have migrated (`views/` → `theme/views/`, `assets/` →
+  `theme/assets/`); `nera update` drops its legacy `views`/`assets` path lists.
+
+The installer gaining a `--theme` flag is a separate, additive change — nearly
+free, since `create.js:28` already accepts a `repoUrl` option and
+clones-then-strips `.git`.
 
 ---
 
@@ -582,26 +835,65 @@ platform existing. It can ship first, on its own merits.
 
 ## Acceptance criteria
 
-- A site with no `theme:` configured renders byte-identically to today — including
-  when a `./theme` folder happens to exist
-- A site with a theme renders layouts and partials from the theme package
-- `theme: docs`, `theme: @acme/my-theme` and `theme: ./theme` all resolve, and a
-  locally-developed theme behaves identically to an installed one
-- A `theme:` naming a package that is not installed fails loudly with an
+The `[x]` items below are implemented and verified against the **revised** §1b
+layout (the refactor landed 2026-07-23): the theme payload sits at the package
+root, the site groups its presentation under `<site>/theme/`, and a deprecated
+root fallback keeps existing sites byte-identical, §5 compatibility landed
+2026-07-24 (generator 4.6.0), and §6 caching was profiled and its template cache
+shipped the same day. **Every criterion is now met** — the two `npm update`
+lifecycle items were exercised 2026-07-24 with a real install→update dry-run (a
+`@demo/theme` v1→v2 installed as successive packed tarballs, the node_modules swap
+a registry `npm update` produces).
+
+- [x] A site renders from `<site>/theme/` when that folder exists; a site with
+  neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
+  and renders **byte-identically to today**, with a one-time deprecation warning
+  *(§1b root fallback — verified e2e: re-homing the same content under `theme/`
+  with no `theme:` key produced byte-identical output and suppressed the warning)*
+- [x] A themed site resolves layouts/partials through `[<site>/theme-or-root, <pkg>]`,
+  the package providing them from its root *(verified e2e against
+  `@nera-static/theme-example`)*
+- [x] `theme: docs`, `theme: @acme/my-theme` and a local path all resolve, and a
+  local theme behaves identically to an installed one *(resolver now targets the
+  package root directly — §1b refactor landed)*
+- [x] A `theme:` naming a package that is not installed fails loudly with an
   actionable message and a non-zero exit code — it does not render an unstyled site
-- A site `config/theme.yaml` setting one key inherits every other key from the
-  theme's own defaults
-- A file placed in the site's `views/` overrides the theme's copy of that file,
-  and only that file
-- `npm update` of the theme package changes the rendered output for
-  non-overridden files, and does not change it for overridden ones
-- Assets from the theme reach `public/`, with site assets winning on conflict
-- A site adding `assets/css/custom.css` with no theme counterpart gets it copied,
-  and the theme's `main.css` still updates via `npm update`
-- The site's `.neraignore` filters its own assets exactly as today, and a theme's
-  assets are copied whole
-- A theme whose `nera.generator` range excludes the running generator fails the
-  build with a clear message; a theme whose plugin `peerDependencies` are
-  unsatisfied warns and renders
-- No `❌ Failed to load npm plugin` line appears for the theme package
-- Build time for `nera-website` does not regress measurably
+- [x] A site `config/theme.yaml` setting one key inherits every other key from the
+  theme's own defaults, exposed to templates as `app.theme.config` *(§1c —
+  verified e2e against `@nera-static/theme-example`: a site override of
+  `colors.primary` won while `label` fell through to the theme default; unit +
+  fixture + `run()` tests cover the merge semantics)*
+- [x] A file placed in the site's `theme/views/` overrides the theme package's
+  copy of that file, and only that file *(verified e2e: a site
+  `theme/views/partials/header.pug` won while the layout and footer fell through
+  to the theme package)*
+- [x] `npm update` of the theme package changes the rendered output for
+  non-overridden files, and does not change it for overridden ones *(verified
+  2026-07-24 via an install→update dry-run: a theme bumped v1→v2 and reinstalled as
+  a packed tarball updated the non-overridden `footer.pug` and `main.css` in the
+  output, while the site's overridden `header.pug` stayed the site's version — even
+  though the theme changed its own `header.pug` too)*
+- [x] Assets from the theme reach `public/`, with site assets winning on conflict
+  *(verified: theme `main.css` reached `public/css/`; unit test confirms the
+  site's `theme/assets` wins a same-path collision)*
+- [x] A site adding `theme/assets/css/custom.css` with no theme counterpart gets
+  it copied, and the theme's `main.css` still updates via `npm update` *(verified
+  2026-07-24 in the same dry-run: the site-only `custom.css` was copied to
+  `public/css/` on both builds, while the un-overridden theme `main.css` updated
+  v1→v2)*
+- [x] The site's `.neraignore` filters its own assets, and a theme's assets are
+  copied whole *(§2d settled: `.neraignore` stays at the site root; the theme
+  pass is unfiltered — verified in render.test.js and theme.test.js)*
+- [x] A theme whose `nera.generator` range excludes the running generator fails the
+  build with a clear message and a non-zero exit; a theme whose plugin
+  `peerDependencies` are unsatisfied warns and renders *(§5 — verified e2e against
+  `@nera-static/theme-example`: it builds under the 4.6.0 generator its
+  `nera.generator: ">=4.6.0"` targets, throws when checked against a simulated
+  4.5.0, and an injected mismatched `plugin-tags` peer warned while a satisfying
+  one was silent; unit + `run()` tests cover both severities. The generator
+  version is read from the generator's own `package.json`, not the site's)*
+- [x] No `❌ Failed to load npm plugin` line appears for the theme package
+- [x] Build time for `nera-website` does not regress measurably *(§6 — profiled
+  2026-07-24: the resolve hook adds ~1% at nera-website's 69-page count, within
+  run-to-run noise. A template cache landed alongside, taking a 69-page
+  `createHtmlFiles` from ~225 ms to ~22 ms — a theme-independent win. Numbers in §6)*
