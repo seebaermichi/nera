@@ -10,6 +10,22 @@ const run = async (settings = defaultSettings) => {
     // `theme:` key is set, in which case render behaves exactly as before.
     const theme = resolveTheme({ app: data.app })
 
+    // Expose the theme to templates as one namespaced object (§1c), so a layout
+    // reads `app.theme.config.colors.primary`. `config` is the theme's own
+    // `config/theme.yaml` defaults deep-merged with the site's optional override.
+    // Attached before the plugin pass so plugins see it too and it threads
+    // through the app object like `lang` and `name` do.
+    if (theme) {
+        data.app = {
+            ...data.app,
+            theme: {
+                name: theme.name,
+                package: theme.package,
+                config: theme.config,
+            },
+        }
+    }
+
     // From `data.app`, not from `settings`: loadAppData has already merged any
     // `folders` block in config/app.yaml over the defaults, and this is what
     // makes that block take effect. Reading `settings.folders` here meant the
