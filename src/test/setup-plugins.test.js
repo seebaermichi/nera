@@ -215,4 +215,51 @@ describe('getPluginsData', () => {
             await fs.rm(path.join(TMP_DIR, 'package.json'), { force: true })
         }
     })
+
+    it('treats only @nera-static/plugin-* as plugins, not core/nera/theme/plugin-utils', async () => {
+        // A thin site depends on @nera-static/nera (and, transitively, core);
+        // neither, nor a theme, nor the plugin-utils library, must be import()ed
+        // as a plugin — only real @nera-static/plugin-* packages are.
+        await fs.writeFile(
+            path.join(TMP_DIR, 'package.json'),
+            JSON.stringify({
+                name: 'fixture-project',
+                dependencies: {
+                    '@nera-static/nera': '^1.0.0',
+                    '@nera-static/core': '^4.9.0',
+                    '@nera-static/theme-foo': '^1.0.0',
+                    '@nera-static/plugin-utils': '^1.0.0',
+                    '@nera-static/plugin-not-installed': '^1.0.0',
+                },
+            })
+        )
+
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+        try {
+            await getPluginsData({ app: {}, pagesData: [] }, PLUGINS_DIR)
+
+            const mentions = (needle) =>
+                [...warn.mock.calls, ...log.mock.calls].some((args) =>
+                    args.some(
+                        (a) =>
+                            typeof a === 'string' &&
+                            a.includes('npm plugin') &&
+                            a.includes(needle)
+                    )
+                )
+
+            // The real plugin is attempted (it just can't resolve).
+            expect(mentions('plugin-not-installed')).toBe(true)
+            // The non-plugins are never even attempted.
+            for (const nonPlugin of ['nera', 'core', 'theme-foo', 'plugin-utils']) {
+                expect(mentions(nonPlugin)).toBe(false)
+            }
+        } finally {
+            warn.mockRestore()
+            log.mockRestore()
+            await fs.rm(path.join(TMP_DIR, 'package.json'), { force: true })
+        }
+    })
 })

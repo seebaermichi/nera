@@ -1,6 +1,6 @@
 {
     "name": "@nera-static/core",
-    "version": "4.9.0",
+    "version": "4.9.1",
     "description": "The Nera static site generator engine — the build pipeline and the layered theme/view resolver, importable by the Nera CLI, @nera-static/validate and tooling",
     "main": "./src/index.js",
     "exports": {

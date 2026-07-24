@@ -126,16 +126,19 @@ export async function getPluginsData(
         // project still loaded the real site's dependencies.
         const pkgJsonPath = path.resolve(process.cwd(), 'package.json')
         const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'))
-        // Theme packages (@nera-static/theme-*) are dependencies too, but they
-        // have no JS entry point — import()ing one would fail and log a scary
-        // "❌ Failed to load npm plugin theme-…" on every build (§1d). Skip the
-        // prefix. This is sufficient on its own: the loader only ever considers
-        // @nera-static/ deps, so a third-party theme (a different scope) is
-        // never a candidate here and needs no exact-name skip.
+        // A plugin is, by convention, exactly an `@nera-static/plugin-*` package
+        // (CLAUDE.md). Match on that prefix rather than the whole `@nera-static/`
+        // scope, so the scope's non-plugin members are never import()ed as
+        // plugins: the engine (`@nera-static/core`) and the CLI
+        // (`@nera-static/nera`) — which a thin site now depends on directly and
+        // which would otherwise log "❌ Failed to load npm plugin nera" on every
+        // build — plus `installer`, `validate`, and theme packages
+        // (`@nera-static/theme-*`, no JS entry point). The one library sharing
+        // the `plugin-` prefix, `@nera-static/plugin-utils`, is excluded by name.
+        const NON_PLUGIN = new Set(['@nera-static/plugin-utils'])
         const deps = Object.keys(pkgJson.dependencies || {}).filter(
             (name) =>
-                name.startsWith('@nera-static/') &&
-                !name.startsWith('@nera-static/theme-')
+                name.startsWith('@nera-static/plugin-') && !NON_PLUGIN.has(name)
         )
 
         for (const fullName of deps) {

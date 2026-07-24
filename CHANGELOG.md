@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.9.1] - 2026-07-24
+
+### Fixed
+
+-   Plugin discovery now matches only `@nera-static/plugin-*` packages (excluding
+    the `@nera-static/plugin-utils` library), instead of the whole `@nera-static/`
+    scope. A thin site (core consolidation, `ROADMAP-core.md`) depends on
+    `@nera-static/nera` directly; the old broad match tried to `import()` the CLI
+    as a plugin and logged `❌ Failed to load npm plugin nera` on every build.
+    Existing sites are unaffected — their direct `@nera-static/*` dependencies
+    were already only plugins (theme packages were, and still are, skipped).
+
 ## [4.9.0] - 2026-07-24
 
 First step of the **core consolidation** (`ROADMAP-core.md`): the generator gains
