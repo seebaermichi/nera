@@ -82,17 +82,24 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
   needed — the compile cache incidentally cut per-build `existsSync` to once per
   layout. See §6 for the numbers.
 
-Nothing open — the design is fully implemented (only `npm update`-lifecycle
-acceptance checks remain to be exercised).
+Nothing open — the design is fully implemented and **released** (2026-07-24):
+generator **4.6.0** (merged to `main` + tagged; the generator is not npm-published,
+so that is its release), installer **2.2.0** (published via CI OIDC — the §5
+update-time check), and the reference theme **`@nera-static/theme-example` 0.1.0**
+(first publish, live on npm). The dogfood site `nera-website` has been migrated
+(below). Every acceptance criterion is met.
 
-**Deliberately not migrated yet: `nera-website`.** The docs site carries its own
-vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
-so moving its `views/`/`assets/` to `theme/` would render an empty site. It can
-only migrate *after* the theme-aware generator is merged to `main` and released,
-via `nera update` (which replaces its vendored `src/`) followed by the folder
-move — decided 2026-07-23 rather than couple the dogfood site to unreleased
-generator code. It renders fine today and emits no deprecation warning (its 4.4.0
-generator has none).
+**`nera-website` migrated — DONE 2026-07-24.** The docs site was on a vendored
+generator **4.4.0** (no theme code), so its migration was deferred until the
+theme-aware generator shipped. Once 4.6.0 was released it was migrated by
+dogfooding the real flow: `nera update` (installer 2.2.0) replaced its vendored
+`src/` with 4.6.0 and stamped `nera.version`, then `views/`/`assets/` moved to
+`theme/views/`/`theme/assets/` (git mv). With no `folders:` block and no `theme:`
+key, `core.js`'s probe resolves the site's own presentation under `theme/` and it
+renders with **no** deprecation warning. Proven output-neutral — the rendered
+`public/` is byte-identical to the 4.4.0 baseline (`diff -rq` clean), lint clean,
+62 vendored tests green. (nera-website is local-only; its GitHub repo was deleted
+2026-07-23, so the migration commit is not pushed anywhere.)
 
 **This file is the single source of truth for theme-system work.** Extend it
 rather than starting a parallel document.
