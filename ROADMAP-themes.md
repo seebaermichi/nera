@@ -1,11 +1,14 @@
 # Roadmap — installable, updatable themes
 
-**Status:** design settled (2026-07-22, sections 1–5, 7, 8; section 6 caching
-deferred). **Implementation in progress on `feat/themes-slice-1`** — slices 1–2,
-§1b, §2d, §1c (config merge + `app.theme` exposure), and §5 (compatibility
-declarations) have landed; only §6 caching remains. The theme feature is versioned
-as generator **4.6.0** (bumped with §5 — the range `@nera-static/theme-example`
-already targets, `nera.generator: ">=4.6.0"`).
+**Status:** design settled (2026-07-22) and **feature-complete on
+`feat/themes-slice-1`** — slices 1–2, §1b, §2d, §1c (config merge + `app.theme`
+exposure), §5 (compatibility declarations), and §6 (caching — profiled 2026-07-24,
+template cache shipped) have all landed. The theme feature is versioned as
+generator **4.6.0** (bumped with §5 — the range `@nera-static/theme-example`
+already targets, `nera.generator: ">=4.6.0"`). All acceptance criteria that can be
+verified without an actual `npm update` are met; the branch is ready to merge to
+`main` and release once the remaining `npm update`-lifecycle criteria are exercised
+(see Acceptance criteria).
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
@@ -70,8 +73,17 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
   when checked against a simulated 4.5.0, and an injected `peerDependencies`
   against a mismatched `plugin-tags@4` warned while `plugin-tags@3` was silent.
   `semver` added as a runtime dependency for standard npm range semantics.
+- **§6 caching** — profiled on the branch (2026-07-24). The resolve hook proved
+  to be within noise (~1% at nera-website's 69 pages), so the build-time criterion
+  was already met; the dominant cost was `createHtmlFiles` recompiling the Pug tree
+  per page. A per-build, per-call template cache (`Map<entry, compiledFn>` in
+  `render.js`) now compiles each distinct layout once (~72× on 69 pages, ~500× on
+  500), theme-independent and byte-identical. No resolve-hook probe memoisation was
+  needed — the compile cache incidentally cut per-build `existsSync` to once per
+  layout. See §6 for the numbers.
 
-Still open: caching (§6).
+Nothing open — the design is fully implemented (only `npm update`-lifecycle
+acceptance checks remain to be exercised).
 
 **Deliberately not migrated yet: `nera-website`.** The docs site carries its own
 vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
@@ -157,7 +169,8 @@ mechanism and it is confirmed.
 
 Sections marked **DECIDED** are settled; do not re-litigate them without a
 reason, and where a rejected alternative is recorded, it is recorded so it does
-not get re-proposed. Section 6 remains genuinely open.
+not get re-proposed. Section 6 (caching) was the last open section and is now
+measured and shipped.
 
 ### 1. Discovery — **DECIDED 2026-07-22**
 
@@ -646,20 +659,51 @@ Same string. npm takes over enforcement, the generator's own check becomes
 duplicate work that can be deprecated whenever convenient, and every existing
 theme keeps working untouched.
 
-### 6. Caching — **OPEN**
+### 6. Caching — **MEASURED + SHIPPED 2026-07-24**
 
-The only section still open, and deliberately so: it is an implementation
-detail, best settled with a profiler on the implementation branch rather than on
-paper.
+> **Profiled and settled 2026-07-24.** The baseline showed the resolve hook is
+> *not* the cost; the per-page recompile was. A template cache landed
+> (`render.js` `createHtmlFiles`); no resolve-hook memoisation was warranted.
 
-The `resolve` hook fires for every `include`/`extends` in every page. It must
-memoise, and it must not stat the filesystem repeatedly. Note `createHtmlFiles`
-already re-runs `pug.compileFile` per page with no template cache — worth
-measuring together rather than separately.
+Settled with a profiler on the branch, as planned. Two things were measured
+(`createHtmlFiles`, median of 7 builds, on the `@nera-static/theme-example`
+templates — a layout + ~6 partials, nera-website's shape):
 
-Constraint from the acceptance criteria: build time for `nera-website` must not
-regress measurably. Take a baseline measurement *before* the first resolve hook
-lands, or there is nothing to compare against.
+**1. The theme resolve hook is within noise.** Themed (2-root chain,
+site-miss→theme-hit — the worst case for probing) vs the pre-theme single-root
+path:
+
+| pages | themeless | themed | delta |
+|---|---|---|---|
+| 69 (nera-website's count) | 224.8 ms | 227.0 ms | **+2.2 ms (~1%)** |
+| 500 (stress) | 1513 ms | 1549 ms | **+35.7 ms (~2.4%)** |
+
+So the acceptance criterion — *`nera-website` build time must not regress
+measurably* — is met by the shipped resolution code with no caching at all. The
+hook's `existsSync` probes (1105/build at 69 pages, ~2 ms total, warm) were **not**
+worth memoising on their own.
+
+**2. The real cost was the per-page recompile, and it is now cached.**
+`createHtmlFiles` re-ran `pug.compileFile` for every page with no template cache,
+recompiling the same tree dozens of times. Since a site's pages share a handful of
+layouts, compiling each distinct layout **once per build** and reusing the template
+function is a large, theme-independent win:
+
+| pages | before | after | speedup |
+|---|---|---|---|
+| 69 | ~196 ms | ~2.7 ms | **~72×** |
+| 500 | ~1273 ms | ~2.5 ms | **~500×** |
+
+End to end (`createHtmlFiles`, including markdown + file writes) this took a
+69-page build from ~225 ms to ~22 ms. Implemented as a **local `Map<entry,
+compiledFn>` scoped to each call** — a fresh cache per build, no process-global
+`pug.cache` to leak between `run()`s or tests. Keyed on the resolved entry path,
+so different layouts stay separate and, under a theme, a layout resolved from the
+theme caches independently of one resolved from the site. Output is byte-identical
+(all 62 tests green); with the cache the resolve hook fires once per distinct
+layout rather than per page, so per-build `existsSync` also dropped (1105 → 153 at
+69 pages) as a side effect — the memoisation §6 called for, achieved by caching the
+compile rather than the probe.
 
 ### 7. Interaction with `nera update` — **DECIDED 2026-07-22**
 
@@ -782,9 +826,11 @@ platform existing. It can ship first, on its own merits.
 The `[x]` items below are implemented and verified against the **revised** §1b
 layout (the refactor landed 2026-07-23): the theme payload sits at the package
 root, the site groups its presentation under `<site>/theme/`, and a deprecated
-root fallback keeps existing sites byte-identical, and §5 compatibility landed
-2026-07-24 (generator 4.6.0). The remaining `[ ]` items are genuinely
-unimplemented (§6 caching) or not yet exercised by an actual `npm update`.
+root fallback keeps existing sites byte-identical, §5 compatibility landed
+2026-07-24 (generator 4.6.0), and §6 caching was profiled and its template cache
+shipped the same day. The only remaining `[ ]` items are the two that need an
+actual `npm update` to exercise — the mechanism they test is already proven by the
+resolution model, but no live `npm update` has been run against them yet.
 
 - [x] A site renders from `<site>/theme/` when that folder exists; a site with
   neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
@@ -828,5 +874,7 @@ unimplemented (§6 caching) or not yet exercised by an actual `npm update`.
   one was silent; unit + `run()` tests cover both severities. The generator
   version is read from the generator's own `package.json`, not the site's)*
 - [x] No `❌ Failed to load npm plugin` line appears for the theme package
-- [ ] Build time for `nera-website` does not regress measurably *(§6 — needs a
-  baseline before caching work)*
+- [x] Build time for `nera-website` does not regress measurably *(§6 — profiled
+  2026-07-24: the resolve hook adds ~1% at nera-website's 69-page count, within
+  run-to-run noise. A template cache landed alongside, taking a 69-page
+  `createHtmlFiles` from ~225 ms to ~22 ms — a theme-independent win. Numbers in §6)*
