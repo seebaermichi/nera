@@ -2,8 +2,10 @@
 
 **Status:** design settled (2026-07-22, sections 1–5, 7, 8; section 6 caching
 deferred). **Implementation in progress on `feat/themes-slice-1`** — slices 1–2,
-§1b, §2d, and §1c (config merge + `app.theme` exposure) have landed; §5
-compatibility checks and §6 caching remain.
+§1b, §2d, §1c (config merge + `app.theme` exposure), and §5 (compatibility
+declarations) have landed; only §6 caching remains. The theme feature is versioned
+as generator **4.6.0** (bumped with §5 — the range `@nera-static/theme-example`
+already targets, `nera.generator: ">=4.6.0"`).
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
@@ -53,8 +55,23 @@ Shipped so far, proven end to end against `@nera-static/theme-example`
   a site `config/theme.yaml` overriding `colors.primary` rendered
   `app.theme.config.colors.primary` = the site value while `label` fell through
   to the theme's own default.
+- **§5 compatibility declarations** — two mechanisms, two severities, both
+  synchronous and both no-ops for a theme (or site) that declares nothing. A
+  theme's `nera.generator` semver range is checked against the version the
+  generator reports about **itself** (`readGeneratorVersion`, read from the
+  generator's own `package.json`, *not* the site's `version`) and a mismatch
+  **fails the build** with a clear message and non-zero exit. A theme's
+  `peerDependencies` (the plugins its CSS targets) are checked against what the
+  site has installed, and a version outside the declared range only **warns** —
+  silent when the plugin is not installed at all. `checkThemeCompatibility` in
+  `theme.js`, called from `src/index.js` right after `resolveTheme`, before any
+  work. Proven end to end against `@nera-static/theme-example` (file: install):
+  its `nera.generator: ">=4.6.0"` builds under the 4.6.0 generator, fails cleanly
+  when checked against a simulated 4.5.0, and an injected `peerDependencies`
+  against a mismatched `plugin-tags@4` warned while `plugin-tags@3` was silent.
+  `semver` added as a runtime dependency for standard npm range semantics.
 
-Still open: compatibility checks (§5), caching (§6).
+Still open: caching (§6).
 
 **Deliberately not migrated yet: `nera-website`.** The docs site carries its own
 vendored generator at **4.4.0**, which has no theme code (no probe, no fallback),
@@ -534,7 +551,23 @@ site's `views/` — so you fork what you were actually rendering — remains wor
 having for the theme's **own** views. It is no longer entangled with plugins, and
 it is not a v1 blocker.
 
-### 5. Compatibility declarations — **DECIDED 2026-07-22**
+### 5. Compatibility declarations — **DECIDED 2026-07-22, SHIPPED 2026-07-24**
+
+> **Landed 2026-07-24 (generator 4.6.0).** `checkThemeCompatibility(theme)` in
+> `theme.js` runs from `src/index.js` immediately after `resolveTheme`, before any
+> rendering. The generator check throws (fail-loud, non-zero exit — the same path
+> as a missing theme); the plugin check `console.warn`s and never aborts. Both are
+> synchronous and both short-circuit when the field is absent, so a theme
+> declaring neither, or a themeless site, is untouched. `nera.generator` is
+> compared against `readGeneratorVersion()` — the generator's **own**
+> `package.json` version — deliberately *not* the site's `version` (the §5 trap
+> below). Ranges use `semver` (new runtime dependency) for standard npm semantics,
+> so the field moves verbatim into `peerDependencies` the day the generator is
+> published (§8). A malformed range warns and is ignored rather than bricking the
+> build. **The `nera update`-time check (below) is deliberately still open** — it
+> belongs in the installer, which changes the generator version, and is tracked
+> separately from this build-time work. Covered by unit + `run()` e2e tests and
+> proven against `@nera-static/theme-example`.
 
 A theme's CSS targets plugin BEM class names, and `CLAUDE.md` classifies those
 changes as **major**. So a theme must declare what it supports, and a mismatch
@@ -749,9 +782,9 @@ platform existing. It can ship first, on its own merits.
 The `[x]` items below are implemented and verified against the **revised** §1b
 layout (the refactor landed 2026-07-23): the theme payload sits at the package
 root, the site groups its presentation under `<site>/theme/`, and a deprecated
-root fallback keeps existing sites byte-identical. The remaining `[ ]` items are
-genuinely unimplemented (§5 compatibility, §6 caching) or not yet exercised by an
-actual `npm update`.
+root fallback keeps existing sites byte-identical, and §5 compatibility landed
+2026-07-24 (generator 4.6.0). The remaining `[ ]` items are genuinely
+unimplemented (§6 caching) or not yet exercised by an actual `npm update`.
 
 - [x] A site renders from `<site>/theme/` when that folder exists; a site with
   neither `theme/` nor a `theme:` package falls back to root `views/`/`assets/`
@@ -786,9 +819,14 @@ actual `npm update`.
 - [x] The site's `.neraignore` filters its own assets, and a theme's assets are
   copied whole *(§2d settled: `.neraignore` stays at the site root; the theme
   pass is unfiltered — verified in render.test.js and theme.test.js)*
-- [ ] A theme whose `nera.generator` range excludes the running generator fails the
-  build with a clear message; a theme whose plugin `peerDependencies` are
-  unsatisfied warns and renders *(§5 — not yet implemented)*
+- [x] A theme whose `nera.generator` range excludes the running generator fails the
+  build with a clear message and a non-zero exit; a theme whose plugin
+  `peerDependencies` are unsatisfied warns and renders *(§5 — verified e2e against
+  `@nera-static/theme-example`: it builds under the 4.6.0 generator its
+  `nera.generator: ">=4.6.0"` targets, throws when checked against a simulated
+  4.5.0, and an injected mismatched `plugin-tags` peer warned while a satisfying
+  one was silent; unit + `run()` tests cover both severities. The generator
+  version is read from the generator's own `package.json`, not the site's)*
 - [x] No `❌ Failed to load npm plugin` line appears for the theme package
 - [ ] Build time for `nera-website` does not regress measurably *(§6 — needs a
   baseline before caching work)*
