@@ -3,7 +3,13 @@ import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
-import { copyFolder, createHtmlFiles, deleteFolder } from '../render.js'
+import {
+    copyFolder,
+    createHtmlFiles,
+    deleteFolder,
+    rewriteHtmlUrls,
+    rewriteAssetUrls,
+} from '../render.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -207,5 +213,124 @@ describe('deleteFolder', () => {
         await deleteFolder(publicDir)
 
         expect(fssync.existsSync(publicDir)).toBe(false)
+    })
+})
+
+describe('rewriteHtmlUrls (base_path)', () => {
+    const BP = '/nera-website'
+
+    it('prefixes root-absolute href/src/data-search-index attributes', () => {
+        const html =
+            '<link href="/css/main.css"><a href="/de/index.html">de</a>' +
+            '<script src="/js/search.js"></script>' +
+            '<input data-search-index="/search-index.json">'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<link href="/nera-website/css/main.css">' +
+                '<a href="/nera-website/de/index.html">de</a>' +
+                '<script src="/nera-website/js/search.js"></script>' +
+                '<input data-search-index="/nera-website/search-index.json">'
+        )
+    })
+
+    it('leaves external, protocol-relative, and anchor URLs untouched', () => {
+        const html =
+            '<a href="https://example.com/x">e</a>' +
+            '<img src="//cdn.example.com/i.png">' +
+            '<a href="#top">top</a><a href="page.html">rel</a>'
+        expect(rewriteHtmlUrls(html, BP)).toBe(html)
+    })
+
+    it('is idempotent — never double-prefixes an already-prefixed URL', () => {
+        const once = rewriteHtmlUrls('<a href="/a.html">a</a>', BP)
+        expect(rewriteHtmlUrls(once, BP)).toBe(once)
+        expect(once).toBe('<a href="/nera-website/a.html">a</a>')
+    })
+
+    it('prefixes each URL in a srcset list, preserving descriptors', () => {
+        const html = '<img srcset="/a.png 1x, /b.png 2x">'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<img srcset="/nera-website/a.png 1x, /nera-website/b.png 2x">'
+        )
+    })
+
+    it('is a no-op with an empty basePath', () => {
+        const html = '<a href="/a.html">a</a>'
+        expect(rewriteHtmlUrls(html, '')).toBe(html)
+    })
+})
+
+describe('rewriteAssetUrls (base_path)', () => {
+    const BP = '/nera-website'
+    let dir
+
+    beforeEach(async () => {
+        dir = createTempPath()
+        await fs.mkdir(dir, { recursive: true })
+    })
+
+    afterEach(async () => {
+        await fs.rm(dir, { recursive: true, force: true })
+    })
+
+    it('rewrites url(/…) in CSS but not external or relative urls', async () => {
+        const css =
+            '@font-face{src:url("/fonts/x.woff2")}' +
+            '.a{background:url(/img/a.png)}' +
+            '.b{background:url(https://cdn/x.png)}'
+        const file = path.join(dir, 'main.css')
+        await fs.writeFile(file, css)
+
+        await rewriteAssetUrls(dir, BP)
+
+        expect(await fs.readFile(file, 'utf-8')).toBe(
+            '@font-face{src:url("/nera-website/fonts/x.woff2")}' +
+                '.a{background:url(/nera-website/img/a.png)}' +
+                '.b{background:url(https://cdn/x.png)}'
+        )
+    })
+
+    it('rewrites start_url and icon src in a .webmanifest', async () => {
+        const file = path.join(dir, 'site.webmanifest')
+        await fs.writeFile(
+            file,
+            JSON.stringify({
+                start_url: '/',
+                icons: [{ src: '/icon-192.png' }, { src: 'https://cdn/i.png' }],
+            })
+        )
+
+        await rewriteAssetUrls(dir, BP)
+
+        const out = JSON.parse(await fs.readFile(file, 'utf-8'))
+        expect(out.start_url).toBe('/nera-website/')
+        expect(out.icons[0].src).toBe('/nera-website/icon-192.png')
+        expect(out.icons[1].src).toBe('https://cdn/i.png')
+    })
+
+    it('rewrites href/url values in a .json asset (e.g. the search index)', async () => {
+        const file = path.join(dir, 'search-index.json')
+        const original = JSON.stringify([
+            { title: 'About', href: '/about.html', content: 'see /docs later' },
+            { title: 'Ext', url: 'https://x/y', href: '/de/x.html' },
+        ])
+        await fs.writeFile(file, original)
+
+        await rewriteAssetUrls(dir, BP)
+
+        const out = JSON.parse(await fs.readFile(file, 'utf-8'))
+        expect(out[0].href).toBe('/nera-website/about.html')
+        // a path mentioned inside a non-URL field is left untouched
+        expect(out[0].content).toBe('see /docs later')
+        expect(out[1].href).toBe('/nera-website/de/x.html')
+        expect(out[1].url).toBe('https://x/y')
+    })
+
+    it('is a no-op with an empty basePath', async () => {
+        const file = path.join(dir, 'main.css')
+        await fs.writeFile(file, '.a{background:url(/img/a.png)}')
+        await rewriteAssetUrls(dir, '')
+        expect(await fs.readFile(file, 'utf-8')).toBe(
+            '.a{background:url(/img/a.png)}'
+        )
     })
 })

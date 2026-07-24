@@ -87,6 +87,9 @@ Nera uses [Pug](https://pugjs.org/) for layout rendering. You have access to:
 - `app`: values from `config/app.yaml`
 - `meta`: metadata from the current markdown page
 - `t(key)`: translation function
+- `url(path)`: prefixes a root-absolute path with the site's `base_path` (see
+  [Deploying to a subdirectory](#-deploying-to-a-subdirectory-base_path)); a
+  no-op when `base_path` is unset
 
 Example:
 
@@ -120,6 +123,41 @@ Use the `t` function in templates:
 
 ```pug
 meta(name="description", content=t('app_description'))
+```
+
+---
+
+## 📁 Deploying to a subdirectory (`base_path`)
+
+By default Nera writes root-absolute URLs (`/css/main.css`, `/about.html`), which
+assume the site is served from a domain root. When it is served from a
+**subdirectory** instead — most commonly a GitHub **project** Pages site at
+`https://<user>.github.io/<repo>/` — those URLs resolve against the domain root
+and 404.
+
+Set `base_path` in `config/app.yaml` to the subdirectory:
+
+```yaml
+base_path: /my-repo
+```
+
+Nera then prefixes every root-absolute URL in the built output with it — links,
+`<script>`/`<link>`/`<img>` sources, `srcset`, CSS `url(…)`, the web app
+manifest, and `href`/`url` values in JSON assets such as the search index. The
+physical output layout is unchanged (files still land at the artifact root, which
+*is* the served subdirectory), and `meta.href` stays in the site's logical
+(un-prefixed) namespace so template URL logic keeps working.
+
+It is fully additive: with no `base_path` (or `base_path: ''`) the build is
+byte-identical to before. Remove it when you move the site to a domain root (e.g.
+a custom domain).
+
+For **absolute** URLs you build yourself (canonical/OpenGraph tags, a sitemap),
+set the relevant plugin's origin to include the subdirectory, or wrap a hardcoded
+path in the `url()` helper:
+
+```pug
+link(rel="preload", as="font", href=url('/fonts/body.woff2'))
 ```
 
 If the key or language is missing, the key itself is returned as fallback.

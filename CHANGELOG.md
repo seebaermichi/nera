@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.8.0] - 2026-07-24
+
+Subdirectory deploys via a new `base_path` config key. A site served from a
+subdirectory — most commonly a GitHub *project* Pages site at
+`https://<user>.github.io/<repo>/` — previously broke, because Nera emits
+root-absolute URLs (`/css/main.css`) that resolve against the domain root and
+404. Setting `base_path` prefixes them at build time. Fully additive: with no
+`base_path`, the build is byte-identical to before.
+
+### Added
+
+-   `base_path` in `config/app.yaml` → `app.basePath` (normalised: leading slash,
+    no trailing slash; blank/`/` → '' → no-op). On build, every root-absolute URL
+    in the output is prefixed with it: HTML `href`/`src`/`poster`/`srcset` and
+    `data-search-index`, CSS `url(…)`, the `.webmanifest` (`start_url`/`scope`/
+    `id`/icons/screenshots/shortcuts), and `href`/`url` values in `.json` assets
+    (e.g. the search index). Prefixing is idempotent, so it never double-applies.
+-   a `url(path)` template helper that prefixes a root-absolute path with
+    `base_path` (a no-op when unset) — for absolute paths built in inline scripts
+    or attributes the automatic rewrite can't reach.
+
+### Changed
+
+-   `meta.href` deliberately stays in the site's logical (un-prefixed) namespace;
+    `base_path` is applied uniformly in the render/asset rewrite, not baked into
+    `meta.href`, so template URL logic (a language switcher stripping `/de`, an
+    `link.href === meta.href` active check) keeps working and never
+    double-prefixes.
+
 ## [4.7.0] - 2026-07-24
 
 `meta.createdAt` can now come from frontmatter, making date ordering survive CI

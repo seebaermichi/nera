@@ -1,6 +1,11 @@
 import { loadAppData, getPagesData, defaultSettings } from './core.js'
 import { getPluginsData } from './setup-plugins.js'
-import { copyFolder, deleteFolder, createHtmlFiles } from './render.js'
+import {
+    copyFolder,
+    deleteFolder,
+    createHtmlFiles,
+    rewriteAssetUrls,
+} from './render.js'
 import { resolveTheme, checkThemeCompatibility } from './theme.js'
 
 const run = async (settings = defaultSettings) => {
@@ -60,6 +65,11 @@ const run = async (settings = defaultSettings) => {
         await copyFolder(theme.assetsRoot, dist, null)
     }
     await copyFolder(assets, dist, '.')
+
+    // Subdirectory deploys: prefix root-absolute URLs inside copied assets that
+    // the HTML rewrite can't reach (CSS `url(/…)`, the web app manifest). Runs
+    // after both asset passes; no-op when `base_path` is unset.
+    await rewriteAssetUrls(dist, data.app.basePath)
 }
 
 export default run
