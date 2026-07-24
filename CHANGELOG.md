@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.7.0] - 2026-07-24
+
+`meta.createdAt` can now come from frontmatter, making date ordering survive CI
+builds. The filesystem `birthtime` it derived from is unreliable there: a fresh
+clone/checkout stamps every file with the same date, silently breaking anything
+that orders or displays by date (pagination, tag overviews, page lists, printed
+tutorial dates). Additive and backward compatible — a page with no date keys in
+frontmatter still uses `birthtime`, so a purely-local build is unchanged.
+
+### Changed
+
+-   `getPagesData` now resolves `meta.createdAt` as
+    `frontmatter.createdAt || frontmatter.date || fs.statSync().birthtime`
+    (`src/core.js`). Authors deploying via CI get a stable date by adding
+    `createdAt:` (or `date:`) to a page's frontmatter; local builds without
+    either key behave exactly as before. See nera-platform R1 (`plans/01`).
+
 ## [4.6.0] - 2026-07-24
 
 The installable, updatable theme system (`ROADMAP-themes.md`). A theme is an npm

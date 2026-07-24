@@ -31,6 +31,18 @@ beforeAll(async () => {
     await fs.writeFile(path.join(PAGES, 'blog/post.md'), '# Blog Post')
     await fs.writeFile(path.join(PAGES, 'broken.md'), '::::')
     await fs.writeFile(path.join(PAGES, 'page.mdx'), '# MDX')
+    await fs.writeFile(
+        path.join(PAGES, 'dated-created.md'),
+        '---\ntitle: Dated\ncreatedAt: 2021-03-04\n---\n\n# Dated'
+    )
+    await fs.writeFile(
+        path.join(PAGES, 'dated-date.md'),
+        '---\ntitle: Dated\ndate: 2019-11-02\n---\n\n# Dated'
+    )
+    await fs.writeFile(
+        path.join(PAGES, 'dated-both.md'),
+        '---\ntitle: Dated\ncreatedAt: 2022-06-07\ndate: 2019-11-02\n---\n\n# Dated'
+    )
     await fs.mkdir(path.join(PAGES, 'a.md.notes'), { recursive: true })
     await fs.writeFile(path.join(PAGES, 'a.md.notes/b.md'), '# Notes')
 })
@@ -261,5 +273,36 @@ describe('getPagesData', () => {
     it('skips non-existing files', () => {
         const result = getPagesData(['non-existing.md'], PAGES)
         expect(result).toHaveLength(0) // File should be skipped, not included with empty content
+    })
+
+    // createdAt resolution (nera-platform R1): frontmatter wins over the
+    // filesystem birthtime, which is unreliable under CI where a fresh
+    // checkout stamps every file with the same date and silently breaks any
+    // date ordering/display.
+    describe('createdAt resolution', () => {
+        const asISO = (d) => new Date(d).toISOString().slice(0, 10)
+
+        it('reads createdAt from frontmatter when present', () => {
+            const [{ meta }] = getPagesData(['dated-created.md'], PAGES)
+            expect(asISO(meta.createdAt)).toBe('2021-03-04')
+        })
+
+        it('falls back to a frontmatter `date` when createdAt is absent', () => {
+            const [{ meta }] = getPagesData(['dated-date.md'], PAGES)
+            expect(asISO(meta.createdAt)).toBe('2019-11-02')
+        })
+
+        it('prefers createdAt over date when both are present', () => {
+            const [{ meta }] = getPagesData(['dated-both.md'], PAGES)
+            expect(asISO(meta.createdAt)).toBe('2022-06-07')
+        })
+
+        it('falls back to filesystem birthtime when frontmatter has no date', () => {
+            // index.md carries a title but no date keys, so createdAt must come
+            // from the file's birthtime — a Date near now for a just-written file.
+            const [{ meta }] = getPagesData(['index.md'], PAGES)
+            expect(meta.createdAt).toBeInstanceOf(Date)
+            expect(Number.isNaN(new Date(meta.createdAt).getTime())).toBe(false)
+        })
     })
 })

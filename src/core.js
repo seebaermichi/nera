@@ -125,16 +125,26 @@ export const getPagesData = (
             const fileContent = fs.readFileSync(fullPath, 'utf-8')
             const content = md.render(fileContent)
 
-            // Get file stats safely
-            let createdAt
-            try {
-                createdAt = fs.statSync(fullPath).birthtime
-            } catch (statErr) {
-                console.warn(
-                    `⚠️ Could not get file stats for ${fullPath}:`,
-                    statErr.message
-                )
-                createdAt = new Date() // Fallback to current date
+            // Resolve the creation date. Prefer an author/platform-supplied
+            // date from frontmatter — `createdAt`, else `date` — because the
+            // filesystem `birthtime` fallback is unreliable under CI: a fresh
+            // clone/checkout stamps every file with the same birthtime, which
+            // silently breaks anything that orders or displays by date
+            // (pagination, tag overviews, page lists, printed dates). Only when
+            // frontmatter carries neither key do we fall back to `birthtime`,
+            // which keeps a purely-local build byte-identical to before.
+            // See nera-platform R1 (plans/01) and ROADMAP notes.
+            let createdAt = md.meta.createdAt || md.meta.date
+            if (!createdAt) {
+                try {
+                    createdAt = fs.statSync(fullPath).birthtime
+                } catch (statErr) {
+                    console.warn(
+                        `⚠️ Could not get file stats for ${fullPath}:`,
+                        statErr.message
+                    )
+                    createdAt = new Date() // Fallback to current date
+                }
             }
 
             // Single source of truth for the output path: separators are
