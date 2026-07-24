@@ -771,7 +771,14 @@ fail) when the just-installed generator falls outside an installed theme's
 
 ### 8. Adjacent: should the generator itself be an npm package?
 
-**Out of scope here, but recorded — it is the same problem one layer up.**
+> **Now its own tracked work — see [`ROADMAP-core.md`](ROADMAP-core.md), the
+> single source of truth for the core consolidation** (`generator` + `installer`
+> → one `@nera-static/nera` CLI over a thin `@nera-static/core` engine). The
+> sketch below is the seed; the plan, package layout, migration and slice order
+> live there. Decided 2026-07-24 to build it before resuming the platform track,
+> exactly as the theme system was.
+
+**Out of scope *here*, but recorded — it is the same problem one layer up.**
 
 `views/` is vendored into every site by git clone and can never be updated: that
 is the fork-once problem this ROADMAP exists to fix. But `src/` is vendored by

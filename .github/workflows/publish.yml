@@ -1,0 +1,66 @@
+name: 📦 Publish to npm
+
+# Publishes @nera-static/core when a version tag is pushed:
+#   npm version <patch|minor|major> && git push --follow-tags
+#
+# Authentication is npm trusted publishing (OIDC). There is no token
+# stored anywhere — GitHub mints a short-lived, workflow-scoped
+# credential per run. This requires a matching Trusted Publisher entry
+# in the package settings on npmjs.com, pointing at this repository and
+# at this filename (publish.yml). The FIRST publish must be a manual
+# bootstrap by a maintainer (npm has no package to attach the publisher
+# to yet); every release after that goes through this workflow.
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+permissions:
+    id-token: write # required for OIDC — without it, publish falls back to a token and fails
+    contents: read
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            # Node 24 ships npm 11.x. Trusted publishing needs npm >= 11.5.1.
+            # `registry-url` is deliberately NOT set: it writes an _authToken
+            # line into .npmrc which breaks OIDC when no NODE_AUTH_TOKEN is
+            # present (actions/setup-node#1551). npm defaults to the public
+            # registry regardless.
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+
+            - name: Pin npm to a version that supports OIDC
+              run: npm install -g npm@latest
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run tests
+              run: npx vitest run
+
+            - name: Lint
+              run: npm run lint
+
+            # Guards against tagging v4.10.0 while package.json still says
+            # 4.9.0 — npm would happily publish the wrong version.
+            - name: Verify tag matches package.json version
+              run: |
+                  TAG="${GITHUB_REF_NAME#v}"
+                  PKG="$(node -p "require('./package.json').version")"
+                  if [ "$TAG" != "$PKG" ]; then
+                    echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG"
+                    exit 1
+                  fi
+                  echo "Tag and package.json agree on $PKG"
+
+            - name: Publish
+              run: npm publish

@@ -73,3 +73,29 @@ const run = async (settings = defaultSettings) => {
 }
 
 export default run
+
+// Public API barrel for `@nera-static/core`. `run` (the whole build) doubles as
+// the default and a named export; the rest is what the CLI, `@nera-static/validate`
+// and tooling reuse — the pipeline stages, the layered resolver, and the
+// read-only site-model loader. Subpath exports (`@nera-static/core/resolve`,
+// `/site-model`, …) stay available for callers that want only one module.
+export { run }
+export {
+    loadAppData,
+    getPagesData,
+    computeFolders,
+    defaultSettings,
+    normalizeBasePath,
+} from './core.js'
+export { getPluginsData } from './setup-plugins.js'
+export {
+    makeLayeredResolver,
+    resolveEntry,
+    defaultResolvePath,
+} from './resolve.js'
+export { resolveSiteModel } from './site-model.js'
+export {
+    resolveTheme,
+    checkThemeCompatibility,
+    deepMerge,
+} from './theme.js'

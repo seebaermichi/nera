@@ -1,8 +1,24 @@
 {
-    "name": "nera",
-    "version": "4.8.0",
-    "description": "A simple static site generator",
-    "main": "index.js",
+    "name": "@nera-static/core",
+    "version": "4.9.0",
+    "description": "The Nera static site generator engine — the build pipeline and the layered theme/view resolver, importable by the Nera CLI, @nera-static/validate and tooling",
+    "main": "./src/index.js",
+    "exports": {
+        ".": "./src/index.js",
+        "./core": "./src/core.js",
+        "./render": "./src/render.js",
+        "./resolve": "./src/resolve.js",
+        "./theme": "./src/theme.js",
+        "./site-model": "./src/site-model.js",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "src/*.js",
+        "index.js"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "start": "nodemon",
         "serve": "vite",
@@ -34,6 +50,10 @@
         "type": "git",
         "url": "https://github.com/seebaermichi/nera"
     },
+    "bugs": {
+        "url": "https://github.com/seebaermichi/nera/issues"
+    },
+    "homepage": "https://github.com/seebaermichi/nera#readme",
     "dependencies": {
         "cpy": "^13.2.2",
         "fs-readdir-recursive": "^1.1.0",

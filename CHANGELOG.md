@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.9.0] - 2026-07-24
+
+First step of the **core consolidation** (`ROADMAP-core.md`): the generator gains
+a **publishable engine identity** as `@nera-static/core`, so its build pipeline
+and — crucially — its layered theme/view resolver can be imported by the coming
+`nera` CLI, by `@nera-static/validate`, and by tooling, instead of being vendored
+by clone. Fully additive: the render pipeline is byte-identical to 4.8.0, and a
+site cloned as before still builds unchanged.
+
+### Added
+
+-   `src/resolve.js` — the layered view resolver (`makeLayeredResolver`,
+    `resolveEntry`, `defaultResolvePath`) extracted verbatim from `render.js` and
+    now exported, so `@nera-static/validate` decides "does this include resolve?"
+    with the exact logic the build uses (no forked copy to drift).
+-   `computeFolders(appConfig, { settings, cwd, warn })` in `core.js` — the
+    `folders` merge and `theme/` probe, now cwd-aware and side-effect-free, so a
+    read-only caller outside the site directory gets the same folders the build
+    does. `loadAppData` delegates to it (behaviour unchanged; still warns once on
+    the legacy root layout).
+-   `src/site-model.js` — `resolveSiteModel({ cwd })`, which returns a site's
+    folders, theme, and the ordered `roots` chain **without building**, capturing
+    a broken `app.yaml` or unresolvable theme as `appConfigError`/`themeError`
+    rather than throwing. The bridge the validator and platform resolve against.
+-   Package identity for npm publishing: scoped name `@nera-static/core`,
+    `exports` map (`.`, `./resolve`, `./core`, `./render`, `./theme`,
+    `./site-model`), `files` scoped to `src/*.js` + `index.js` (tests excluded),
+    `publishConfig.access`, and a trusted-publishing `publish.yml`. The bare
+    `nera` name is taken on npm; the scoped name is ours (the *command* stays
+    `nera`, provided by the CLI package).
+
+### Changed
+
+-   `render.js` imports `makeLayeredResolver`/`resolveEntry` from `./resolve.js`
+    instead of defining them inline — pure refactor, identical output.
+
 ## [4.8.0] - 2026-07-24
 
 Subdirectory deploys via a new `base_path` config key. A site served from a
