@@ -118,6 +118,22 @@ export const createHtmlFiles = async (
         const roots = theme ? [viewsFolder, theme.viewsRoot] : [viewsFolder]
         const resolver = theme ? makeLayeredResolver(roots) : null
 
+        // Compile options are constant across the page loop — hoist them out.
+        const compileOptions = resolver
+            ? { basedir: viewsFolder, plugins: [{ resolve: resolver }] }
+            : { basedir: viewsFolder }
+
+        // Compile each distinct layout once per build, then reuse the template
+        // function for every page that uses it (ROADMAP-themes.md §6). This loop
+        // previously re-ran pug.compileFile per page, recompiling the same tree
+        // dozens of times — the dominant build cost (measured ~70× on 69 pages,
+        // ~500× on 500, since a site's pages share a handful of layouts). Keyed
+        // on the resolved entry path, so different layouts stay separate and,
+        // under a theme, a layout resolved from the theme caches independently of
+        // one resolved from the site. Scoped to this call — a fresh Map per
+        // build, no process-global pug.cache to leak between run()s or tests.
+        const compiled = new Map()
+
         for (const pageData of data.pagesData) {
             if (pageData.meta.layout) {
                 data.t = (key) =>
@@ -133,12 +149,11 @@ export const createHtmlFiles = async (
                     ? resolveEntry(pageData.meta.layout, roots)
                     : `${viewsFolder}/${pageData.meta.layout}`
 
-                const fn = pug.compileFile(
-                    entry,
-                    resolver
-                        ? { basedir: viewsFolder, plugins: [{ resolve: resolver }] }
-                        : { basedir: viewsFolder }
-                )
+                let fn = compiled.get(entry)
+                if (!fn) {
+                    fn = pug.compileFile(entry, compileOptions)
+                    compiled.set(entry, fn)
+                }
                 html = fn({ ...data, ...pageData })
 
                 const htmlPath = path.join(
