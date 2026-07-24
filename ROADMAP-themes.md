@@ -577,10 +577,18 @@ it is not a v1 blocker.
 > below). Ranges use `semver` (new runtime dependency) for standard npm semantics,
 > so the field moves verbatim into `peerDependencies` the day the generator is
 > published (§8). A malformed range warns and is ignored rather than bricking the
-> build. **The `nera update`-time check (below) is deliberately still open** — it
-> belongs in the installer, which changes the generator version, and is tracked
-> separately from this build-time work. Covered by unit + `run()` e2e tests and
-> proven against `@nera-static/theme-example`.
+> build. Covered by unit + `run()` e2e tests and proven against
+> `@nera-static/theme-example`.
+>
+> **The `nera update`-time check shipped separately in `@nera-static/installer`
+> 2.2.0** (2026-07-24). `nera update` is the moment the generator version
+> changes, so after the update it warns when the just-installed generator falls
+> outside an installed theme's `nera.generator` range — a **warning, not a
+> failure**, since this build-time check is the hard gate and the core update
+> itself is legitimate. It reads the version from the freshly cloned generator's
+> own `package.json` (not the site's — the same trap), scans the project's
+> dependencies for any package declaring `nera.generator` (no YAML parsing, no
+> `theme:` knowledge needed), and shares `semver` semantics with this check.
 
 A theme's CSS targets plugin BEM class names, and `CLAUDE.md` classifies those
 changes as **major**. So a theme must declare what it supports, and a mismatch
@@ -623,7 +631,8 @@ It needs a field the generator itself reads, e.g.:
 
 checked at build time by the generator, and at update time by `nera update`,
 which is the moment the generator version actually changes. Two mechanisms for
-two different things, each in the only place that can see them. To settle.
+two different things, each in the only place that can see them. **Both shipped**
+— build-time in generator 4.6.0, update-time in installer 2.2.0.
 
 #### Designing `nera.generator` to survive section 8
 
@@ -748,7 +757,10 @@ express plugin compatibility through `peerDependencies`, but has no way whatsoev
 to express "requires generator >= 5.0" through npm.
 
 That check has to live outside npm, and `nera update` — the command that changes
-the generator version — is exactly when it matters. See section 5.
+the generator version — is exactly when it matters. See section 5. **Shipped in
+`@nera-static/installer` 2.2.0** (2026-07-24): after an update it warns (does not
+fail) when the just-installed generator falls outside an installed theme's
+`nera.generator` range.
 
 ### 8. Adjacent: should the generator itself be an npm package?
 
