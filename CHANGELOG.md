@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.9.2] - 2026-07-25
+
+### Fixed
+
+-   `dotenv` moved from devDependencies to **dependencies**. `render.js` imports
+    it (and is always loaded via the package entry), so a consumer installing
+    `@nera-static/core` from npm without it crashed on import with
+    `ERR_MODULE_NOT_FOUND: dotenv`. This broke the 4.9.1 tarball for every
+    installed consumer; 4.9.1 should not be used.
+
+### Changed
+
+-   `files` is now an explicit list of the seven engine modules + `index.js`,
+    excluding `src/watch-assets.js` — dev-only tooling (used by the engine's own
+    `dev` script) that imports the `chokidar`/`dotenv` devDeps and is never loaded
+    by a consumer. Keeps the published package free of modules with unmet imports.
+
 ## [4.9.1] - 2026-07-24
 
 ### Fixed

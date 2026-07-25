@@ -1,6 +1,6 @@
 {
     "name": "@nera-static/core",
-    "version": "4.9.1",
+    "version": "4.9.2",
     "description": "The Nera static site generator engine — the build pipeline and the layered theme/view resolver, importable by the Nera CLI, @nera-static/validate and tooling",
     "main": "./src/index.js",
     "exports": {
@@ -13,7 +13,13 @@
         "./package.json": "./package.json"
     },
     "files": [
-        "src/*.js",
+        "src/core.js",
+        "src/index.js",
+        "src/render.js",
+        "src/resolve.js",
+        "src/setup-plugins.js",
+        "src/site-model.js",
+        "src/theme.js",
         "index.js"
     ],
     "publishConfig": {
@@ -56,6 +62,7 @@
     "homepage": "https://github.com/seebaermichi/nera#readme",
     "dependencies": {
         "cpy": "^13.2.2",
+        "dotenv": "^17.2.0",
         "fs-readdir-recursive": "^1.1.0",
         "gray-matter": "^4.0.3",
         "markdown-it": "^14.1.0",
@@ -69,7 +76,6 @@
     "devDependencies": {
         "chokidar": "^5.0.0",
         "concurrently": "^10.0.3",
-        "dotenv": "^17.2.0",
         "eslint": "^10.7.0",
         "husky": "^9.1.7",
         "nodemon": "^3.0.3",

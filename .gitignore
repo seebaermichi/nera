@@ -6,3 +6,6 @@ ISSUES.md
 .vite
 # npm credentials — never commit
 .npmrc
+
+# npm pack artifacts
+*.tgz
