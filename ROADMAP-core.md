@@ -255,10 +255,11 @@ maintainer's bootstrap steps.
 
 ## Maintainer bootstrap (post-code, in order)
 
-The three new packages are not on npm yet, so their first publish is manual, and
-**order matters** (each depends on the one before):
+The packages publish in dependency order (each depends on the one before). The
+first publish of a brand-new package is a manual bootstrap, after which its npm
+Trusted Publisher is configured and CI OIDC (a pushed `v*` tag) takes over.
 
-1. Create GitHub remotes: `seebaermichi/nera-cli`, `seebaermichi/nera-validate` (the generator repo already exists).
-2. Bootstrap-publish, in order: **`@nera-static/core`** → **`@nera-static/validate`** → **`@nera-static/nera`** (npm has nothing to attach a Trusted Publisher to until the first publish; CI OIDC takes over afterward).
+1. ✅ GitHub remotes created & pushed: `seebaermichi/nera-cli`, `seebaermichi/nera-validate` (the generator repo already existed; its main is now pushed too).
+2. **`@nera-static/core`** ✅ **published** — bootstrapped 4.9.1 (broken: shipped `dotenv` as a devDep though `render.js` imports it → import crash on install), fixed and re-released as **4.9.2 via CI OIDC** once the Trusted Publisher was set up. *Lesson for the next two: `npm pack` → install the tarball into a clean dir → import it, **before** publishing.* Then **`@nera-static/validate`** → **`@nera-static/nera`** (still pending).
 3. In `nera-website`: `npm install` (regenerate the lockfile against the now-published deps), commit the lockfile, then push — its CI `npm ci` then works.
-4. `npm deprecate @nera-static/installer "use @nera-static/nera"`.
+4. `npm deprecate @nera-static/installer "use @nera-static/nera"`. Optional: `npm deprecate @nera-static/core@4.9.1 "broken — use 4.9.2+"`.
