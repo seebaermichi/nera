@@ -1,231 +1,156 @@
-# Nera – a lightweight static site generator
+# @nera-static/core – the Nera engine
 
 [![Test](https://github.com/seebaermichi/nera/actions/workflows/test.yml/badge.svg)](https://github.com/seebaermichi/nera/actions/workflows/test.yml)
 
-**Nera** is a minimal static site generator that transforms Markdown content into fast, clean HTML pages using [Pug](https://pugjs.org/) templates. It is designed to be simple to use, yet extendable with plugins.
+**`@nera-static/core`** is the engine behind [Nera](https://github.com/seebaermichi/nera-cli): the four-stage build pipeline that turns Markdown + [Pug](https://pugjs.org/) into static HTML, plus the layered theme/view resolver. It is an **importable library**, consumed by the [`@nera-static/nera`](https://www.npmjs.com/package/@nera-static/nera) CLI, by [`@nera-static/validate`](https://www.npmjs.com/package/@nera-static/validate), and by other tooling.
 
 > ⚠️ This project is under active development. Breaking changes may occur.
 
 ---
 
-## 🚀 Getting Started
+## 👉 Building a website? You probably don't want this package
+
+If you want to **create and build a site**, install the CLI, not the engine — it brings `@nera-static/core` and `@nera-static/validate` transitively:
 
 ```bash
-npm install -g @nera-static/installer
+npm install -g @nera-static/nera
 
-# Create a new project
 nera new my-nera-site
-
 cd my-nera-site
-npm run dev        # Start dev server with live reload
-npm run render     # Render the static site to /public
+nera dev            # build + live-reload dev server
+nera build          # render pages/ → public/
 ```
 
-Alternatively, clone manually:
+A site is a **thin project** — a `package.json` whose only Nera dependency is `@nera-static/nera`, plus `config/`, `pages/`, and a `theme/`. It is not a clone of this repo. See the [CLI README](https://github.com/seebaermichi/nera-cli) for the full site workflow (content, translations, deployment).
+
+Install `@nera-static/core` directly only if you are **embedding the engine** — a custom build script, a hosted platform, or your own tooling:
 
 ```bash
-git clone git@github.com:seebaermichi/nera.git
-cd nera
-rm -fr .git
-npm install
-npm run dev
+npm install @nera-static/core
 ```
 
 ---
 
-## 🗂️ Directory Structure
+## 🧱 What the engine does
 
-```bash
-my-nera-site/
-├── config/
-│   └── app.yaml         # Global site config (name, lang, translations, etc.)
-├── pages/               # Markdown content with frontmatter metadata
-├── public/              # Rendered static site output
-├── src/
-│   ├── plugins/         # Local plugins (optional)
-│   ├── core.js
-│   ├── index.js
-│   ├── render.js
-│   └── setup-plugins.js
-├── theme/               # Your site's presentation (layered over an installed theme)
-│   ├── assets/          # CSS, JS, images, fonts – copied to /public
-│   └── views/           # Pug templates (layouts and partials)
-└── .neraignore          # List of asset files or folders to ignore during render
+`run()` executes a fixed **four-stage pipeline** against the current working directory:
+
+1. **`loadAppData`** — parse `config/app.yaml` into `app`; resolve the presentation folders (and the `theme/` probe) and list `pages/` recursively.
+2. **`getPagesData`** — render each Markdown file with markdown-it, extract frontmatter, and derive `meta.href`/`dirname`/`filename`/`createdAt`. Returns `[{ content, meta }]`.
+3. **`getPluginsData`** — load and apply plugins (see the plugin contract below), threading their `app`/`pagesData` results.
+4. **render** — delete `public/`, write the HTML files (layering theme views under the site's), copy assets (theme first, site second), and rewrite root-absolute URLs for `base_path` deploys.
+
+Two things that are easy to miss:
+
+- A page is only rendered if its frontmatter defines `layout`. Pages without it are silently skipped.
+- `public/` is deleted on every render, so nothing may be authored there by hand.
+
+---
+
+## 📦 Public API
+
+The package is ESM (`"type": "module"`), requires **Node ≥ 20**, and exposes a barrel at the root plus per-module subpath exports.
+
+```js
+import { run } from '@nera-static/core'
+
+// Build the site in process.cwd(): pages/ → public/
+await run()
 ```
 
-> **Presentation lives under `theme/`.** Your site's `theme/views/` and
-> `theme/assets/` are yours to edit; if you also set `theme: <name>` in
-> `config/app.yaml`, an installed theme package is layered *under* them and your
-> files override it per file. Sites created before this layout keep their
-> `views/`/`assets/` at the project root — that still works (with a deprecation
-> warning), but move them to `theme/views/` and `theme/assets/` when you can.
+`run(settings?)` accepts an optional `settings` object (defaults to `defaultSettings`); its `folders` block is normally taken from the site's `config/app.yaml`, not passed here.
 
----
+### Exports
 
-## 📄 Page Content (`pages/`)
+| Export | From | Purpose |
+|---|---|---|
+| `run` (also default) | `.` | Run the whole four-stage build against the cwd. |
+| `loadAppData`, `getPagesData`, `computeFolders`, `defaultSettings`, `normalizeBasePath` | `./core` | Pipeline stages 1–2 and the folder/base-path helpers. |
+| `getPluginsData` | (`.` / `setup-plugins`) | Pipeline stage 3 — load and apply plugins. |
+| `makeLayeredResolver`, `resolveEntry`, `defaultResolvePath` | `./resolve` | The layered Pug view resolver (site over theme, per file). |
+| `resolveSiteModel` | `./site-model` | Read-only: the folders, theme, and resolver `roots` chain for a directory **without building it** — the bridge `@nera-static/validate` and the platform use to agree with the engine on "how this site resolves." |
+| `resolveTheme`, `checkThemeCompatibility`, `deepMerge` | `./theme` | Theme discovery, `nera.generator`/peer-dependency compatibility checks, config merge. |
 
-Each Markdown file must define frontmatter metadata, e.g.:
+Subpath exports (`@nera-static/core/resolve`, `/site-model`, `/core`, `/render`, `/theme`) are available for callers that want a single module without pulling in the whole barrel.
 
-```markdown
----
-layout: pages/default.pug
-title: Homepage
----
-# Welcome to Nera
+```js
+import { resolveSiteModel } from '@nera-static/core/site-model'
 
-This content will be injected into the layout file defined above.
-```
-
-> All frontmatter values are accessible as the `meta` object in your Pug templates.
-
----
-
-## 🎨 Templates (`theme/views/`)
-
-Nera uses [Pug](https://pugjs.org/) for layout rendering. You have access to:
-
-- `app`: values from `config/app.yaml`
-- `meta`: metadata from the current markdown page
-- `t(key)`: translation function
-- `url(path)`: prefixes a root-absolute path with the site's `base_path` (see
-  [Deploying to a subdirectory](#-deploying-to-a-subdirectory-base_path)); a
-  no-op when `base_path` is unset
-
-Example:
-
-```pug
-doctype html
-html(lang=app.lang)
-  head
-    title= meta.title
-    meta(name="description", content=meta.description || t('app_description'))
-  body
-    h1= meta.title
-    != content
+const model = resolveSiteModel({ cwd: '/path/to/site' })
+// → { folders, theme, roots, appConfigError, themeError, ... }  (never throws)
 ```
 
 ---
 
-## 🌍 Translations
+## 🔌 Plugin contract
 
-You can define translations in `config/app.yaml`:
+Plugins are discovered from two places: local directories under the configured plugins folder (`folders.plugins`, default `./src/plugins`; a thin site sets `./plugins`), and any dependency in the **site's** `package.json` whose name starts with **`@nera-static/plugin-`** (excluding the `@nera-static/plugin-utils` library).
 
-```yaml
-lang: en
-translations:
-  en:
-    app_description: Nera is a simple static site generator.
-  de:
-    app_description: Nera ist ein einfacher Generator für statische Webseiten.
+A plugin is an ESM module exporting either or both hooks — no registration, no base class:
+
+```js
+export function getAppData({ app, pagesData }) { /* return a new app object */ }
+export function getMetaData({ app, pagesData }) { /* return a new pagesData array */ }
 ```
 
-Use the `t` function in templates:
+- `getAppData` runs first and must return a **plain object**; `getMetaData` must return an **array**. A wrong return type is discarded with a warning and the build continues.
+- Results are threaded: `getMetaData` sees the `app` that `getAppData` returned.
+- Both hooks are awaited (generator ≥ 4.3.0), but keeping them synchronous is the safe default.
+- Config is read from the **user's site** (`config/<name>.yaml` via `getConfig`), not from the plugin package; supply per-key JS fallbacks.
 
-```pug
-meta(name="description", content=t('app_description'))
-```
+Execution order: names under `start:` in `config/plugin-order.yaml`, then everything else alphabetically, then names under `end:`. For the full catalog see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md).
+
+---
+
+## 🎨 Templates and the layered resolver
+
+Rendering uses [Pug](https://pugjs.org/). Templates receive:
+
+- `app`: values from `config/app.yaml` (including `app.theme` when a theme is set)
+- `meta`: frontmatter metadata for the current page
+- `t(key)`: translation helper — resolves `app.translations[meta.lang || app.lang][key]`, falling back to the key itself
+- `url(path)`: prefixes a root-absolute path with the site's `base_path` (a no-op when unset)
+
+Views resolve **layered**: a site's `theme/views/<file>` overrides an installed theme package's same-path file, WordPress child-theme style. A themeless site renders exactly as before this layer existed. The design lives in [`ROADMAP-themes.md`](./ROADMAP-themes.md); the consolidation that made this package importable is in [`ROADMAP-core.md`](./ROADMAP-core.md).
 
 ---
 
 ## 📁 Deploying to a subdirectory (`base_path`)
 
-By default Nera writes root-absolute URLs (`/css/main.css`, `/about.html`), which
-assume the site is served from a domain root. When it is served from a
-**subdirectory** instead — most commonly a GitHub **project** Pages site at
-`https://<user>.github.io/<repo>/` — those URLs resolve against the domain root
-and 404.
+By default the engine writes root-absolute URLs (`/css/main.css`, `/about.html`), which assume the site is served from a domain root. When it is served from a **subdirectory** instead — most commonly a GitHub **project** Pages site at `https://<user>.github.io/<repo>/` — those URLs 404.
 
-Set `base_path` in `config/app.yaml` to the subdirectory:
+Set `base_path` in `config/app.yaml`:
 
 ```yaml
 base_path: /my-repo
 ```
 
-Nera then prefixes every root-absolute URL in the built output with it — links,
-`<script>`/`<link>`/`<img>` sources, `srcset`, CSS `url(…)`, the web app
-manifest, and `href`/`url` values in JSON assets such as the search index. The
-physical output layout is unchanged (files still land at the artifact root, which
-*is* the served subdirectory), and `meta.href` stays in the site's logical
-(un-prefixed) namespace so template URL logic keeps working.
+The engine then prefixes every root-absolute URL in the built output — links, `<script>`/`<link>`/`<img>` sources, `srcset`, CSS `url(…)`, the web app manifest, and `href`/`url` values in JSON assets such as the search index. The physical output layout is unchanged, and `meta.href` stays in the site's logical (un-prefixed) namespace so template URL logic keeps working.
 
-It is fully additive: with no `base_path` (or `base_path: ''`) the build is
-byte-identical to before. Remove it when you move the site to a domain root (e.g.
-a custom domain).
+It is fully additive: with no `base_path` (or `base_path: ''`) the build is byte-identical. Remove it when you move the site to a domain root.
 
-For **absolute** URLs you build yourself (canonical/OpenGraph tags, a sitemap),
-set the relevant plugin's origin to include the subdirectory, or wrap a hardcoded
-path in the `url()` helper:
-
-```pug
-link(rel="preload", as="font", href=url('/fonts/body.woff2'))
-```
-
-If the key or language is missing, the key itself is returned as fallback.
+For **absolute** URLs you build yourself (canonical/OpenGraph tags, a sitemap), set the relevant plugin's origin to include the subdirectory, or wrap a hardcoded path in the `url()` helper.
 
 ---
 
-## 🔌 Plugins
+## 🛠 Developing this engine
 
-Nera supports plugins that can:
-
-- Add data to the app or individual pages
-- Modify metadata
-- Inject routes or components
-- Extend rendering logic
-
-You can place local plugins in `src/plugins/` or install official ones via npm:
+This repo ships a bundled demo site used to exercise the pipeline during development — the same pipeline the CLI drives via `run()`:
 
 ```bash
-npm install @nera-static/plugin-navigation
+npm run render  # build the demo site to /public
+npm run dev     # render, then vite + asset watch + rebuild on change
+npm run serve   # vite over the built output
+npm test        # vitest (WATCH mode) — use `npx vitest run` for a single pass
+npm run lint    # eslint .
 ```
 
-For a complete list of existing plugins, see [PLUGINS.md](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md).
-
-### ⚙️ Plugin Execution Order
-
-To control the **execution order** of plugins, you can define a `config/plugin-order.yaml` file like this:
-
-```yaml
-plugin-order:
-  - start:
-      - plugin-tags
-  - end:
-      - plugin-search
-```
-
-- `start`: plugins listed here will run first (in the order listed).
-- `end`: plugins listed here will run last (in the order listed).
-- Any other plugins not listed will be placed in the middle, sorted alphabetically.
-
-This is especially useful when some plugins (like `plugin-search`) rely on metadata added by earlier ones.
+Formatting is enforced by eslint: 4-space indent, no semicolons, single quotes. There is no build step.
 
 ---
 
-## 📁 Asset Handling
+## 📚 Further reading
 
-All files in the `theme/assets/` directory will be copied to `/public` during render. You can exclude files using a `.neraignore` at the project root. Example:
-
-```
-ignore.txt
-css/dev-only.css
-```
-
-Supports nested paths relative to `theme/assets/`.
-
----
-
-## 🛠 Development Scripts
-
-```bash
-npm run dev     # Starts local development server
-npm run render  # Renders pages to /public
-npm start       # Shortcut for dev mode
-```
-
----
-
-## 📚 Further Reading
-
+- [`@nera-static/nera`](https://github.com/seebaermichi/nera-cli) — the CLI, and the getting-started for building a site
+- [PLUGINS.md](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md) — the plugin catalog
 - [How Nera is used to build its own website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)
-
----
