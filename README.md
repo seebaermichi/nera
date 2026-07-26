@@ -4,6 +4,8 @@
 
 **`@nera-static/core`** is the engine behind [Nera](https://github.com/seebaermichi/nera-cli): the four-stage build pipeline that turns Markdown + [Pug](https://pugjs.org/) into static HTML, plus the layered theme/view resolver. It is an **importable library**, consumed by the [`@nera-static/nera`](https://www.npmjs.com/package/@nera-static/nera) CLI, by [`@nera-static/validate`](https://www.npmjs.com/package/@nera-static/validate), and by other tooling.
 
+📖 **Documentation:** [nera.js.org](https://nera.js.org)
+
 > ⚠️ This project is under active development. Breaking changes may occur.
 
 ---
@@ -151,6 +153,6 @@ Formatting is enforced by eslint: 4-space indent, no semicolons, single quotes. 
 
 ## 📚 Further reading
 
+- [nera.js.org](https://nera.js.org) — the official Nera website and documentation
 - [`@nera-static/nera`](https://github.com/seebaermichi/nera-cli) — the CLI, and the getting-started for building a site
 - [PLUGINS.md](https://github.com/seebaermichi/nera/blob/main/PLUGINS.md) — the plugin catalog
-- [How Nera is used to build its own website](https://medium.com/@micha.becker79/building-nera-website-with-nera-4b50ed5dbff2)
