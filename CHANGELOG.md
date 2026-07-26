@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.9.3] - 2026-07-26
+
+### Changed
+
+-   README rewritten for the package's post-consolidation identity as
+    `@nera-static/core`, the importable engine. It previously described the
+    pre-consolidation world — `npm install -g @nera-static/installer` (now
+    deprecated), the removed git-clone workflow, and a site with a vendored
+    engine `src/`. It now leads with a pointer to `@nera-static/nera` for
+    building a site, documents the public API barrel and subpath exports, and
+    scopes the `render`/`dev`/`serve` scripts to developing this engine's demo
+    site. Docs only — no code change. (Published so npm renders the current
+    README; the 4.9.2 tarball still shows the old one.)
+
 ## [4.9.2] - 2026-07-25
 
 ### Fixed
