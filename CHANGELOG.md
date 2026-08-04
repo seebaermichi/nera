@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.10.0] - 2026-08-04
+
+### Changed
+
+-   Upgraded `markdown-it` from `^14.1.0` to `^15.0.0`, the Markdown renderer
+    behind stage 2 of the build pipeline. The engine uses only markdown-it's
+    public API (`new MarkdownIt({ html: true }).use(meta)`) — it enables no
+    linkify and imports no internal subpaths — so 15.0's breaking changes
+    (linkify-it v6 fuzzy-link defaults, removed `markdown-it/lib/*` exports,
+    dropped `StateBlock#ddIndent`) do not reach it. Rendered output is
+    unchanged except for markdown-it 15's CommonMark edge-case fixes (named
+    entities now require a trailing semicolon; lowercase HTML declarations are
+    recognised as blocks). All 96 tests pass and the bundled demo site renders
+    identically. Minor, not major: no core API, config key, or intended output
+    changes for consumers.
+
 ## [4.9.3] - 2026-07-26
 
 ### Changed
