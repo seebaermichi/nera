@@ -65,7 +65,7 @@
         "dotenv": "^17.2.0",
         "fs-readdir-recursive": "^1.1.0",
         "gray-matter": "^4.0.3",
-        "markdown-it": "^14.1.0",
+        "markdown-it": "^15.0.0",
         "markdown-it-meta": "^0.0.1",
         "pretty": "^2.0.0",
         "pug": "^3.0.2",
