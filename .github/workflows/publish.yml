@@ -26,7 +26,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             # Node 24 ships npm 11.x. Trusted publishing needs npm >= 11.5.1.
             # `registry-url` is deliberately NOT set: it writes an _authToken
@@ -34,7 +34,7 @@ jobs:
             # present (actions/setup-node#1551). npm defaults to the public
             # registry regardless.
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
                   node-version: '24'
 
