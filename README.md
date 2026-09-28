@@ -40,7 +40,7 @@ npm install @nera-static/core
 1. **`loadAppData`** — parse `config/app.yaml` into `app`; resolve the presentation folders (and the `theme/` probe) and list `pages/` recursively.
 2. **`getPagesData`** — render each Markdown file with markdown-it, extract frontmatter, and derive `meta.href`/`dirname`/`filename`/`createdAt`. Returns `[{ content, meta }]`.
 3. **`getPluginsData`** — load and apply plugins (see the plugin contract below), threading their `app`/`pagesData` results.
-4. **render** — delete `public/`, write the HTML files (layering theme views under the site's), copy assets (theme first, site second), and rewrite root-absolute URLs for `base_path` deploys.
+4. **render** — delete `public/`, write the HTML files (layering theme views under the site's), copy assets (theme first, site second), rewrite root-absolute URLs for `base_path` deploys, and (opt-in) version asset URLs with content hashes for cache busting.
 
 Two things that are easy to miss:
 
@@ -132,6 +132,22 @@ The engine then prefixes every root-absolute URL in the built output — links, 
 It is fully additive: with no `base_path` (or `base_path: ''`) the build is byte-identical. Remove it when you move the site to a domain root.
 
 For **absolute** URLs you build yourself (canonical/OpenGraph tags, a sitemap), set the relevant plugin's origin to include the subdirectory, or wrap a hardcoded path in the `url()` helper.
+
+---
+
+## 🔄 Cache busting (`asset_hashing`)
+
+Browsers cache stylesheets, scripts and fonts, so after a deploy visitors can keep seeing the old CSS/JS until they force a reload. Enable content hashing in `config/app.yaml`:
+
+```yaml
+asset_hashing: true
+```
+
+As the last build step the engine appends `?v=<hash>` — the first 10 hex chars of the file's SHA-256 — to every local asset URL in the output: `<link>`/`<script>`/`<img>` sources, `srcset`, `poster`, `data-search-index`, and `url(…)` inside CSS. The hash is taken from the file that actually landed in `public/`, so site assets, theme-package assets and plugin output are all covered, and templates keep writing plain `/css/main.css`. Each file is versioned on its own: its URL changes exactly when its content does, and stays cacheable otherwise. A stylesheet is hashed after its `url()` references are rewritten, so a changed font busts the CSS as well.
+
+Left untouched: links to pages (`.html`, directories), external and protocol-relative URLs, other schemes (`data:`, `mailto:`), fragment-only refs, URLs that already carry a query string, and references that don't resolve to a file in `public/`. It composes with `base_path`. URLs a script builds at runtime (a `fetch('/data.json')` literal in JS) are not rewritten — pass them in through an attribute such as `data-search-index` instead.
+
+Opt-in and additive: without the key the build is byte-identical.
 
 ---
 

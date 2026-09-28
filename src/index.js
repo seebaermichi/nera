@@ -5,6 +5,7 @@ import {
     deleteFolder,
     createHtmlFiles,
     rewriteAssetUrls,
+    hashAssetUrls,
 } from './render.js'
 import { resolveTheme, checkThemeCompatibility } from './theme.js'
 
@@ -70,6 +71,11 @@ const run = async (settings = defaultSettings) => {
     // the HTML rewrite can't reach (CSS `url(/…)`, the web app manifest). Runs
     // after both asset passes; no-op when `base_path` is unset.
     await rewriteAssetUrls(dist, data.app.basePath)
+
+    // Cache busting: append `?v=<content hash>` to local asset URLs in the
+    // output. Last, so it hashes the final files behind the final URLs. No-op
+    // unless `asset_hashing: true` is set in config/app.yaml.
+    await hashAssetUrls(dist, data.app.basePath, data.app.asset_hashing === true)
 }
 
 export default run
