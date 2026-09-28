@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Added
+
+-   Opt-in cache busting via `asset_hashing: true` in `config/app.yaml`. A new
+    last build pass (`hashAssetUrls` in `render.js`, after `rewriteAssetUrls`)
+    appends `?v=<content hash>` to every local asset URL in the output — HTML
+    `href`/`src`/`srcset`/`poster`/`data-search-index` and CSS `url(…)`,
+    root-absolute or relative. Each file is hashed from its final content in
+    `public/` (stylesheets after their own `url()` rewrite), so site, theme and
+    plugin assets are covered without template changes and a URL changes
+    exactly when its file does. Page links, external/scheme URLs, fragment-only
+    refs, URLs with an existing query and unresolvable refs are left alone;
+    composes with `base_path`. Without the key the build is byte-identical.
+
 ## [4.10.0] - 2026-08-04
 
 ### Changed

@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import fssync from 'fs'
 import path from 'path'
+import { createHash } from 'crypto'
 import cpy from 'cpy'
 import pug from 'pug'
 import pretty from 'pretty'
@@ -151,6 +152,164 @@ export const rewriteAssetUrls = async (publicFolder, basePath) => {
         }
     }
     await walk(publicFolder)
+}
+// -----------------------------------------------------------------------------
+
+// --- Asset hashing (config `asset_hashing: true` → cache busting) -------------
+//
+// Appends `?v=<content hash>` to every local asset URL in the built output, so
+// a browser's cached copy is invalidated exactly when that file changes and
+// kept otherwise. Runs as the very last build pass, over the files that actually
+// landed in `public/` — site assets, theme-package assets and plugin output
+// alike — so templates and themes keep writing plain `/css/main.css` and never
+// need to know about it. Opt-in: without the key the output is byte-identical.
+//
+// Order matters: CSS files are rewritten first (their `url()` references —
+// fonts, images — are leaves), and a file's hash is taken from its *final*
+// content, so a font change changes the CSS hash too and busts the stylesheet.
+//
+// Left alone: external and protocol-relative URLs, `data:`/`mailto:` and other
+// schemes, fragment-only refs, URLs that already carry a query string (the
+// author chose one), links to pages (`.html`/`.htm`, directories), and any
+// reference that does not resolve to a file in `public/`.
+
+const HASH_LENGTH = 10
+const PAGE_EXTENSIONS = new Set(['.html', '.htm'])
+
+// Split `path#fragment` so the query lands before the fragment.
+const splitFragment = (url) => {
+    const i = url.indexOf('#')
+    return i === -1 ? [url, ''] : [url.slice(0, i), url.slice(i)]
+}
+
+const isHashable = (url) =>
+    typeof url === 'string' &&
+    url !== '' &&
+    !url.startsWith('#') &&
+    !url.startsWith('//') &&
+    !/^[a-z][a-z0-9+.-]*:/i.test(url) &&
+    !url.includes('?')
+
+// Returns `hashUrl(url, fromFile)`. Hashes are memoised per hasher and read
+// from the file as it is on disk at first use.
+const makeHasher = (publicFolder, basePath) => {
+    const cache = new Map()
+    const root = path.resolve(publicFolder)
+
+    // Resolve a URL as written in `fromFile` to a file inside `public/`, or null.
+    const resolveTarget = (url, fromFile) => {
+        let decoded
+        try {
+            decoded = decodeURI(url)
+        } catch {
+            return null
+        }
+        let target
+        if (decoded.startsWith('/')) {
+            // Root-absolute: strip a `base_path` prefix the base-path pass added.
+            const local =
+                basePath && decoded.startsWith(`${basePath}/`)
+                    ? decoded.slice(basePath.length)
+                    : decoded
+            target = path.join(root, local)
+        } else {
+            target = path.resolve(path.dirname(fromFile), decoded)
+        }
+        if (!target.startsWith(`${root}${path.sep}`)) return null
+        if (PAGE_EXTENSIONS.has(path.extname(target).toLowerCase())) return null
+        try {
+            return fssync.statSync(target).isFile() ? target : null
+        } catch {
+            return null
+        }
+    }
+
+    return (url, fromFile) => {
+        if (!isHashable(url)) return url
+        const [pathPart, fragment] = splitFragment(url)
+        if (!pathPart) return url
+        const target = resolveTarget(pathPart, fromFile)
+        if (!target) return url
+
+        let hash = cache.get(target)
+        if (!hash) {
+            hash = createHash('sha256')
+                .update(fssync.readFileSync(target))
+                .digest('hex')
+                .slice(0, HASH_LENGTH)
+            cache.set(target, hash)
+        }
+        return `${pathPart}?v=${hash}${fragment}`
+    }
+}
+
+// Version the URL-bearing attributes of one HTML document. Mirrors the
+// attribute set of the base-path rewrite, but also accepts relative values.
+export const hashHtmlUrls = (html, htmlFile, hashUrl) =>
+    html
+        .replace(
+            /\b(href|src|poster|data-search-index)=("|')([^"']*)\2/gi,
+            (m, attr, quote, val) =>
+                `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`
+        )
+        .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
+            const rewritten = list
+                .split(',')
+                .map((part) => {
+                    const seg = part.trim()
+                    if (!seg) return part
+                    const [url, ...descriptor] = seg.split(/\s+/)
+                    return [hashUrl(url, htmlFile), ...descriptor].join(' ')
+                })
+                .join(', ')
+            return `srcset=${quote}${rewritten}${quote}`
+        })
+
+// Version the `url()` references of one CSS file (root-absolute or relative).
+export const hashCssUrls = (css, cssFile, hashUrl) =>
+    css.replace(
+        /url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi,
+        (m, quote, val) =>
+            `url(${quote}${hashUrl(val.trim(), cssFile)}${quote})`
+    )
+
+// The pass itself. No-op unless `enabled`; run it after every asset copy and
+// after rewriteAssetUrls, so it sees the final files and final (prefixed) URLs.
+export const hashAssetUrls = async (publicFolder, basePath, enabled) => {
+    if (!enabled || !fssync.existsSync(publicFolder)) return
+
+    const cssFiles = []
+    const htmlFiles = []
+    const walk = async (dir) => {
+        for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name)
+            if (entry.isDirectory()) {
+                await walk(full)
+                continue
+            }
+            const ext = path.extname(entry.name).toLowerCase()
+            if (ext === '.css') cssFiles.push(full)
+            else if (PAGE_EXTENSIONS.has(ext)) htmlFiles.push(full)
+        }
+    }
+    await walk(publicFolder)
+
+    // CSS first, so each stylesheet's hash is taken from its rewritten content.
+    // The HTML pass gets a fresh hasher: a stylesheet hashed during the CSS pass
+    // (as an `@import` target) may have been rewritten since.
+    const hashInCss = makeHasher(publicFolder, basePath)
+    for (const file of cssFiles.sort()) {
+        const css = await fs.readFile(file, 'utf-8')
+        const out = hashCssUrls(css, file, hashInCss)
+        if (out !== css) await fs.writeFile(file, out, 'utf-8')
+    }
+    const hashInHtml = makeHasher(publicFolder, basePath)
+    for (const file of htmlFiles) {
+        const html = await fs.readFile(file, 'utf-8')
+        const out = hashHtmlUrls(html, file, hashInHtml)
+        if (out !== html) await fs.writeFile(file, out, 'utf-8')
+    }
+    console.log(SUCCESS_COLOR, 'Asset URLs hashed')
 }
 // -----------------------------------------------------------------------------
 
