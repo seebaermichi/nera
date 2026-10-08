@@ -78,6 +78,38 @@ describe('copyFolder', () => {
         expect(files).not.toContain(path.join('css', 'ignore.css'))
     })
 
+    // Server config such as .htaccess must reach public/; the glob skips
+    // dotfiles unless told otherwise.
+    it('copies dotfiles and dot-directories', async () => {
+        await fs.writeFile(path.join(srcDir, '.htaccess'), 'Options -Indexes')
+        await fs.mkdir(path.join(srcDir, '.well-known'), { recursive: true })
+        await fs.writeFile(
+            path.join(srcDir, '.well-known', 'security.txt'),
+            'Contact: mailto:x@example.com'
+        )
+
+        await copyFolder(srcDir, publicDir)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        expect(files).toContain('.htaccess')
+        expect(files).toContain(path.join('.well-known', 'security.txt'))
+    })
+
+    it('filters dotfiles listed in .neraignore', async () => {
+        await fs.writeFile(path.join(srcDir, '.DS_Store'), '')
+        await fs.writeFile(
+            path.join(tmpRoot, 'src', '.neraignore'),
+            'ignore.txt\n.DS_Store\n'
+        )
+
+        await copyFolder(srcDir, publicDir)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        expect(files).not.toContain('.DS_Store')
+    })
+
     // §2d: the theme asset pass passes `null` so a theme package's payload is
     // never filtered by a .neraignore — author-controlled via `files:`.
     it('skips the ignore list entirely when ignoreBase is null', async () => {

@@ -351,6 +351,9 @@ export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
         try {
             await cpy([`${sourceFolder}/**/*`], targetFolder, {
                 parents: true,
+                // Dotfiles (.htaccess, .well-known/) are site payload too;
+                // anything unwanted is excluded via .neraignore.
+                dot: true,
                 filter: (file) => ignoreFiles(ignore, file.path, sourceFolder),
             })
             console.log(SUCCESS_COLOR, 'Assets copied')
