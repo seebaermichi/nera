@@ -113,7 +113,11 @@ Rendering uses [Pug](https://pugjs.org/). Templates receive:
 - `t(key)`: translation helper — resolves `app.translations[meta.lang || app.lang][key]`, falling back to the key itself
 - `url(path)`: prefixes a root-absolute path with the site's `base_path` (a no-op when unset)
 
-Views resolve **layered**: a site's `theme/views/<file>` overrides an installed theme package's same-path file, WordPress child-theme style. A themeless site renders exactly as before this layer existed. The design lives in [`ROADMAP-themes.md`](./ROADMAP-themes.md); the consolidation that made this package importable is in [`ROADMAP-core.md`](./ROADMAP-core.md).
+Views resolve **layered**: a site's `theme/views/<file>` overrides an installed theme package's same-path file, WordPress child-theme style. A themeless site renders exactly as before this layer existed.
+
+The `NERA_THEME` environment variable overrides `theme:` in `config/app.yaml` for one run, in any of its forms (`NERA_THEME=./themes/classic nera build`), so you can build or preview another design without editing the config. An empty value falls back to `app.yaml`.
+
+The design lives in [`ROADMAP-themes.md`](./ROADMAP-themes.md); the consolidation that made this package importable is in [`ROADMAP-core.md`](./ROADMAP-core.md).
 
 ---
 

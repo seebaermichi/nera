@@ -118,6 +118,57 @@ describe('resolveTheme', () => {
             resolveTheme({ app: { theme: './nope' }, cwd: tmpRoot })
         ).toThrow(/does not exist/)
     })
+
+    describe('NERA_THEME override', () => {
+        beforeEach(async () => {
+            for (const name of ['a', 'b']) {
+                await fs.mkdir(path.join(tmpRoot, 'themes', name, 'views'), {
+                    recursive: true
+                })
+            }
+        })
+
+        it('replaces app.theme when set', () => {
+            const theme = resolveTheme({
+                app: { theme: './themes/a' },
+                cwd: tmpRoot,
+                env: { NERA_THEME: './themes/b' }
+            })
+
+            expect(theme.name).toBe('./themes/b')
+            expect(theme.root).toBe(path.join(tmpRoot, 'themes', 'b'))
+        })
+
+        it('applies a theme to a site whose app.yaml sets none', () => {
+            const theme = resolveTheme({
+                app: {},
+                cwd: tmpRoot,
+                env: { NERA_THEME: './themes/a' }
+            })
+
+            expect(theme.name).toBe('./themes/a')
+        })
+
+        it('falls back to app.theme when empty', () => {
+            const theme = resolveTheme({
+                app: { theme: './themes/a' },
+                cwd: tmpRoot,
+                env: { NERA_THEME: '' }
+            })
+
+            expect(theme.name).toBe('./themes/a')
+        })
+
+        it('fails loudly when it names a missing theme', () => {
+            expect(() =>
+                resolveTheme({
+                    app: { theme: './themes/a' },
+                    cwd: tmpRoot,
+                    env: { NERA_THEME: './themes/nope' }
+                })
+            ).toThrow(/does not exist/)
+        })
+    })
 })
 
 describe('deepMerge (§1c merge semantics)', () => {

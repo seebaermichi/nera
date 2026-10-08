@@ -15,6 +15,9 @@ const run = async (settings = defaultSettings) => {
     // Discover the configured theme (ROADMAP-themes.md §1). Null when no
     // `theme:` key is set, in which case render behaves exactly as before.
     const theme = resolveTheme({ app: data.app })
+    if (theme && process.env.NERA_THEME) {
+        console.log(`🎨 Nera: using theme "${theme.name}" (from NERA_THEME)`)
+    }
 
     // Verify the theme's compatibility declarations before doing any work (§5):
     // a nera.generator range that excludes THIS generator fails the build (a

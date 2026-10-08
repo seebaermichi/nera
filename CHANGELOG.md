@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.12.0] - 2026-10-08
+
+### Added
+
+-   The `NERA_THEME` environment variable overrides `theme:` in
+    `config/app.yaml` for one run (`NERA_THEME=./themes/classic nera build`),
+    in any of its three forms, so a site can build or preview another design
+    without editing the config. It is read in `resolveTheme`, so the build and
+    `resolveSiteModel` (and with it `nera validate`) agree on it. An empty
+    value falls back to `app.yaml`. `themeSpec(app, env)` is exported from
+    `./theme` for tooling that needs the spec in effect.
+
 ## [4.11.3] - 2026-10-08
 
 ### Fixed

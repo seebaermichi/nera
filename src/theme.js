@@ -24,8 +24,18 @@ import { satisfies, validRange } from 'semver'
 // The returned `config` is the theme's `config/theme.yaml` defaults deep-merged
 // with the site's optional `config/theme.yaml` (§1c). The pipeline exposes the
 // whole result to templates as `app.theme = { name, package, config }`.
-export function resolveTheme({ app, cwd = process.cwd() } = {}) {
-    const spec = app?.theme
+//
+// The NERA_THEME environment variable, when set and non-empty, takes the place
+// of `app.theme` — in any of the three forms — so a site can build or preview
+// another design without editing app.yaml (`NERA_THEME=./themes/classic nera
+// build`). It is read here, the one place every consumer resolves a theme
+// through, so build, dev and validate (via resolveSiteModel) all agree on it.
+export function resolveTheme({
+    app,
+    cwd = process.cwd(),
+    env = process.env,
+} = {}) {
+    const spec = themeSpec(app, env)
     if (!spec) return null
 
     const isLocal = spec.startsWith('.')
@@ -53,6 +63,13 @@ export function resolveTheme({ app, cwd = process.cwd() } = {}) {
         assetsRoot,
         config,
     }
+}
+
+// The theme spec in effect: NERA_THEME over `app.theme`. An empty NERA_THEME is
+// treated as unset, so `NERA_THEME= nera build` falls back to app.yaml rather
+// than silently building themeless.
+export function themeSpec(app, env = process.env) {
+    return env?.NERA_THEME || app?.theme || null
 }
 
 // §1c: the theme package ships `config/theme.yaml` (at its root) with real
