@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.11.3] - 2026-10-08
+
+### Fixed
+
+-   `README.md` sent site builders to the CLI README for "the full site
+    workflow (content, translations, deployment)", which that README does not
+    cover. It now points at the docs on nera.js.org for the workflow and keeps
+    the CLI README link for the commands. Documentation only.
+
 ## [4.11.2] - 2026-10-08
 
 ### Fixed

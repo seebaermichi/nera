@@ -23,7 +23,7 @@ nera dev            # build + live-reload dev server
 nera build          # render pages/ → public/
 ```
 
-A site is a **thin project** — a `package.json` whose only Nera dependency is `@nera-static/nera`, plus `config/`, `pages/`, and a `theme/`. It is not a clone of this repo. See the [CLI README](https://github.com/seebaermichi/nera-cli) for the full site workflow (content, translations, deployment).
+A site is a **thin project** — a `package.json` whose only Nera dependency is `@nera-static/nera`, plus `config/`, `pages/`, and a `theme/`. It is not a clone of this repo. See the [Nera docs](https://nera.js.org/docs/) for the full site workflow (content, translations, deployment) and the [CLI README](https://github.com/seebaermichi/nera-cli) for its commands.
 
 Install `@nera-static/core` directly only if you are **embedding the engine** — a custom build script, a hosted platform, or your own tooling:
 
