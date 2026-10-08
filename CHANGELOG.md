@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.11.1] - 2026-10-08
+
+### Changed
+
+-   Bumped the `dotenv` runtime dependency from `^17.2.0` to `^18.0.4`. The
+    engine only calls `dotenv.config()`, whose API is unchanged; the visible
+    difference is that dotenv's "injected env" log line now goes to stderr
+    instead of stdout, without the rotating tips.
+
 ## [4.11.0] - 2026-09-28
 
 ### Added
