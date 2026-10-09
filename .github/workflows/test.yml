@@ -15,7 +15,8 @@ jobs:
             matrix:
                 # Node 18 reached EOL 2025-04-30 and the toolchain
                 # (vitest 4 / vite 8 / eslint 10) requires Node 20+, so the
-                # floor is Node 20 to match the `engines` field.
+                # floor is Node 20 to match the `engines` field
+                # (`^20.19.0 || >=22.0.0`; setup-node's `20` is the latest 20.x).
                 node-version: [20, 22]
 
         steps:

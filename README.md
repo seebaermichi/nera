@@ -51,7 +51,7 @@ Two things that are easy to miss:
 
 ## 📦 Public API
 
-The package is ESM (`"type": "module"`), requires **Node ≥ 20**, and exposes a barrel at the root plus per-module subpath exports.
+The package is ESM (`"type": "module"`), requires **Node 20.19 or later** (Node 21 excluded), and exposes a barrel at the root plus per-module subpath exports.
 
 ```js
 import { run } from '@nera-static/core'
