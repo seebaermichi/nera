@@ -365,6 +365,38 @@ export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
     }
 }
 
+// Copy the entries plugins returned from `getAssets` (already validated by
+// setup-plugins.js#validateAsset) into `targetFolder`. A directory `from` has
+// its contents copied into `to`; a file `from` is copied to the file path `to`.
+// A `from` that does not exist is skipped with a warning, the build continues.
+// No `.neraignore` filtering: the payload is plugin-controlled.
+export const copyPluginAssets = async (assets = [], targetFolder) => {
+    for (const { from, to, plugin } of assets) {
+        const target = path.join(targetFolder, to)
+        let stat
+
+        try {
+            stat = await fs.stat(from)
+        } catch {
+            console.warn(
+                `⚠️ Plugin "${plugin}" asset not found, skipped: ${from}`
+            )
+            continue
+        }
+
+        if (stat.isDirectory()) {
+            await copyFolder(from, target, null)
+        } else if (to === '') {
+            console.warn(
+                `⚠️ Plugin "${plugin}" asset ${from} is a file and needs a file path as "to", skipped`
+            )
+        } else {
+            await fs.mkdir(path.dirname(target), { recursive: true })
+            await fs.copyFile(from, target)
+        }
+    }
+}
+
 // The layered view resolver (`makeLayeredResolver`/`resolveEntry`) now lives in
 // `./resolve.js` so `@nera-static/validate` can reuse the exact same logic; it
 // is imported at the top of this file.

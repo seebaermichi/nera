@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.13.0] - 2026-10-09
+
+### Added
+
+-   A third optional plugin hook, `getAssets({ app, pagesData })`, for
+    plugins that produce files. It runs after every plugin's `getAppData` and
+    `getMetaData`, in plugin order, and returns `[{ from, to }]`: `from` an
+    absolute file or directory, `to` a path relative to `public/`. Core copies
+    the entries after the theme's assets and before the site's (theme →
+    plugins → site, so the site still wins a collision), without
+    `.neraignore` filtering, and before `base_path` rewriting and asset
+    hashing, so both cover plugin files. Plugins could not do this
+    themselves: they run before `public/` is deleted. A non-array result, or
+    an entry with a missing or relative `from` or an absolute or escaping
+    `to`, is skipped with a warning and the build continues.
+    `getPluginsData` returns the validated entries as `assets`. Sites and
+    plugins that do not use the hook build byte-identically.
+
 ## [4.12.0] - 2026-10-08
 
 ### Added

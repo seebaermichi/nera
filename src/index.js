@@ -2,6 +2,7 @@ import { loadAppData, getPagesData, defaultSettings } from './core.js'
 import { getPluginsData } from './setup-plugins.js'
 import {
     copyFolder,
+    copyPluginAssets,
     deleteFolder,
     createHtmlFiles,
     rewriteAssetUrls,
@@ -68,6 +69,10 @@ const run = async (settings = defaultSettings) => {
     if (theme) {
         await copyFolder(theme.assetsRoot, dist, null)
     }
+    // Plugin assets (`getAssets`) sit between the two: they override the
+    // theme and the site overrides them. Unfiltered like the theme pass — the
+    // payload is plugin-controlled.
+    await copyPluginAssets(data.assets, dist)
     await copyFolder(assets, dist, '.')
 
     // Subdirectory deploys: prefix root-absolute URLs inside copied assets that

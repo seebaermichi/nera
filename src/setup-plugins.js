@@ -227,11 +227,84 @@ export async function getPluginsData(
     }
 
     //
-    // 6. Return final
+    // 6. Collect plugin assets
+    //
+    // After every getAppData/getMetaData has run, so each plugin sees the final
+    // app/pagesData and knows which files it produced. Core copies them into
+    // public/ between the theme and the site asset passes (src/index.js).
+    const assets = []
+
+    for (const plugin of ordered) {
+        const mod = plugin.module
+
+        if (typeof mod.getAssets !== 'function') continue
+
+        const result = await mod.getAssets({ app: appData, pagesData })
+        if (!Array.isArray(result)) {
+            console.warn(
+                `⚠️ Plugin "${plugin.name}" getAssets returned invalid format, skipping.`
+            )
+            continue
+        }
+
+        for (const entry of result) {
+            const asset = validateAsset(entry)
+            if (typeof asset === 'string') {
+                console.warn(
+                    `⚠️ Plugin "${plugin.name}" getAssets entry skipped: ${asset}`
+                )
+                continue
+            }
+            assets.push({ ...asset, plugin: plugin.name })
+        }
+    }
+
+    //
+    // 7. Return final
     //
     return {
         app: appData,
         pagesData,
         plugins: ordered.map((p) => p.module),
+        assets,
     }
+}
+
+/**
+ * Validate one `getAssets` entry. Returns the normalized `{ from, to }`, or a
+ * string saying why the entry is skipped.
+ *
+ * `from` must be an absolute path (file or directory). `to` is relative to
+ * public/ and may not be absolute or climb out of it; `''`/`'.'` mean public/
+ * itself. Backslashes are accepted so a plugin may pass `path.join` output on
+ * Windows.
+ */
+export function validateAsset(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return 'not an object'
+    }
+
+    const { from, to } = entry
+
+    if (typeof from !== 'string' || from === '') {
+        return 'missing "from"'
+    }
+    if (!path.isAbsolute(from)) {
+        return `"from" must be an absolute path (${from})`
+    }
+    if (typeof to !== 'string') {
+        return `missing "to" (from ${from})`
+    }
+
+    const slashed = to.replace(/\\/g, '/')
+    if (path.isAbsolute(to) || slashed.startsWith('/') || /^[a-zA-Z]:/.test(to)) {
+        return `"to" must be relative to public/ (${to})`
+    }
+
+    const normalized = path.posix.normalize(slashed || '.')
+    if (normalized === '..' || normalized.startsWith('../')) {
+        return `"to" escapes public/ (${to})`
+    }
+
+    return { from, to: normalized === '.' ? '' : normalized.replace(/\/$/, '') }
 }

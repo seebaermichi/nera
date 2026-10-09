@@ -88,15 +88,17 @@ const model = resolveSiteModel({ cwd: '/path/to/site' })
 
 Plugins are discovered from two places: local directories under the configured plugins folder (`folders.plugins`, default `./src/plugins`; a thin site sets `./plugins`), and any dependency in the **site's** `package.json` whose name starts with **`@nera-static/plugin-`** (excluding the `@nera-static/plugin-utils` library).
 
-A plugin is an ESM module exporting either or both hooks — no registration, no base class:
+A plugin is an ESM module exporting any of these hooks — no registration, no base class:
 
 ```js
 export function getAppData({ app, pagesData }) { /* return a new app object */ }
 export function getMetaData({ app, pagesData }) { /* return a new pagesData array */ }
+export function getAssets({ app, pagesData }) { /* return [{ from, to }] to copy into public/ */ }
 ```
 
 - `getAppData` runs first and must return a **plain object**; `getMetaData` must return an **array**. A wrong return type is discarded with a warning and the build continues.
 - Results are threaded: `getMetaData` sees the `app` that `getAppData` returned.
+- `getAssets` (core ≥ 4.13.0) is for plugins that produce files. It runs after every plugin's `getAppData`/`getMetaData`, in plugin order, with the final `app`/`pagesData`, and returns an array of `{ from, to }`: `from` an absolute file or directory, `to` a path relative to `public/` (for a file, the target file path; for a directory, the folder its contents go into). Core copies them after the theme's assets and before the site's (theme → plugins → site, so the site wins a collision), unfiltered by `.neraignore`, and before `base_path` rewriting and asset hashing, which therefore cover them. A non-array result, or an entry with a missing/relative `from` or an absolute or `public/`-escaping `to`, is skipped with a warning; a `from` that does not exist is skipped at copy time.
 - Both hooks are awaited (generator ≥ 4.3.0), but keeping them synchronous is the safe default.
 - Config is read from the **user's site** (`config/<name>.yaml` via `getConfig`), not from the plugin package; supply per-key JS fallbacks.
 
