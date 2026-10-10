@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.15.1] - 2026-10-10
+
+### Fixed
+
+-   **The build log names each page.** `HTML created:` printed the page's
+    directory (`meta.dirname`), so every page in the root logged the same
+    `HTML created: /`. It now prints the file actually written, as its path
+    under `public/`: `HTML created: /about.html`, `/de/index.html`. The path
+    is never prefixed with `base_path`.
+-   **No more `◇ injected env (0) from .env` banner on every build.** dotenv
+    now runs with `quiet: true`; a site's `.env` is still loaded into
+    `process.env` exactly as before.
+
 ## [4.15.0] - 2026-10-10
 
 ### Fixed

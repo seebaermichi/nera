@@ -8,7 +8,9 @@ import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
 import { makeLayeredResolver, resolveEntry } from './resolve.js'
 
-dotenv.config()
+// `quiet` drops dotenv's `◇ injected env (N) from .env` banner from every build;
+// the `.env` values are still loaded into `process.env`.
+dotenv.config({ quiet: true })
 
 const SUCCESS_COLOR = '\x1b[32m%s\x1b[0m'
 
@@ -510,10 +512,13 @@ export const createHtmlFiles = async (
                 await fs.mkdir(path.dirname(htmlPath), { recursive: true })
                 await fs.writeFile(htmlPath, pretty(html), 'utf-8')
 
-                console.log(
-                    SUCCESS_COLOR,
-                    `HTML created: ${pageData.meta.dirname}`
-                )
+                // Name the file actually written, as its path under `public/`
+                // (`/de/index.html`), so every page gets a distinct line.
+                const outputPath = path
+                    .relative(publicFolder, htmlPath)
+                    .split(path.sep)
+                    .join('/')
+                console.log(SUCCESS_COLOR, `HTML created: /${outputPath}`)
             }
         }
     } else {

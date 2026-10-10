@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { spawnSync } from 'child_process'
+import { fileURLToPath, pathToFileURL } from 'url'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
@@ -275,6 +277,42 @@ describe('createHtmlFiles', () => {
         expect(content).toContain('<h1>Welcome!</h1>')
         expect(content).toContain('<title>Home</title>')
     })
+
+    it('logs each page as the path written under public/, without base_path', async () => {
+        const page = (dirname, filename) => ({
+            meta: {
+                layout: 'index.pug',
+                dirname,
+                filename,
+                fullPath: path.posix.join(dirname, filename)
+            }
+        })
+        const data = {
+            app: { basePath: '/repo' },
+            pagesData: [
+                page('/', 'index.html'),
+                page('/', 'about.html'),
+                page('/de', 'index.html')
+            ]
+        }
+        const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+        try {
+            await createHtmlFiles(data, viewsDir, publicDir)
+            const lines = log.mock.calls
+                .map((args) => args.at(-1))
+                .filter((line) => line.startsWith('HTML created:'))
+
+            expect(lines).toEqual([
+                'HTML created: /index.html',
+                'HTML created: /about.html',
+                'HTML created: /de/index.html'
+            ])
+            expect(fssync.existsSync(path.join(publicDir, 'de/index.html'))).toBe(true)
+        } finally {
+            log.mockRestore()
+        }
+    })
 })
 
 describe('deleteFolder', () => {
@@ -417,5 +455,42 @@ describe('rewriteAssetUrls (base_path)', () => {
         expect(await fs.readFile(file, 'utf-8')).toBe(
             '.a{background:url(/img/a.png)}'
         )
+    })
+})
+
+describe('dotenv loading', () => {
+    let tmpRoot
+
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        await fs.mkdir(tmpRoot, { recursive: true })
+        await fs.writeFile(path.join(tmpRoot, '.env'), 'NERA_DOTENV_PROBE=loaded\n')
+    })
+
+    afterEach(async () => {
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    it('loads .env from the site root without printing the injected-env banner', () => {
+        // A child process, because render.js calls dotenv.config() once at
+        // import time — this worker imported it long ago, from another cwd.
+        const renderUrl = pathToFileURL(
+            path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../render.js')
+        ).href
+        const env = { ...process.env }
+        delete env.NERA_DOTENV_PROBE
+        const result = spawnSync(
+            process.execPath,
+            [
+                '--input-type=module',
+                '-e',
+                `await import(${JSON.stringify(renderUrl)}); console.log(process.env.NERA_DOTENV_PROBE)`
+            ],
+            { cwd: tmpRoot, env, encoding: 'utf8' }
+        )
+
+        expect(result.status).toBe(0)
+        expect(result.stdout.trim()).toBe('loaded')
+        expect(result.stderr + result.stdout).not.toContain('injected env')
     })
 })
