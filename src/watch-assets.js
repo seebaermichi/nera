@@ -4,7 +4,7 @@ import { copyFolder } from './render.js'
 import path from 'path'
 import dotenv from 'dotenv'
 
-dotenv.config()
+dotenv.config({ quiet: true })
 
 // Mirror the presentation probe in core.js (ROADMAP-themes.md §1b): a site's own
 // assets live under theme/ in the revised layout, falling back to the legacy
