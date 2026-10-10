@@ -1,11 +1,52 @@
 import fs from 'fs'
 import path from 'path'
 import fsReaddirRecursive from 'fs-readdir-recursive'
-import meta from 'markdown-it-meta'
 import MarkdownIt from 'markdown-it'
 import yaml from 'yaml'
 
-const md = new MarkdownIt({ html: true }).use(meta)
+// Frontmatter is parsed with `yaml` like every other YAML file Nera reads, set
+// up to match what pages saw under markdown-it-meta/js-yaml 3: unquoted dates
+// become Date objects, `<<` merge keys work, and a repeated key takes the last
+// value. `nera validate` parses the same block, so a page it accepts parses
+// here too.
+const FRONTMATTER_OPTIONS = {
+    schema: 'core',
+    customTags: ['timestamp'],
+    merge: true,
+    uniqueKeys: false,
+}
+
+// Block rule for a `---` fenced YAML block on the page's first line, replacing
+// markdown-it-meta. The result goes into the per-render `env`, not onto the
+// shared `md` instance: markdown-it-meta's `md.meta` was never reset, so a page
+// without frontmatter inherited the previous page's.
+const frontmatterRule = (state, start, end) => {
+    if (start !== 0 || state.blkIndent !== 0 || state.tShift[start] < 0) {
+        return false
+    }
+    const lineAt = (line) =>
+        state.src.slice(state.bMarks[line], state.eMarks[line])
+    if (lineAt(start) !== '---') {
+        return false
+    }
+
+    const data = []
+    let line = start
+    while (line < end) {
+        line++
+        if (lineAt(line) === '---' || state.tShift[line] < 0) {
+            break
+        }
+        data.push(lineAt(line))
+    }
+
+    state.env.meta = yaml.parse(data.join('\n'), FRONTMATTER_OPTIONS) || {}
+    state.line = line + 1
+    return true
+}
+
+const md = new MarkdownIt({ html: true })
+md.block.ruler.before('code', 'frontmatter', frontmatterRule, { alt: [] })
 
 // Normalise a site's `base_path` (config/app.yaml) into a URL prefix.
 // Absent/blank/`/` → '' so a root-served site is untouched and renders
@@ -152,7 +193,9 @@ export const getPagesData = (
 
             // Read and parse markdown
             const fileContent = fs.readFileSync(fullPath, 'utf-8')
-            const content = md.render(fileContent)
+            const env = {}
+            const content = md.render(fileContent, env)
+            const pageMeta = env.meta || {}
 
             // Resolve the creation date. Prefer an author/platform-supplied
             // date from frontmatter — `createdAt`, else `date` — because the
@@ -163,7 +206,7 @@ export const getPagesData = (
             // frontmatter carries neither key do we fall back to `birthtime`,
             // which keeps a purely-local build byte-identical to before.
             // See nera-platform R1 (plans/01) and ROADMAP notes.
-            let createdAt = md.meta.createdAt || md.meta.date
+            let createdAt = pageMeta.createdAt || pageMeta.date
             if (!createdAt) {
                 try {
                     createdAt = fs.statSync(fullPath).birthtime
@@ -196,7 +239,7 @@ export const getPagesData = (
             results.push({
                 content,
                 meta: {
-                    ...md.meta,
+                    ...pageMeta,
                     createdAt,
                     href: wholeFilePathString,
                     fullPath: wholeFilePathString,

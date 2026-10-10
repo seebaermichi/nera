@@ -110,6 +110,59 @@ describe('copyFolder', () => {
         expect(files).not.toContain('.DS_Store')
     })
 
+    // cpy skipped OS/editor clutter by default; the in-house copy keeps that.
+    it('skips junk files even without a .neraignore entry', async () => {
+        for (const junk of ['.DS_Store', 'Thumbs.db', 'notes.txt~', '._image.png']) {
+            await fs.writeFile(path.join(srcDir, junk), '')
+        }
+
+        await copyFolder(srcDir, publicDir)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        expect(files).toEqual(['include.txt'])
+    })
+
+    it('copies only files, so an empty directory does not reach public/', async () => {
+        await fs.mkdir(path.join(srcDir, 'empty'), { recursive: true })
+
+        await copyFolder(srcDir, publicDir)
+
+        expect(fssync.existsSync(path.join(publicDir, 'empty'))).toBe(false)
+    })
+
+    it('keeps the source file mtime', async () => {
+        const past = new Date('2020-01-02T03:04:05Z')
+        await fs.utimes(path.join(srcDir, 'include.txt'), past, past)
+
+        await copyFolder(srcDir, publicDir)
+
+        const { mtime } = await fs.stat(path.join(publicDir, 'include.txt'))
+        expect(mtime.getTime()).toBe(past.getTime())
+    })
+
+    it('follows symlinks and skips a dangling one', async () => {
+        const outside = path.join(tmpRoot, 'outside')
+        await fs.mkdir(outside, { recursive: true })
+        await fs.writeFile(path.join(outside, 'linked.txt'), 'via link')
+        await fs.symlink(outside, path.join(srcDir, 'linked-dir'))
+        await fs.symlink(path.join(outside, 'linked.txt'), path.join(srcDir, 'linked-file.txt'))
+        await fs.symlink(path.join(tmpRoot, 'missing'), path.join(srcDir, 'dangling.txt'))
+        // A link back up the tree must not loop.
+        await fs.symlink(srcDir, path.join(outside, 'loop'))
+
+        await copyFolder(srcDir, publicDir)
+
+        const files = await getAllRelativeFiles(publicDir, publicDir)
+
+        expect(files).toContain(path.join('linked-dir', 'linked.txt'))
+        expect(files).toContain('linked-file.txt')
+        expect(files).not.toContain('dangling.txt')
+        expect(
+            await fs.readFile(path.join(publicDir, 'linked-file.txt'), 'utf8')
+        ).toBe('via link')
+    })
+
     // §2d: the theme asset pass passes `null` so a theme package's payload is
     // never filtered by a .neraignore — author-controlled via `files:`.
     it('skips the ignore list entirely when ignoreBase is null', async () => {

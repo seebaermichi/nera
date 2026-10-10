@@ -53,7 +53,7 @@ developer never names — they arrive transitively and `nera update` bumps them.
 
 | Package | Role | Who depends on it | Ships |
 |---|---|---|---|
-| **`@nera-static/core`** | the engine — the four-stage pipeline (`loadAppData` → `getPagesData` → `getPluginsData` → render), theme discovery, the layered resolver | `@nera-static/nera`, `@nera-static/validate`, (future) the platform's Node service | `src/` + `index.js`; build-time deps only (markdown-it, pug, yaml, cpy, rimraf, pretty, semver, …) — **no CLI, no dev-server deps** |
+| **`@nera-static/core`** | the engine — the four-stage pipeline (`loadAppData` → `getPagesData` → `getPluginsData` → render), theme discovery, the layered resolver | `@nera-static/nera`, `@nera-static/validate`, (future) the platform's Node service | `src/` + `index.js`; build-time deps only (markdown-it, pug, yaml, rimraf, pretty, semver, …) — **no CLI, no dev-server deps** |
 | **`@nera-static/nera`** | the one developer-facing CLI — `bin: { nera }` with `new`, `build`, `dev`, `serve`, `update`, `validate`, later `add` | the site (its sole dependency); run via `npx` for `new` | the CLI, the **scaffold template** (`template/` → the thin starter site), dev-server orchestration (vite + watch + re-render) |
 | **`@nera-static/validate`** | standalone validator — `validateSite()` returning structured results | `@nera-static/nera` (for the `validate` subcommand), the platform's Node service | the validator + a bin (`nera-validate`) |
 

@@ -48,6 +48,14 @@ beforeAll(async () => {
         path.join(PAGES, 'dated-both.md'),
         '---\ntitle: Dated\ncreatedAt: 2022-06-07\ndate: 2019-11-02\n---\n\n# Dated'
     )
+    await fs.writeFile(
+        path.join(PAGES, 'yaml-features.md'),
+        '---\nbase: &b\n  a: 1\nchild:\n  <<: *b\n  c: 2\ntitle: first\ntitle: last\npublished: 2024-05-06\nquoted: "2024-05-06"\ndraft: yes\n---\n\n# YAML'
+    )
+    await fs.writeFile(
+        path.join(PAGES, 'bad-frontmatter.md'),
+        '---\ntitle: [unclosed\n---\n\n# Bad'
+    )
     await fs.mkdir(path.join(PAGES, 'a.md.notes'), { recursive: true })
     await fs.writeFile(path.join(PAGES, 'a.md.notes/b.md'), '# Notes')
 })
@@ -291,6 +299,50 @@ describe('getPagesData', () => {
         const [{ meta }] = getPagesData(['blog/post.md'], PAGES)
         expect(meta.href).toBe('/blog/post.html')
         expect(meta.fullPath).toBe('/blog/post.html')
+    })
+
+    // markdown-it-meta kept the parsed frontmatter on the shared parser and never
+    // reset it, so a page without frontmatter inherited the previous page's —
+    // `layout` included, which made a page that should be skipped render.
+    it('does not carry frontmatter over to a page that has none', () => {
+        const [first, second] = getPagesData(['index.md', 'blog/post.md'], PAGES)
+
+        expect(first.meta.title).toBe('Home')
+        expect(second.meta.title).toBeUndefined()
+    })
+
+    // The frontmatter parser behaves as markdown-it-meta's js-yaml 3 did on
+    // what real pages use.
+    describe('frontmatter parsing', () => {
+        let meta
+        beforeAll(() => {
+            ;[{ meta }] = getPagesData(['yaml-features.md'], PAGES)
+        })
+
+        it('turns an unquoted date into a Date and keeps a quoted one a string', () => {
+            expect(meta.published).toBeInstanceOf(Date)
+            expect(meta.published.toISOString()).toBe('2024-05-06T00:00:00.000Z')
+            expect(meta.quoted).toBe('2024-05-06')
+        })
+
+        it('resolves << merge keys', () => {
+            expect(meta.child).toEqual({ a: 1, c: 2 })
+        })
+
+        it('lets a repeated key take the last value', () => {
+            expect(meta.title).toBe('last')
+        })
+
+        it('keeps yes/no as strings (YAML 1.2 booleans only)', () => {
+            expect(meta.draft).toBe('yes')
+        })
+
+        it('skips a page whose frontmatter does not parse', () => {
+            const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+            expect(getPagesData(['bad-frontmatter.md'], PAGES)).toHaveLength(0)
+            expect(errors).toHaveBeenCalled()
+            errors.mockRestore()
+        })
     })
 
     // createdAt resolution (nera-platform R1): frontmatter wins over the

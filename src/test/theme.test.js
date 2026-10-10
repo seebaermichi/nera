@@ -525,7 +525,7 @@ describe('run() with a theme (assets layering)', () => {
     it('copies theme assets then site assets, with the site winning collisions', async () => {
         // views/assets point at the site's own `theme/` layer (what the core.js
         // probe resolves them to — see core.test.js for the probe itself). Paths
-        // are absolute so `cpy`'s dest is unambiguous under a symlinked tmpdir.
+        // are absolute so the copy destination is unambiguous under a symlinked tmpdir.
         await run({
             folders: {
                 config: path.join(tmpRoot, 'config'),

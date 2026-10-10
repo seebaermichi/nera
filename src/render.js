@@ -2,7 +2,6 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import path from 'path'
 import { createHash } from 'crypto'
-import cpy from 'cpy'
 import pug from 'pug'
 import pretty from 'pretty'
 import { rimraf } from 'rimraf'
@@ -335,6 +334,47 @@ export function ignoreFiles(ignoreList, filePath, sourceRoot) {
     )
 }
 
+// OS and editor clutter that never belongs in public/, matched against a file's
+// basename. The list cpy (via the `junk` package) skipped by default; kept so
+// replacing cpy changes nothing a site ships.
+const JUNK =
+    /^npm-debug\.log$|^\..*\.swp$|^\.DS_Store$|^\.AppleDouble$|^\.LSOverride$|^Icon\r$|^\._.*|^\.Spotlight-V100(?:$|\/)|\.Trashes|^__MACOSX$|~$|^Thumbs\.db$|^ehthumbs\.db$|^[Dd]esktop\.ini$|@eaDir$/
+
+// Every file under `dir`, dotfiles included, junk excluded. Symlinks are
+// followed like cpy's glob did (a linked directory is walked, a dangling link
+// skipped); `seen` stops a link pointing back up the tree from looping.
+const listFiles = async (dir, seen = new Set()) => {
+    const real = await fs.realpath(dir)
+    if (seen.has(real)) return []
+    seen.add(real)
+
+    const files = []
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        let stat = entry
+        if (entry.isSymbolicLink()) {
+            stat = await fs.stat(full).catch(() => null)
+            if (!stat) continue
+        }
+        if (stat.isDirectory()) {
+            files.push(...(await listFiles(full, seen)))
+        } else if (stat.isFile() && !JUNK.test(entry.name)) {
+            files.push(full)
+        }
+    }
+    return files
+}
+
+// Copy one file, creating its directory and keeping its mode and timestamps,
+// as cpy's copy-file did.
+const copyPreserving = async (from, to) => {
+    await fs.mkdir(path.dirname(to), { recursive: true })
+    await fs.copyFile(from, to)
+    const { atime, mtime, mode } = await fs.stat(from)
+    await fs.utimes(to, atime, mtime)
+    await fs.chmod(to, mode)
+}
+
 // `ignoreBase` is the directory to read `.neraignore` from:
 //   - omitted → the source's parent (back-compat with the pre-theme layout,
 //     where `assets/` sat at the site root so its parent *was* the root)
@@ -349,13 +389,13 @@ export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
         const ignore = base === null ? [] : getIgnoredFiles(base)
 
         try {
-            await cpy([`${sourceFolder}/**/*`], targetFolder, {
-                parents: true,
-                // Dotfiles (.htaccess, .well-known/) are site payload too;
-                // anything unwanted is excluded via .neraignore.
-                dot: true,
-                filter: (file) => ignoreFiles(ignore, file.path, sourceFolder),
-            })
+            for (const file of await listFiles(sourceFolder)) {
+                if (!ignoreFiles(ignore, file, sourceFolder)) continue
+                await copyPreserving(
+                    file,
+                    path.join(targetFolder, path.relative(sourceFolder, file))
+                )
+            }
             console.log(SUCCESS_COLOR, 'Assets copied')
         } catch (err) {
             console.error('Copy failed:', err)

@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.15.0] - 2026-10-10
+
+### Fixed
+
+-   **A page without frontmatter no longer inherits the previous page's.**
+    The frontmatter parser (markdown-it-meta) stored its result on the one
+    shared Markdown parser and never reset it, so a page without a `---`
+    block got the `meta` of whichever page was read before it, `layout`
+    included. Such a page was then rendered with someone else's layout and
+    title instead of being skipped, depending on read order. Frontmatter is
+    now parsed per page.
+
+### Changed
+
+-   **Frontmatter is parsed with `yaml`**, the parser Nera already uses for
+    `app.yaml`, plugin config and `nera validate`, instead of
+    markdown-it-meta's js-yaml 3. It is set up to match what pages relied
+    on: unquoted dates are still `Date` objects, `<<` merge keys work, and a
+    repeated key still takes the last value. Compared on 229 real pages
+    (the plugin fleet, nera.js.org and a production site) the result is
+    identical, and both sites build byte for byte the same.
+    YAML 1.1 leftovers js-yaml 3 still accepted now follow YAML 1.2, exactly
+    as `nera validate` already does: `10:30` is the string `"10:30"` (was
+    the number 630), `0755`, `1_000` and `0b101` are no longer converted,
+    and a tab-indented block is an error, which skips that page like any
+    other invalid frontmatter. Run `nera validate`: a site it accepts is
+    unaffected.
+-   Assets are copied by core itself instead of `cpy`, with the same
+    behaviour: files only (no empty directories), dotfiles included, the
+    same OS/editor junk skipped (`.DS_Store`, `Thumbs.db`, `*~`, …),
+    symlinks followed, mode and timestamps kept, `.neraignore` applied.
+
+### Removed
+
+-   The dependencies `markdown-it-meta`, `cpy` and the unused `gray-matter`.
+    This takes js-yaml 3 and micromatch out of every site's dependency tree,
+    and with them the open advisories for `sprintf-js` and `braces`, for
+    which no fixed release exists.
+
 ## [4.14.0] - 2026-10-09
 
 ### Changed
