@@ -1,0 +1,28 @@
+name: Fleet check
+
+# Weekly check that every public Nera repo meets the fleet baseline: the
+# protect-main ruleset and, for each published @nera-static package, the Test
+# and npm version badges in its README. A gap fails the run, and GitHub emails
+# the failure. Secret scanning status needs an admin token and is skipped here;
+# run scripts/fleet-check.sh locally (logged in to gh) for the full check.
+
+on:
+    schedule:
+        # Mondays 06:00 UTC
+        - cron: '0 6 * * 1'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    fleet-check:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Check the fleet baseline
+              run: bash scripts/fleet-check.sh
+              env:
+                  GH_TOKEN: ${{ github.token }}
