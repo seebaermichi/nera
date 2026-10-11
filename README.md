@@ -1,6 +1,7 @@
 # @nera-static/core – the Nera engine
 
 [![Test](https://github.com/seebaermichi/nera/actions/workflows/test.yml/badge.svg)](https://github.com/seebaermichi/nera/actions/workflows/test.yml)
+[![npm version](https://img.shields.io/npm/v/@nera-static/core)](https://www.npmjs.com/package/@nera-static/core)
 
 **`@nera-static/core`** is the engine behind [Nera](https://github.com/seebaermichi/nera-cli): the four-stage build pipeline that turns Markdown + [Pug](https://pugjs.org/) into static HTML, plus the layered theme/view resolver. It is an **importable library**, consumed by the [`@nera-static/nera`](https://www.npmjs.com/package/@nera-static/nera) CLI, by [`@nera-static/validate`](https://www.npmjs.com/package/@nera-static/validate), and by other tooling.
 
