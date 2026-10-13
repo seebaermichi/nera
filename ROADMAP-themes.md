@@ -1191,8 +1191,8 @@ then pass `nera check` with **zero findings** (§S7):
   theme section headings `h2`, card titles `h2`, or `h3` under a section
   heading.
 - **Every theme `<nav>` has an `aria-label`** (`a11y-nav-name`). Plugin markup
-  that emits an unlabelled `<nav>` (plugin-page-pagination) is labelled by the
-  site in its published copy (§S6).
+  that emitted an unlabelled `<nav>` (plugin-page-pagination before 2.4.0) is
+  covered by §S6, item 4.
 - `html[lang]` always set (`a11y-html-lang`), a non-empty `<title>`
   (`a11y-title`), a zoomable viewport (`a11y-viewport-zoom`), no duplicate ids
   in theme markup (`a11y-duplicate-id`), every theme link has text
@@ -1655,12 +1655,14 @@ acceptance build (§S7) does exactly this in its fixture site:
 3. Publish every plugin template it uses into `theme/views/vendor/` and fill the
    seams (§S2.4, §S3.2, §S4.2). Keep plugin-navigation's default class names
    (§S3.5) and call `+linkListNav` (pass `rootPath` for a language prefix).
-4. In the published `page-pagination.pug`, add an `aria-label` to its `<nav>`
-   (for example `aria-label=t('More posts')`): the plugin's `<nav>` has none, and
-   with the header `<nav>` on the page that is an `a11y-nav-name` finding.
-5. Never include `fontawesome-cdn-link.pug`; social icons are text or inline SVG
-   (`icon_raw`). Drop `target="_blank"` from the published
-   `social-media-links.pug` or leave `a11y-target-blank` at its default `off`.
+4. Use `@nera-static/plugin-page-pagination` ≥ 2.4.0, whose `<nav>` carries
+   `aria-label=t('Pagination')`; translate `Pagination` (§7). Up to 2.3.x the
+   `<nav>` had no label, which next to the header `<nav>` is an `a11y-nav-name`
+   finding — on those versions, add the attribute to the published copy.
+5. Never include `fontawesome-cdn-link.pug` (deprecated in plugin-social-media-links
+   2.3.0, removed in 3.0.0); social icons are text or inline SVG (`icon_raw`).
+   Set `open_in_new_tab: false` in `config/social-media-links.yaml` (2.3.0+), so
+   the links carry no `target="_blank"` (`a11y-target-blank`).
 6. Set `footer_links` in `config/theme.yaml` to the imprint and privacy pages,
    per language, with labels the legal rules recognise (`Impressum`,
    `Datenschutz` / `Imprint`, `Privacy`); legal texts cite § 5 DDG and the
@@ -1751,6 +1753,15 @@ page-pagination 2.3.2, code-blocks 1.2.1). Most are literal in the plugin's
 | `nera-code`, `nera-code-scope`, the `--nera-code-*` properties | plugin-code-blocks `assets/nera-code.css` |
 
 The theme repos repeat this check in CI (§S7) whenever a peer range changes.
+
+**Releases since the check (2026-10-13), from this section's carry-forwards:**
+plugin-page-pagination 2.4.0 (labelled `<nav>`), plugin-navigation 3.1.0
+(`label` on `simpleNav`/`pipeSeparatedNav`), plugin-page-navigation 2.5.0
+(labelled `<nav>`), plugin-social-media-links 2.3.0 (`open_in_new_tab`, CDN
+template deprecated), plugin-tags 3.3.0 (`t('Read more')`) — classes and
+structure unchanged in all of them. When a theme repo is built, raise those
+peer floors to these releases (`^2.4.0`, `^3.1.0`, `^2.3.0`, `^3.3.0`) and
+re-run the class check against them.
 
 ### S9. Open questions
 
