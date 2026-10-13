@@ -1234,3 +1234,361 @@ link. `homeHref(lang)` (brand link) uses rule 2, falling back to `/`.
 
 The site never overrides `assets/css/theme.css` unless it accepts losing its
 updates (§2b).
+
+### S3. `@nera-static/theme-business` — **SPECIFIED 2026-10-13**
+
+For a small business, an association or a portfolio: a front page with a hero,
+cards, opening hours, a contact page with the form, and legal pages. Carries the
+`business` and `portfolio` starters. `config/app.yaml`: `theme: business`.
+
+#### S3.1 Page types
+
+All `extends ../layouts/layout.pug` and fill `block main`. "Header" below means
+`header.page__header` → `h1.page__title` (`meta.title`) → `p.page__lead`
+(`meta.lead`, when set); "body" means `div.page__body` with `!= content`.
+
+| view (`layout:` value) | for | renders, in order |
+|---|---|---|
+| `pages/default.pug` | about, services, legal pages, any standard page | header; body; cards (`meta.cards`, when set); opening hours (when `meta.show_hours` and `app.business.hours`) |
+| `pages/home.pug` | the front page | `section.hero` (§S3.1a, holds the `<h1>`); body; cards; opening hours (when `meta.show_hours`) |
+| `pages/contact.pug` | the contact page | header; body; `div.contact` with `div.contact__form` (seam `partials/contact-form.pug`) and `aside.contact__aside` (`h2` `t('Contact details')` + `partials/address.pug`; `h2` `t('Opening hours')` + `partials/opening-hours.pug`, when hours are set) |
+| `pages/list.pug` | a section index: the portfolio's projects, a team, an offer list | header; body; `ul.cards.cards--list` with one card per **child page** (§S3.1b) |
+| `pages/gallery.pug` | one portfolio project, a photo page | header; `div.page__body.gallery`: the body, with every `figure.nera-image` directly in it laid out as an image grid |
+
+**S3.1a Hero** (`pages/home.pug`): `section.hero` → `div.hero__inner` →
+`h1.hero__title` (`meta.hero.title`, else `meta.title`) → `p.hero__text`
+(`meta.hero.text`) → `p.hero__actions` with `a.button(href=hero.cta.href)` and
+`a.button.button--secondary(href=hero.cta_secondary.href)`, each only when set →
+`div.hero__media` (seam `partials/hero-media.pug`; hidden by CSS when empty).
+
+**S3.1b Child pages** (`pages/list.pug`): every page in `pagesData` that has a
+`layout`, is in the page's language, has `meta.dirname` equal to
+`meta.list_dir` (default: the list page's own `meta.dirname`) and is not the list
+page itself. Sorted by `meta.order` (numbers first, ascending), then
+`meta.title`. Each is `li.card` → `div.card__media` (seam
+`partials/card-media.pug`, `item` in scope) → `h2.card__title` →
+`a.card__link(href=item.meta.href)` → `p.card__text` (`item.meta.description`).
+
+**Cards** (`partials/cards.pug`, used by default and home): `meta.cards` is a
+list of `{ title, text, href }` (`href` optional). Rendered as `ul.cards` →
+`li.card` → `h2.card__title` (a link when `href` is set) → `p.card__text`. With
+`meta.cards_title` set, a `h2.cards__title` comes first and the card titles are
+`h3`. The services page is a default page with cards.
+
+**Gallery.** plugin-images turns `![alt](src "Caption")` alone in a paragraph
+into `figure.nera-image` + `figcaption.nera-image__caption`. The gallery grid
+targets `.gallery > figure.nera-image`, so a project page writes each picture
+with a caption; text paragraphs between them span the full row. Without
+plugin-images the images stay inline and stack — the page still renders.
+
+Frontmatter (`meta.*`) the business views read:
+
+| key | type | read by |
+|---|---|---|
+| `title` | string | all (`<title>`, `<h1>`, cards in lists) |
+| `description` | string | all (`meta description`); `list.pug` card text |
+| `lead` | string | all but home |
+| `robots` | string | all |
+| `lang`, `slug` | string | all (§S2.8) |
+| `hero` | `{ title, text, cta: { label, href }, cta_secondary: { label, href } }` | home |
+| `cards`, `cards_title` | list of `{ title, text, href }`, string | default, home |
+| `show_hours` | boolean | default, home |
+| `list_dir` | site path, e.g. `/projects` | list |
+| `order` | number | the child pages of a list |
+
+`app.*` the business views read: `name`, `lang`, `robots`, `translations`,
+`theme.config` (§S2.5, plus `footer.show_hours`, default `true`), and
+**`app.business`** — the business's facts, in the site's `config/app.yaml`
+(site facts, not presentation, so they survive a theme switch):
+
+```yaml
+# config/app.yaml (the business starter fills it)
+business:
+    name: Brot & Zeit            # optional, else app.name
+    street: Bergstraße 12
+    postal_code: '10115'
+    city: Berlin
+    country: Deutschland         # optional
+    phone: '+49 30 1234567'      # optional; a tel: link with spaces removed
+    email: hallo@example.org     # optional; a plain mailto: link — the starter leaves it
+                                 # out and points to the contact form instead
+    hours:                       # optional; days and hours_note are t() keys
+        - days: Mon–Fri
+          opens: '07:00'
+          closes: '18:00'
+        - days: Sat
+          opens: '08:00'
+          closes: '14:00'
+        - days: Sun
+          closed: true
+    hours_note: Closed on public holidays
+```
+
+`partials/opening-hours.pug` renders `dl.opening-hours` → per row
+`div.opening-hours__row` → `dt.opening-hours__days` (`t(days)`) →
+`dd.opening-hours__time` (`time(datetime=opens)` – `time(datetime=closes)`, or
+`t('Closed')`), then `p.opening-hours__note` (`t(hours_note)`).
+`partials/address.pug` renders `address.address` with one `span.address__line`
+per set line and `a.address__link` for phone and email. Both partials render
+nothing when their data is missing.
+
+**Footer** (business part of `partials/footer.pug`): `div.site-footer__cols` →
+`div.site-footer__col` ×3: brand name + `partials/address.pug`;
+`h2.site-footer__heading` `t('Opening hours')` + `partials/opening-hours.pug`
+(when `footer.show_hours` and hours are set); `partials/footer-extra.pug`
+sits after the columns (§S2.2).
+
+#### S3.2 Business seams
+
+| seam | included from | in scope | the starter overrides it with |
+|---|---|---|---|
+| `partials/hero-media.pug` | `div.hero__media` | `meta` | `include /vendor/plugin-images/picture` + `+picture(meta.images && meta.images.hero, { alt: meta.hero.image_alt, class: 'hero__image', loading: 'eager' })` |
+| `partials/card-media.pug` | `div.card__media` in `list.pug` | `item` (the child page) | the same mixin with `item.meta.images && item.meta.images.image` and `class: 'card__image'` |
+| `partials/contact-form.pug` | `div.contact__form` | `app`, `meta` | `include /vendor/plugin-contact-form/contact-form` |
+
+Plus the shared seams (§S2.4).
+
+#### S3.3 Business translation keys
+
+`Opening hours`, `Closed`, `Contact details`, `Phone`, `Email` — in addition to
+the shared keys (§S2.6).
+
+#### S3.4 Look and token defaults
+
+**"Clear and sturdy."** A white page with warm-grey bands; a system sans-serif
+throughout; a deep-blue accent. The header is one bar (brand left, nav right,
+hairline below) that wraps on narrow screens. The home hero is a full-width
+`surface` band with a large `h1` (fluid, `clamp()`), a short text and a solid
+accent button next to an outlined one. Cards sit in an auto-fill grid (min
+`16rem`) with a hairline border and `size.radius`, no shadows. Running text is
+held to `size.measure`, grids and the header to `size.width`. The footer is a
+`surface` band with three columns that collapse to one. Galleries are a 2–4
+column grid with muted captions. Nothing moves.
+
+```yaml
+# nera-theme-business/config/theme.yaml — defaults
+label: Business
+tokens:
+    color:
+        bg: '#ffffff'
+        surface: '#f4f1ec'
+        text: '#1c2024'
+        muted: '#545b63'
+        accent: '#1d4e89'
+        accent_text: '#ffffff'
+        border: '#d6d2ca'
+        focus: '#b04a00'
+    font:
+        body: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        heading: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        mono: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace"
+    size:
+        base: '1.0625rem'
+        measure: '42rem'
+        width: '72rem'
+        radius: '0.375rem'
+        space: '1.5rem'
+extra_css: []
+footer_links: []
+footer:
+    show_hours: true
+```
+
+Contrast of the defaults (computed 2026-10-13): text/bg 16.4, text/surface
+14.6, muted/bg 6.9, muted/surface 6.1, accent/bg 8.4, accent/surface 7.5,
+accent_text/accent 8.4, focus/bg 5.5 — all ≥ 4.5:1.
+
+#### S3.5 Plugin classes business styles
+
+`peerDependencies` as in §S2.1. Every class verified in the published template
+(§S8):
+
+| plugin (peer range) | classes styled | notes |
+|---|---|---|
+| `@nera-static/plugin-contact-form` `^1.1.1` | `contact-form`, `contact-form__intro`, `contact-form__field`, `contact-form__label`, `contact-form__label--checkbox`, `contact-form__label--radio`, `contact-form__label-text`, `contact-form__input`, `contact-form__input--textarea`, `contact-form__input--select`, `contact-form__input--checkbox`, `contact-form__input--radio`, `contact-form__input--error`, `contact-form__options`, `contact-form__consent`, `contact-form__status`, `contact-form__submit` | never styles `contact-form__decoy` or `contact-form__recipient`: both must stay hidden |
+| `@nera-static/plugin-navigation` `^3.0.3` | `nav`, `nav--list`, `nav__item`, `nav__link`, `nav__link--active`, `nav__link--active-path` | only under `.site-header__nav`; these are the defaults of `app.nav.navClass` / `activeClass` / `activePathClass`, so the starter keeps those config keys unset |
+| `@nera-static/plugin-images` `^1.0.2` | `nera-image`, `nera-image__caption` | the Markdown content pass; theme images from the `picture` mixin get theme classes (`hero__image`, `card__image`) |
+| `@nera-static/plugin-social-media-links` `^2.2.2` | `social-media-links`, `social-media-links__list`, `social-media-links__item`, `social-media-links__link`, `social-media-links__icon`, `social-media-links__label` | only under `.site-footer` |
+
+#### S3.6 Business public classes (contract)
+
+`skip-link`, `site-header`, `site-header__inner`, `site-header__brand`,
+`site-header__nav`, `lang-switch`, `lang-switch__list`, `lang-switch__item`,
+`lang-switch__link`, `site-main`, `page__header`, `page__title`, `page__lead`,
+`page__body`, `hero`, `hero__inner`, `hero__title`, `hero__text`,
+`hero__actions`, `hero__media`, `hero__image`, `button`, `button--secondary`,
+`cards`, `cards--list`, `cards__title`, `card`, `card__media`, `card__image`,
+`card__title`, `card__link`, `card__text`, `contact`, `contact__form`,
+`contact__aside`, `gallery`, `opening-hours`, `opening-hours__row`,
+`opening-hours__days`, `opening-hours__time`, `opening-hours__note`, `address`,
+`address__line`, `address__link`, `site-footer`, `site-footer__inner`,
+`site-footer__cols`, `site-footer__col`, `site-footer__heading`,
+`site-footer__legal`, `site-footer__copy`.
+
+### S4. `@nera-static/theme-blog` — **SPECIFIED 2026-10-13**
+
+For a personal or team blog: reading comfort first, posts by date, tags,
+prev/next, code. Carries the `blog` starter. `config/app.yaml`: `theme: blog`.
+
+#### S4.1 Page types
+
+"Header" and "body" as in §S3.1.
+
+| view (`layout:` value) | for | renders, in order |
+|---|---|---|
+| `pages/home.pug` | the front page | header; body (an intro); `section.post-list` → `h2.post-list__title` `t('Recent posts')` → `ol.post-list__items` with the newest `blog.home_posts` posts as cards (§S4.1a) → `a.post-list__more(href=meta.archive_href)` `t('All posts')`, when `archive_href` is set; seam `partials/tag-cloud.pug` |
+| `pages/post.pug` | one post | `article.post` → `header.post__header` (`h1.post__title`; `p.post__meta` with `t('Published')` `time.post__date`, `t('Updated')` `time.post__updated` when `meta.updated`, `t('By')` `span.post__author` when `meta.author`; `p.post__lead`) → `div.post__media` (seam `partials/post-media.pug`) → `div.post__body.nera-code-scope` (`!= content`) → `footer.post__footer` (`div.post__tags`: seam `partials/post-tags.pug`; `div.post__pagination`: seam `partials/post-pagination.pug`) |
+| `pages/archive.pug` | all posts | header; body; one `section.post-archive__year` per year, newest first → `h2` (the year) → `ul.post-archive__list` → `li.post-archive__item` → `time` + `a`; seam `partials/tag-cloud.pug` |
+| `pages/tag.pug` | the tag pages plugin-tags generates | `section.tag-page` → seam `partials/tag-overview.pug`, which owns the `<h1>`. The starter sets `tag_overview_layout: 'pages/tag.pug'` in `config/tags.yaml`. |
+| `pages/default.pug` | about, legal pages, any standard page | header; body |
+
+**Posts** are the pages in `pagesData` whose `meta.layout` is listed in
+`blog.post_layouts` (default `['pages/post.pug']`) and whose language is the
+page's, newest first by `meta.createdAt` (ties by `meta.href`). Each post
+should set `date` in its frontmatter: without it `createdAt` is the file's birth
+time, which CI stamps the same on every file (core 4.7.0).
+
+**S4.1a Post card**: `li.post-list__item` → `article.post-card` →
+`div.post-card__media` (seam `partials/card-media.pug`, `item` in scope) →
+`h3.post-card__title` → `a.post-card__link(href=item.meta.href)` →
+`time.post-card__date(datetime=isoDate(...))` → `p.post-card__excerpt`
+(`item.meta.description`).
+
+**List pagination.** Core renders one HTML file per Markdown file, so a list
+cannot be split over `/page/2.html` from a theme. The home shows the newest
+`blog.home_posts`, the archive shows all; between posts, plugin-page-pagination
+gives prev/next. A paged list is §S9 T1.
+
+Frontmatter (`meta.*`) the blog views read:
+
+| key | type | read by |
+|---|---|---|
+| `title`, `description`, `lead`, `robots`, `lang`, `slug` | as in §S3.1 | all (`description` is the card excerpt) |
+| `date` (→ `createdAt`) | date | post, cards, archive |
+| `updated` | date | post |
+| `author` | string | post |
+| `archive_href` | site path | home |
+| `tags` | list | not read by the theme — plugin-tags reads it; the starter shows it through the `post-tags` seam |
+
+`app.*`: `name`, `lang`, `robots`, `translations`, `theme.config` (§S2.5, plus
+`blog.post_layouts` and `blog.home_posts`).
+
+#### S4.2 Blog seams
+
+| seam | included from | in scope | the starter overrides it with |
+|---|---|---|---|
+| `partials/post-media.pug` | `div.post__media` | `meta` | `include /vendor/plugin-images/picture` + `+picture(meta.images && meta.images.image, { alt: meta.image_alt, class: 'post__image', loading: 'eager' })` |
+| `partials/card-media.pug` | `div.post-card__media` | `item` (the post) | the same mixin with `item.meta.images` and `class: 'post-card__image'` |
+| `partials/post-tags.pug` | `div.post__tags` | `meta` | `include /vendor/plugin-tags/partials/tag-links` |
+| `partials/post-pagination.pug` | `div.post__pagination` | `meta` | `include /vendor/plugin-page-pagination/page-pagination` (its published copy gets an `aria-label`, §S6) |
+| `partials/tag-overview.pug` | `section.tag-page` | `meta`, `app` | `include /vendor/plugin-tags/pages/tag-overview`. Default without plugin: `h1.page__title` + the body |
+| `partials/tag-cloud.pug` | home, archive | `app`, `meta` | `include /vendor/plugin-tags/partials/tag-cloud` |
+| `partials/feed-link.pug` | end of `head.pug`, before `head-extra.pug` | `app`, `meta` | **reserved** for the planned `@nera-static/plugin-feed` (its `<link rel="alternate">`). Empty; no classes named. A footer link to the feed goes in `footer-extra.pug`. |
+
+Plus the shared seams (§S2.4).
+
+#### S4.3 Blog translation keys
+
+`Recent posts`, `All posts`, `Published`, `Updated`, `By` — in addition to the
+shared keys (§S2.6).
+
+#### S4.4 Look and token defaults
+
+**"Quiet paper."** A warm off-white page and one centred reading column; a
+serif for running text at a generous size and line height (1.6); a system
+sans-serif, smaller, for headings, dates, nav and tags; a rust accent; links
+underlined. No bands, no hero, no cards with borders: the home and the archive
+are date-led lists (the date small and muted above the title, tabular figures in
+the archive). Tags are small outlined pills; prev/next are the two halves of a
+row under a hairline. Code blocks sit on the page colour with a hairline.
+The footer is one line of small muted text. Next to business it reads as a
+different theme at a glance: serif vs sans, one column vs grids, lists vs cards.
+
+```yaml
+# nera-theme-blog/config/theme.yaml — defaults
+label: Blog
+tokens:
+    color:
+        bg: '#fbf9f4'
+        surface: '#f1ece1'
+        text: '#24211d'
+        muted: '#5c574f'
+        accent: '#8c3a12'
+        accent_text: '#ffffff'
+        border: '#ddd5c6'
+        focus: '#1a5aa6'
+    font:
+        body: "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif"
+        heading: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        mono: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace"
+    size:
+        base: '1.1875rem'
+        measure: '38rem'
+        width: '46rem'
+        radius: '0'
+        space: '1.75rem'
+extra_css: []
+footer_links: []
+blog:
+    post_layouts: ['pages/post.pug']
+    home_posts: 10
+```
+
+Contrast of the defaults (computed 2026-10-13): text/bg 15.2, text/surface
+13.6, muted/bg 6.8, muted/surface 6.1, accent/bg 7.3, accent/surface 6.5,
+accent_text/accent 7.7, focus/bg 6.5 — all ≥ 4.5:1.
+
+**Code blocks.** `theme.css` maps the theme's tokens onto plugin-code-blocks'
+custom properties, on `.nera-code` as the plugin's stylesheet suggests:
+`--nera-code-bg: var(--theme-color-bg)`, `--nera-code-ink:
+var(--theme-color-text)`, `--nera-code-muted: var(--theme-color-muted)`,
+`--nera-code-accent: var(--theme-color-accent)`, `--nera-code-line:
+var(--theme-color-border)`, `--nera-code-font: var(--theme-font-mono)`,
+`--nera-code-radius: var(--theme-size-radius)`. `--nera-code-string`,
+`-symbol` and `-prompt` keep the plugin's defaults, which reach 4.5:1 on the
+blog's `bg` (string 5.0, symbol 5.9). The plugin's stylesheet is linked by the
+starter through `extra_css: ['/_nera/code-blocks.css']`; the theme never links
+`/_nera/…` itself (it would 404 on a site without the plugin).
+
+#### S4.5 Plugin classes blog styles
+
+```json
+"peerDependencies": {
+    "@nera-static/plugin-code-blocks": "^1.2.1",
+    "@nera-static/plugin-images": "^1.0.2",
+    "@nera-static/plugin-navigation": "^3.0.3",
+    "@nera-static/plugin-page-pagination": "^2.3.2",
+    "@nera-static/plugin-social-media-links": "^2.2.2",
+    "@nera-static/plugin-tags": "^3.2.3"
+}
+```
+
+each with `{ "optional": true }` in `peerDependenciesMeta`.
+
+| plugin (peer range) | classes / properties styled | notes |
+|---|---|---|
+| `@nera-static/plugin-tags` `^3.2.3` | `tag-cloud`, `tag-cloud__item`, `tag-links`, `tag-links__item`, `tag-overview`, `tag-overview__header`, `tag-overview__title`, `tag-overview__image`, `tag-overview__content`, `tag-overview__item`, `tag-overview__item-title`, `tag-overview__item-date`, `tag-overview__item-description`, `tag-overview__item-link` | `tag-overview` renders its own `<h1>` and `<h2>`s, hence the seam owns the heading |
+| `@nera-static/plugin-page-pagination` `^2.3.2` | `page-pagination`, `page-pagination__link`, `page-pagination__link--previous`, `page-pagination__link--next` | |
+| `@nera-static/plugin-code-blocks` `^1.2.1` | `nera-code` (custom properties only, see S4.4); `nera-code-scope` on `div.post__body` | the properties' names are the plugin's contract |
+| `@nera-static/plugin-images` `^1.0.2` | `nera-image`, `nera-image__caption` | as in §S3.5 |
+| `@nera-static/plugin-navigation` `^3.0.3` | as in §S3.5 | |
+| `@nera-static/plugin-social-media-links` `^2.2.2` | as in §S3.5 | |
+
+No class for search, statistics, stacks, popular-content, page-navigation or
+simple-page-list: none of the starters uses them on a page. A site that adds one
+styles it in its `custom.css`.
+
+#### S4.6 Blog public classes (contract)
+
+The shared shell classes (`skip-link`, `site-header`, `site-header__inner`,
+`site-header__brand`, `site-header__nav`, `lang-switch`, `lang-switch__list`,
+`lang-switch__item`, `lang-switch__link`, `site-main`, `page__header`,
+`page__title`, `page__lead`, `page__body`, `site-footer`, `site-footer__inner`,
+`site-footer__legal`, `site-footer__copy`), plus `post`, `post__header`,
+`post__title`, `post__meta`, `post__date`, `post__updated`, `post__author`,
+`post__lead`, `post__media`, `post__image`, `post__body`, `post__footer`,
+`post__tags`, `post__pagination`, `post-list`, `post-list__title`,
+`post-list__items`, `post-list__item`, `post-list__more`, `post-card`,
+`post-card__media`, `post-card__image`, `post-card__title`, `post-card__link`,
+`post-card__date`, `post-card__excerpt`, `post-archive__year`,
+`post-archive__list`, `post-archive__item`, `tag-page`.
