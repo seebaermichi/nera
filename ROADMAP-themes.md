@@ -911,3 +911,326 @@ a registry `npm update` produces).
   2026-07-24: the resolve hook adds ~1% at nera-website's 69-page count, within
   run-to-run noise. A template cache landed alongside, taking a 69-page
   `createHtmlFiles` from ~225 ms to ~22 ms — a theme-independent win. Numbers in §6)*
+
+---
+
+## Starter-ready themes (for nera-cli/ROADMAP-ai.md L5) — **SPECIFIED 2026-10-13**
+
+The specification for the two themes the starter kits need:
+**`@nera-static/theme-business`** and **`@nera-static/theme-blog`**. The theme
+repos (`nera-theme-business`, `nera-theme-blog`, flat siblings of `generator/`)
+are built from this section alone, so everything a builder needs is here. The
+parent spec is `nera-cli/ROADMAP-ai.md` L5:
+
+> Each needs a real theme — at least two new themes beyond `theme-example`;
+> theme specs live in `generator/ROADMAP-themes.md`.
+
+Everything below uses only what the shipped engine gives a template
+(`@nera-static/core` 4.15.2, verified 2026-10-13 against `src/render.js`,
+`src/core.js`, `src/theme.js`):
+
+| a template sees | what it is |
+|---|---|
+| `app` | every key of the site's `config/app.yaml`, plus `app.lang`, `app.basePath`, `app.folders`, `app.translations`, and `app.theme = { name, package, config }` (§1c) — plus whatever plugins add |
+| `meta` | the page's frontmatter, plus `href`, `fullPath`, `dirname`, `filename` and `createdAt` (frontmatter `createdAt`, else `date`, else file birth time) |
+| `pagesData` | every page as `{ content, meta }`, rendered or not |
+| `content` | the page's Markdown, rendered to HTML |
+| `t(key)` | `app.translations[meta.lang \|\| app.lang][key]`, falling back to the key |
+| `url(path)` | a root-absolute path with `base_path` in front (core also rewrites every root-absolute `href`/`src` after rendering, so the themes write plain `/…` paths) |
+
+Where a theme would need more than this, it is an open question (§S9), not a
+requirement.
+
+### S1. Purpose and scope — **SPECIFIED 2026-10-13**
+
+A theme is presentation only (§1e, D5 in `ROADMAP-ai.md`); a starter kit is a
+whole site that depends on one. The names say what a theme suits, the starter
+says what the site is. Two themes, because the four starters need two clearly
+different looks: an organisation's site with a front page, cards and contact
+details, and a reading-first blog.
+
+| starter | theme | why |
+|---|---|---|
+| `blank` | **none** — the scaffold's own `theme/views/` (what `nera new` makes today) | minimal by definition; the owner adds a theme later with one `theme:` line |
+| `business` | **`business`** | home with hero, services cards, opening hours, contact form, legal pages |
+| `blog` | **`blog`** | post list, single post, archive, tag pages, prev/next, code blocks |
+| `portfolio` | **`business`** | its `pages/list.pug` (card grid of child pages) and `pages/gallery.pug` (image grid) carry the projects; a portfolio also needs the hero, the contact page and the legal footer, which business already has |
+
+Out of scope for both themes, by rule:
+
+- **No `views/vendor/`** and no plugin `.pug` (§4). A theme styles plugin BEM
+  classes and offers **seams** (§S2.4) where the site puts the plugin templates
+  it published itself (`npm run publish-template` / `npx nera-<plugin>` →
+  `theme/views/vendor/plugin-<name>/`).
+- **No content.** Sample pages, `config/app.yaml`, plugin config and
+  translations belong to the starter.
+- **No logic.** No hooks (§1e), no JavaScript in 1.0 (§S2.7).
+
+### S2. Shared contract (both themes) — **SPECIFIED 2026-10-13**
+
+#### S2.1 Package shape
+
+Payload at the package root (§1b). `package.json`, shown for business; blog
+differs only in name, description, repository and `peerDependencies` (§S4.5):
+
+```json
+{
+    "name": "@nera-static/theme-business",
+    "version": "1.0.0",
+    "description": "Nera theme for small-business, organisation and portfolio sites — presentation only.",
+    "type": "module",
+    "license": "MIT",
+    "keywords": ["nera", "nera-theme"],
+    "files": ["views", "assets", "config"],
+    "exports": { "./package.json": "./package.json" },
+    "engines": { "node": "^20.19.0 || >=22.0.0" },
+    "nera": { "generator": ">=4.15.0" },
+    "peerDependencies": {
+        "@nera-static/plugin-contact-form": "^1.1.1",
+        "@nera-static/plugin-images": "^1.0.2",
+        "@nera-static/plugin-navigation": "^3.0.3",
+        "@nera-static/plugin-social-media-links": "^2.2.2"
+    },
+    "peerDependenciesMeta": {
+        "@nera-static/plugin-contact-form": { "optional": true },
+        "@nera-static/plugin-images": { "optional": true },
+        "@nera-static/plugin-navigation": { "optional": true },
+        "@nera-static/plugin-social-media-links": { "optional": true }
+    },
+    "repository": { "type": "git", "url": "git+https://github.com/seebaermichi/nera-theme-business.git" },
+    "bugs": { "url": "https://github.com/seebaermichi/nera-theme-business/issues" },
+    "homepage": "https://github.com/seebaermichi/nera-theme-business#readme"
+}
+```
+
+| field | rule |
+|---|---|
+| `files` | `views`, `assets`, `config` only (README, LICENSE and `package.json` ship anyway). Tests, fixtures and scripts stay out of the tarball. |
+| `exports` | only `./package.json`, so core's `resolvePackageRoot` finds the root (§1b). No JS entry. |
+| `nera.generator` | **`>=4.15.0`**. The themes rely on `app.theme.config` (4.6.0), frontmatter `date` as `meta.createdAt` (4.7.0, post dates), and per-page frontmatter parsed by `yaml` (4.15.0: a page without frontmatter no longer inherits the previous page's `layout`, and `10:30` is the string `"10:30"`, not 630). 4.15.x is also the only line the acceptance builds run on. No upper bound: a core major is checked when it ships, and an upper bound would fail every site's build on the day it lands (§5). |
+| `peerDependencies` | one entry per plugin whose classes or custom properties the theme's CSS targets, all marked optional (a site without the plugin has nothing to mis-style; core stays silent, §5). The floor is the release the class list was checked against (§S7), the caret keeps the major. A plugin with no markup (sitemap, canonical-links, link-attributes) is not a peer. |
+| `devDependencies` | what the fixture build needs (§S7): `@nera-static/nera` `^1.10.0` and the peer plugins. Nothing at runtime. |
+
+#### S2.2 Views every page needs
+
+Both themes use the conventional paths of `@nera-static/theme-example`, so the
+base template's `pages/index.md` (`layout: pages/default.pug`) renders with the
+theme. `nera new --theme` already leaves out the scaffold's own
+`layouts/layout.pug` and `pages/default.pug` (files marked
+`nera:scaffold-default`, `nera-cli` `src/scaffold.js`), so they do not shadow the
+theme's; `nera validate` warns (`theme-shadowed`) on a site that kept them.
+
+| file | role |
+|---|---|
+| `layouts/layout.pug` | the shell: `html(lang=meta.lang \|\| app.lang \|\| 'en')`, `head` (includes `partials/head.pug`), `body` → skip link → `partials/header.pug` → `main#main.site-main` → `partials/footer.pug` → `partials/scripts.pug`. Exactly one `<main>`, with `id="main"`. |
+| `partials/head.pug` | charset; `meta(name='viewport' content='width=device-width, initial-scale=1')` (zoomable: no `maximum-scale`, no `user-scalable`); `title` = `meta.title` and `app.name` joined with ` – `, or `app.name` alone when they are equal; `meta description` from `meta.description` (omitted when empty); `meta robots` from `meta.robots \|\| app.robots` (omitted when neither); `link(rel='stylesheet' href='/css/theme.css')`; `partials/tokens.pug`; one stylesheet `link` per `extra_css` entry; then `include head-extra.pug`. |
+| `partials/tokens.pug` | the design tokens as CSS custom properties (§S2.5). |
+| `partials/helpers.pug` | the shared Pug functions the views call, defined with `-` code: `pageLang(page)` (`page.meta.lang \|\| app.lang`), `sameLang(page)`, `homeHref(lang)`, `formatDate(value, lang)`, `isoDate(value)`, `hrefFor(value, lang)` (a string, or a `{ <lang>: href }` map). Included by the layout before anything that uses them. |
+| `partials/header.pug` | `header.site-header` → `.site-header__inner` → `a.site-header__brand(href=homeHref(lang))` with `app.name` as text → `nav.site-header__nav(aria-label=t('Main navigation'))` containing `include nav-main.pug` → `include lang-switch.pug`. |
+| `partials/lang-switch.pug` | rendered only when `Object.keys(app.translations \|\| {})` has two or more languages (§S2.8). |
+| `partials/footer.pug` | `footer.site-footer` → `.site-footer__inner`; theme-specific content (§S3, §S4); then `include footer-extra.pug`; then `nav.site-footer__legal(aria-label=t('Legal'))` with one link per `footer_links` entry; then `p.site-footer__copy` (`© <build year> <app.name>`). |
+| `partials/scripts.pug` | `include scripts-extra.pug` and nothing else — the themes ship no JavaScript (§S2.7). |
+
+**Headings.** Every page type renders exactly one `<h1>`: the theme's page
+header from `meta.title` (or the hero title, §S3.1), except where a seam owns it
+(blog `pages/tag.pug`, §S4.1). The page body therefore starts at `##`; a `#` in
+a page's Markdown is a second `<h1>` (`a11y-h1`). The starters' sample pages
+follow this.
+
+#### S2.3 Blocks a site's own view extends
+
+A site adds its own page type with `extends ../layouts/layout.pug` in
+`theme/views/pages/<name>.pug` (the layered resolver finds the theme's layout).
+The layout defines these blocks; all are public contract:
+
+| block | where | default |
+|---|---|---|
+| `head` | end of `<head>`, after `head-extra.pug` | empty |
+| `header` | start of `<body>`, after the skip link | `include ../partials/header.pug` |
+| `main` | inside `main#main.site-main` | `!= content` |
+| `footer` | after `</main>` | `include ../partials/footer.pug` |
+| `scripts` | end of `<body>` | `include ../partials/scripts.pug` |
+
+Every theme page type (§S3.1, §S4.1) is `extends ../layouts/layout.pug` +
+`block main`.
+
+#### S2.4 Seams (include points the site fills)
+
+A seam is a partial the theme ships **empty** (or with a plugin-free default)
+and the site overrides per file (§1b, §2b). This is how plugin output reaches a
+themed page without the theme shipping plugin templates. Seams are public
+contract: their path and the variables in scope are semver-protected.
+
+| seam (both themes) | included from | in scope | typical site override |
+|---|---|---|---|
+| `partials/head-extra.pug` | end of `head.pug` | `app`, `meta` | canonical/alternate links (`include /vendor/plugin-canonical-links/index`), a feed `<link>` once a feed plugin exists |
+| `partials/nav-main.pug` | inside `nav.site-header__nav` | `app`, `meta` | `include /vendor/plugin-navigation/partials/link-list-navigation` then `+linkListNav` — the `ul` form, so the theme's labelled `<nav>` is the only `<nav>` around it |
+| `partials/footer-extra.pug` | footer, before the legal nav | `app`, `meta` | `include /vendor/plugin-social-media-links/social-media-links` (never `fontawesome-cdn-link.pug`: a CDN request, `privacy-third-party`) |
+| `partials/scripts-extra.pug` | `scripts.pug` | `app`, `meta` | a site's own `<script type="module">` |
+
+Theme-specific seams are listed in §S3.2 and §S4.2. A seam that renders plugin
+data is filled by the **site** (the starter); the theme never reads plugin data
+itself, so a theme update can never break on a plugin's data shape.
+
+#### S2.5 Design tokens (`config/theme.yaml`)
+
+The theme's `config/theme.yaml` declares every token with a real default; a
+site overrides any of them in its own `config/theme.yaml` (deep merge, §1c). The
+token set is the same in both themes (names are contract; values differ, §S3.4,
+§S4.4):
+
+| token (`tokens.<group>.<name>`) | type | CSS custom property | use |
+|---|---|---|---|
+| `color.bg` | CSS colour | `--theme-color-bg` | page background |
+| `color.surface` | CSS colour | `--theme-color-surface` | bands, cards, header/footer |
+| `color.text` | CSS colour | `--theme-color-text` | body text |
+| `color.muted` | CSS colour | `--theme-color-muted` | dates, captions, meta lines |
+| `color.accent` | CSS colour | `--theme-color-accent` | links, buttons, active nav |
+| `color.accent_text` | CSS colour | `--theme-color-accent-text` | text on `accent` |
+| `color.border` | CSS colour | `--theme-color-border` | hairlines, field borders |
+| `color.focus` | CSS colour | `--theme-color-focus` | `:focus-visible` outline |
+| `font.body` | font-family list | `--theme-font-body` | running text |
+| `font.heading` | font-family list | `--theme-font-heading` | headings, brand, nav |
+| `font.mono` | font-family list | `--theme-font-mono` | code |
+| `size.base` | length | `--theme-size-base` | root font size |
+| `size.measure` | length | `--theme-size-measure` | max line length of running text |
+| `size.width` | length | `--theme-size-width` | max content width (header, grids) |
+| `size.radius` | length | `--theme-size-radius` | corners of cards, buttons, fields |
+| `size.space` | length | `--theme-size-space` | base vertical rhythm |
+
+**How a token becomes a custom property.** `partials/tokens.pug` walks
+`app.theme.config.tokens` and emits one declaration per leaf,
+`--theme-<group>-<name>` with `_` turned into `-`, inside one inline
+`<style>:root{…}</style>`. A value is emitted only if it is a string or number
+containing none of `<`, `>`, `{`, `}`, `;` — anything else is dropped, so a
+typo in YAML cannot break out of the rule. `assets/css/theme.css` reads every
+token as `var(--theme-…, <the same default>)`, so the page is styled even if
+the `<style>` is missing. A token a site adds that the theme does not know is
+emitted too and harmless.
+
+```pug
+//- partials/tokens.pug (normative behaviour, not normative code)
+-
+    const tokens = (app.theme && app.theme.config && app.theme.config.tokens) || {}
+    const safe = (v) => ['string', 'number'].includes(typeof v) && !/[<>{};]/.test(String(v))
+    const decls = []
+    for (const [group, values] of Object.entries(tokens)) {
+        if (!values || typeof values !== 'object') continue
+        for (const [name, value] of Object.entries(values)) {
+            if (safe(value)) decls.push(`--theme-${group}-${name.replace(/_/g, '-')}:${value};`)
+        }
+    }
+if decls.length
+    style!= `:root{${decls.join('')}}`
+```
+
+Other keys in the theme's `config/theme.yaml` (contract, same in both themes):
+
+| key | type | default | meaning |
+|---|---|---|---|
+| `label` | string | `Business` / `Blog` | human label, for a future themes UI |
+| `extra_css` | array of root-absolute paths | `[]` | stylesheets linked after `theme.css`, in order (§2a). An entry not starting with a single `/` is ignored, so no third-party stylesheet can come in this way. The blog starter sets `['/_nera/code-blocks.css']`; a site's own `custom.css` goes here too. |
+| `footer_links` | array of `{ label, href }` | `[]` | the footer's legal nav. `label` goes through `t()`; `href` is a path or a `{ <lang>: path }` map, resolved for the page's language (an entry without a path for that language is left out). The starters put the imprint and privacy pages here, which is what `legal-imprint-link` / `legal-privacy-link` look for. |
+
+Arrays are replaced wholesale by the merge (§1c), so a site's `footer_links`
+is the whole list.
+
+**Fonts.** Both themes use **system font stacks** in 1.0 and ship no font files.
+A site that wants a webfont self-hosts it: files in `theme/assets/fonts/`, an
+`@font-face` in its `custom.css`, and the family name in `tokens.font.*`. Never a
+font or script CDN.
+
+**No dark mode in 1.0.** A `prefers-color-scheme` variant would be a new token
+group (`color_dark`) in a later minor.
+
+#### S2.6 Translation keys (`t()`)
+
+Every UI string a theme renders goes through `t()` with an **English key**, so an
+English site needs no translations and a German one adds them under
+`translations.de` in `config/app.yaml`. The theme ships no translations (§S9 T3).
+Shared keys:
+
+| key | where |
+|---|---|
+| `Skip to content` | skip link |
+| `Main navigation` | `aria-label` of the header `<nav>` |
+| `Language` | `aria-label` of the language switch `<nav>` |
+| `Legal` | `aria-label` of the footer legal `<nav>` |
+| `language_name` | read from **each** language's own translations by the language switch, so the switch shows `Deutsch` / `English`; falls back to the upper-case code |
+
+Theme-specific keys are in §S3.3 and §S4.3. `footer_links` labels and the
+`days` / `hours_note` of opening hours are `t()` keys too (the site picks them).
+Dates use `toLocaleDateString(lang, { year: 'numeric', month: 'long', day:
+'numeric' })` with the page's language; they need no key.
+
+#### S2.7 Accessibility and privacy guarantees
+
+What the theme guarantees on every page type; the starter's sample pages must
+then pass `nera check` with **zero findings** (§S7):
+
+- **Skip link first.** `a.skip-link(href='#main')` is the first focusable
+  element of `<body>`; visually hidden until focused (`a11y-skip-link`).
+- **One `<main id="main">`** (`a11y-main`), **one `<h1>`** (`a11y-h1`), no
+  heading level skipped by theme markup (`a11y-heading-skip`): page header `h1`,
+  theme section headings `h2`, card titles `h2`, or `h3` under a section
+  heading.
+- **Every theme `<nav>` has an `aria-label`** (`a11y-nav-name`). Plugin markup
+  that emits an unlabelled `<nav>` (plugin-page-pagination) is labelled by the
+  site in its published copy (§S6).
+- `html[lang]` always set (`a11y-html-lang`), a non-empty `<title>`
+  (`a11y-title`), a zoomable viewport (`a11y-viewport-zoom`), no duplicate ids
+  in theme markup (`a11y-duplicate-id`), every theme link has text
+  (`a11y-link-name`), language-switch links carry `hreflang` **and** a matching
+  `lang` (`a11y-link-lang`), no `target="_blank"` in theme markup
+  (`a11y-target-blank`), theme `<img>` only through seams, where the site passes
+  `alt` (`a11y-img-alt`).
+- **Motion.** No `animation` and no `scroll-behavior: smooth`; transitions only
+  inside `@media (prefers-reduced-motion: no-preference)`, and `theme.css`
+  contains a `prefers-reduced-motion` query (`a11y-reduced-motion`).
+- **Focus.** `:focus-visible` gets a 3px outline in `--theme-color-focus`.
+- **Contrast.** The default pairs `text`/`bg`, `text`/`surface`,
+  `muted`/`bg`, `muted`/`surface`, `accent`/`bg`, `accent`/`surface`,
+  `accent_text`/`accent` and `focus`/`bg` reach **4.5:1** (WCAG AA; checked by
+  script, §S7).
+- **No third-party request.** Every URL the theme emits or its CSS loads is
+  root-absolute (`/…`) or a fragment; `extra_css` refuses anything else
+  (`privacy-third-party`, `privacy-insecure`).
+- **No device storage and no JavaScript.** The themes ship no `.js` file and
+  no inline `<script>` (`privacy-storage`). Behaviour a site wants (a menu
+  toggle) is the site's `scripts-extra.pug`. Narrow screens are handled by CSS
+  alone (the header nav wraps).
+- **Legal links.** The footer renders `footer_links` on every page; the starter
+  fills it (`legal-imprint-link`, `legal-privacy-link`). Legal page text is the
+  starter's (`legal-outdated-law`).
+
+#### S2.8 Language switch (core data only)
+
+Shown when `app.translations` has two or more languages. For each language
+`l` other than the page's own:
+
+1. the target is the page in `pagesData` that has a `layout`, the same
+   `meta.slug` as the current page (the same identifier
+   `@nera-static/plugin-canonical-links` uses by default for alternates), and
+   `pageLang(page) === l`;
+2. else the home page of `l`: the page with `pageLang(page) === l`,
+   `meta.filename === 'index.html'` and the shortest `meta.dirname`;
+3. else the language is left out.
+
+Markup: `nav.lang-switch(aria-label=t('Language'))` → `ul.lang-switch__list` →
+`li.lang-switch__item` → `a.lang-switch__link(href, hreflang=l, lang=l)`; the
+current language is a `span.lang-switch__link(aria-current='true', lang=…)`, not a
+link. `homeHref(lang)` (brand link) uses rule 2, falling back to `/`.
+
+#### S2.9 What a site overrides, and how
+
+| to change | do this | keeps theme updates for |
+|---|---|---|
+| a colour, a font, a width | the token in the site's `config/theme.yaml` (§S2.5) | everything |
+| a few CSS rules | `theme/assets/css/custom.css` + `extra_css: ['/css/custom.css']` (§2a) | everything but nothing is forked |
+| where plugin output goes | override a seam (§S2.4, §S3.2, §S4.2) | every other file |
+| one partial or page type | copy it to `theme/views/<same path>` (§1b) | every other file |
+| the whole shell | override `layouts/layout.pug` | page types, partials, CSS |
+| a new page type | `theme/views/pages/<name>.pug` extending the layout (§S2.3) | everything |
+
+The site never overrides `assets/css/theme.css` unless it accepts losing its
+updates (§2b).
