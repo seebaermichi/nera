@@ -1592,3 +1592,178 @@ The shared shell classes (`skip-link`, `site-header`, `site-header__inner`,
 `post-card__media`, `post-card__image`, `post-card__title`, `post-card__link`,
 `post-card__date`, `post-card__excerpt`, `post-archive__year`,
 `post-archive__list`, `post-archive__item`, `tag-page`.
+
+### S5. Versioning and release — **SPECIFIED 2026-10-13**
+
+A published theme's contract is everything a site can depend on: the view and
+partial paths (page types, seams), the blocks (§S2.3), the token names and the
+other `config/theme.yaml` keys (§S2.5), the `t()` keys, the frontmatter and
+`app.business` keys it reads, the public classes (§S3.6, §S4.6) and the plugin
+classes it styles. Semver over that contract:
+
+| change | bump |
+|---|---|
+| remove or rename a view, page type, seam, partial or block; remove or rename a token, `config/theme.yaml` key, `t()` key, frontmatter or `app.*` key, or public class; change the element or nesting of an element that carries a public class; change what a key means | **major** |
+| raise the `nera.generator` floor; drop a plugin major from `peerDependencies` | **major** (sites on the old core or plugin stop building or lose styling) |
+| add a view, seam, block, token, key or class; add a plugin major to a peer range (`^3.2.3 \|\| ^4.0.0`); change a token's default value | **minor** (a new `t()` key shows English on a translated site until the site adds it: name it in the CHANGELOG) |
+| a CSS or markup fix that keeps every contract item; an accessibility fix; docs | **patch** |
+
+Release, per theme repo (repos are created only when their slice starts, and
+their work is filed as `[nera-theme-business]` / `[nera-theme-blog]` issues):
+
+1. **1.0.0 is bootstrap-published by hand** by the maintainer (a new
+   `@nera-static/*` package cannot use OIDC before it exists), then the npm
+   Trusted Publisher is set to the repo's release workflow.
+2. **A real x.y.1 via CI OIDC within two days** (a pushed `v*` tag), so the new
+   Trusted Publisher does not expire unused.
+3. Every later release goes out from CI on a `v*` tag; `CHANGELOG.md` (Keep a
+   Changelog) is updated in the same commit as the change.
+4. Fleet setup like every repo: README with the Test and npm badges, ruleset,
+   secret scanning, Dependabot, private vulnerability reporting, `FUNDING.yml`.
+
+Order: each theme ships 1.0.x before the starter that depends on it; the
+starter depends on `^1.0.1` (the first CI release).
+
+### S6. What a starter must do so its theme passes — **SPECIFIED 2026-10-13**
+
+The theme guarantees its own markup (§S2.7). The rest is site content and
+plugin output, which the **starter** owns. Written here because a theme's
+acceptance build (§S7) does exactly this in its fixture site:
+
+1. Keep a `theme/views/` folder (it holds the vendor copies and the seam
+   overrides anyway; without a site views folder core renders nothing, §S9 T2).
+2. Do not ship the scaffold's `nera:scaffold-default` files
+   (`theme/views/layouts/layout.pug`, `theme/views/pages/default.pug`): they
+   would shadow the theme's (§S9 T4).
+3. Publish every plugin template it uses into `theme/views/vendor/` and fill the
+   seams (§S2.4, §S3.2, §S4.2). Keep plugin-navigation's default class names
+   (§S3.5) and call `+linkListNav` (pass `rootPath` for a language prefix).
+4. In the published `page-pagination.pug`, add an `aria-label` to its `<nav>`
+   (for example `aria-label=t('More posts')`): the plugin's `<nav>` has none, and
+   with the header `<nav>` on the page that is an `a11y-nav-name` finding.
+5. Never include `fontawesome-cdn-link.pug`; social icons are text or inline SVG
+   (`icon_raw`). Drop `target="_blank"` from the published
+   `social-media-links.pug` or leave `a11y-target-blank` at its default `off`.
+6. Set `footer_links` in `config/theme.yaml` to the imprint and privacy pages,
+   per language, with labels the legal rules recognise (`Impressum`,
+   `Datenschutz` / `Imprint`, `Privacy`); legal texts cite § 5 DDG and the
+   TDDDG, not the TMG or TTDSG.
+7. Translate every theme key (§S2.6, §S3.3, §S4.3), `language_name` per
+   language, the `footer_links` labels and the opening-hours `days` /
+   `hours_note`, under `translations.<lang>` in `config/app.yaml`.
+8. Start page bodies at `##`, give every image an `alt`, give every post a
+   `date`, give translations of one page the same `slug`.
+9. Blog: `tag_overview_layout: 'pages/tag.pug'` in `config/tags.yaml`;
+   `extra_css: ['/_nera/code-blocks.css']` in `config/theme.yaml`.
+
+### S7. Acceptance criteria — **SPECIFIED 2026-10-13**
+
+Per theme repo, each checked by a script or a build in CI. The **fixture site**
+is `test/site/` in the theme repo: the matching starter's page set (business:
+home, about, services, contact, opening hours, imprint, privacy, a portfolio
+list and one gallery project; blog: home, archive, three dated posts with tags
+and a code block, one tag page, about, imprint, privacy), in English and German,
+with the peer plugins and `@nera-static/nera` installed as `devDependencies`,
+the theme used by local path (`theme: ../..`), and the steps of §S6 applied.
+Its `config/validate.yaml` turns every `nera check` rule on, the ones off by
+default included (`a11y-link-lang`, `a11y-target-blank`, `a11y-reduced-motion`,
+`privacy-storage`).
+
+- [ ] **Package.** `npm pack --dry-run` lists only `package.json`, `README.md`,
+  `LICENSE`, `CHANGELOG.md` and files under `views/`, `assets/`, `config/`;
+  nothing under `views/vendor/`; no `.js` file. `package.json` has the fields of
+  §S2.1 with these exact values for `keywords`, `files`, `exports`, `engines`,
+  `nera.generator` and the peer ranges of §S3.5 / §S4.5, every peer marked
+  optional.
+- [ ] **Contract present.** Every view, partial, seam and block named in §S2 and
+  §S3 (business) or §S4 (blog) exists, every token and key of §S2.5 is in
+  `config/theme.yaml`, every public class of §S3.6 / §S4.6 appears in `views/`.
+- [ ] **Builds clean.** `nera build` of the fixture exits 0, with no `⚠️` line
+  from core's compatibility check, no `Views folder not found`, and one
+  `HTML created:` line per fixture page that has a `layout` (none skipped).
+- [ ] **Validates clean.** `nera validate --json` and `nera check --json` both
+  report `"ok": true` and `"results": []`.
+- [ ] **Without plugins.** With the plugins removed and the seams left at the
+  theme's defaults, the fixture still builds and `nera check` still reports no
+  findings (the seams degrade to nothing, never to broken markup).
+- [ ] **Plugin classes exist.** A script greps every plugin class of §S3.5 /
+  §S4.5 in the `npm pack` tarball of the plugin at its peer floor; all found
+  (§S8 records how computed classes are matched).
+- [ ] **No unlisted plugin coupling.** Every class selector in
+  `assets/css/theme.css` is a public class of the theme or a plugin class listed
+  for it.
+- [ ] **Tokens.** The built HTML carries `--theme-color-accent:<default>`; with
+  the fixture's `config/theme.yaml` setting `tokens.color.accent: '#006400'` it
+  carries `--theme-color-accent:#006400` and every other token still at its
+  default; a value containing `}` is not emitted.
+- [ ] **Per-file override.** A fixture file `theme/views/partials/footer-extra.pug`
+  appears in every page's footer while the theme's own `footer.pug` still
+  renders around it.
+- [ ] **Same origin only.** Every `src`, `srcset`, stylesheet `href` in the built
+  HTML and every `url()` in the built CSS is root-absolute or a fragment;
+  `assets/` contains no `http://` or `https://` outside comments; an `extra_css`
+  entry `https://example.org/x.css` is not linked.
+- [ ] **Contrast.** A script computes the eight default pairs of §S2.7 from
+  `config/theme.yaml`; each ≥ 4.5:1.
+- [ ] **Distinct.** The two themes' `tokens.font.body` defaults differ (sans vs
+  serif), and their page-type lists differ (§S3.1 vs §S4.1).
+- [ ] **Subdirectory deploy.** With `base_path: /sub` every theme link and
+  stylesheet in the output starts with `/sub/`.
+- [ ] **Starter fit (business).** The fixture's contact page renders the form of
+  `@nera-static/plugin-contact-form` through the `contact-form` seam, with all
+  labels associated (`a11y-form-label` clean).
+- [ ] **Starter fit (blog).** The home lists the posts newest first; the archive
+  groups them by year; a generated tag page has exactly one `<h1>`; a post shows
+  prev/next from plugin-page-pagination and its tags from plugin-tags; a code
+  block uses the theme's `--nera-code-*` mapping.
+
+### S8. Plugin classes — verification record — **VERIFIED 2026-10-13**
+
+Every plugin class in §S3.5 and §S4.5 was checked against the `npm pack`
+tarball of the plugin at the version given as the peer floor (contact-form
+1.1.1, images 1.0.2, navigation 3.0.3, social-media-links 2.2.2, tags 3.2.3,
+page-pagination 2.3.2, code-blocks 1.2.1). Most are literal in the plugin's
+`views/`. The exceptions, matched by their source instead:
+
+| class | emitted by |
+|---|---|
+| `nav`, `nav--list`, `nav__item`, `nav__link` | plugin-navigation `views/partials/link-list-navigation.pug` and `views/helper/mixins.pug`: `` `${navBlock}--list` ``, `` `${navBlock}__item` ``, `` `${navBlock}__link` `` with `navBlock` defaulting to `'nav'` |
+| `nav__link--active`, `nav__link--active-path` | plugin-navigation `views/helper/setup.pug` (literal defaults) |
+| `contact-form__input--error` | plugin-contact-form `index.js` (`DEFAULT_ERROR_CLASS`, set by the client script on an invalid field) |
+| `nera-image`, `nera-image__caption` | plugin-images `src/rewrite-html.js` (the Markdown content pass) |
+| `nera-code`, `nera-code-scope`, the `--nera-code-*` properties | plugin-code-blocks `assets/nera-code.css` |
+
+The theme repos repeat this check in CI (§S7) whenever a peer range changes.
+
+### S9. Open questions
+
+Only where a starter-ready theme meets something core does not do today. None
+of them blocks the themes: each has the workaround named.
+
+- **T1 — Paged lists.** Core writes one HTML file per Markdown file
+  (`createHtmlFiles`), and a theme has no hooks (§1e), so a theme cannot split a
+  post list over `/page/2.html`. Workaround: the newest `blog.home_posts` on the
+  home, everything in the archive, prev/next between posts. A paged list needs
+  a plugin that creates list pages in `getMetaData` (as plugin-tags creates tag
+  pages). Is that a new plugin, or an option of plugin-page-pagination?
+- **T2 — A themed site needs its own views folder.** `createHtmlFiles` returns
+  early with `Views folder not found` when the site's views folder is missing,
+  even though the theme supplies every layout (`src/render.js`, the
+  `existsSync(viewsFolder)` check; without `theme/`, `computeFolders` also
+  falls back to the legacy root `views/`). Workaround: starters keep
+  `theme/views/` (§S6.1). Should core render from the theme alone when the
+  site has no views folder?
+- **T3 — Theme-shipped translations.** `t()` reads only `app.translations`, so a
+  theme cannot ship its German UI strings; every starter repeats them. Should
+  core merge a theme's `config/theme.yaml` `translations` under the site's (site
+  wins), as §1c does for tokens?
+- **T4 — `nera new --starter` and scaffold defaults.** `--theme` leaves out the
+  scaffold's `nera:scaffold-default` files (`nera-cli` `src/scaffold.js`);
+  `--starter` (not built yet) must do the same, or the base template's
+  `layouts/layout.pug` and `pages/default.pug` shadow the theme's. A
+  `nera-cli` concern for L5, recorded here because the themes rely on it.
+- **T5 — Tokens under a strict CSP.** The tokens are an inline `<style>`
+  (§S2.5); a site with `Content-Security-Policy: style-src 'self'` blocks it and
+  falls back to the defaults in `theme.css`. Emitting a generated stylesheet
+  instead would need a theme to write a file, which only a plugin can
+  (`getAssets`). Is that worth a companion plugin, or is the fallback enough?
