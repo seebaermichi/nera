@@ -1,0 +1,26 @@
+{
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Edit|Write|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/enforce-issue-step-gate.sh"
+                    }
+                ]
+            }
+        ],
+        "SessionStart": [
+            {
+                "matcher": "clear|compact|resume",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/rebind-issue-session.sh"
+                    }
+                ]
+            }
+        ]
+    }
+}

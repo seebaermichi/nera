@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# The one entry point the Snagio skills use for every API call, whatever the stack.
+#
+#   bash .claude/scripts/snagio <command> [args...]
+#
+# <command> is pull, report, push, import, plan-steps, complete-step, doctor or install; the
+# `snagio:` prefix is optional. Arguments and stdin are passed through unchanged, as
+# are stdout, stderr and the exit code.
+#
+# - A Laravel app with snagio-php installed runs `php artisan snagio:<command>`, so a
+#   Sail/Docker setup keeps resolving SNAGIO_BASE_URL inside the app.
+# - Anything else runs the Node CLI: $SNAGIO_CLI when set (e.g.
+#   SNAGIO_CLI="node ~/workspace/snagio-cli/bin/snagio.js"), else `snagio` on the PATH.
+
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "usage: bash .claude/scripts/snagio <pull|report|push|import|plan-steps|complete-step|doctor|install> [args...]" >&2
+    exit 2
+fi
+
+cmd="${1#snagio:}"
+shift
+
+if [ -f artisan ] && [ -d vendor/snagio/snagio-php ]; then
+    exec php artisan "snagio:${cmd}" "$@"
+fi
+
+if [ -n "${SNAGIO_CLI:-}" ]; then
+    read -r -a cli <<< "$SNAGIO_CLI"
+    for i in "${!cli[@]}"; do
+        case "${cli[$i]}" in
+            "~") cli[$i]="$HOME" ;;
+            "~/"*) cli[$i]="$HOME/${cli[$i]#"~/"}" ;;
+        esac
+    done
+    exec "${cli[@]}" "$cmd" "$@"
+fi
+
+if command -v snagio >/dev/null 2>&1; then
+    exec snagio "$cmd" "$@"
+fi
+
+cat >&2 <<'EOF'
+snagio: no Snagio CLI found. This is not a Laravel app with snagio-php installed, so
+the Node CLI is needed. Either run `npm link` once in the snagio-cli checkout to put
+`snagio` on the PATH, or set SNAGIO_CLI (e.g. SNAGIO_CLI="node ~/workspace/snagio-cli/bin/snagio.js").
+EOF
+exit 127

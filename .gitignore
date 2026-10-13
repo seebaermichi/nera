@@ -9,3 +9,6 @@ ISSUES.md
 
 # npm pack artifacts
 *.tgz
+
+# Browser-test artifacts (Playwright MCP)
+.playwright-mcp/
