@@ -10,6 +10,10 @@ met** — including the two `npm update` lifecycle checks, exercised 2026-07-24 
 a real install→update dry-run. The branch is ready to merge to `main` and release
 4.6.0.
 
+**Starter-ready themes (2026-10-13):** `@nera-static/theme-business` and
+`@nera-static/theme-blog`, the themes the `ROADMAP-ai.md` L5 starters need, are
+specified in the section **Starter-ready themes** at the end of this file.
+
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
 > `theme/` wrapper**, and a **site groups its own presentation under
@@ -1670,7 +1674,7 @@ default included (`a11y-link-lang`, `a11y-target-blank`, `a11y-reduced-motion`,
 `privacy-storage`).
 
 - [ ] **Package.** `npm pack --dry-run` lists only `package.json`, `README.md`,
-  `LICENSE`, `CHANGELOG.md` and files under `views/`, `assets/`, `config/`;
+  `LICENSE` and files under `views/`, `assets/`, `config/`;
   nothing under `views/vendor/`; no `.js` file. `package.json` has the fields of
   §S2.1 with these exact values for `keywords`, `files`, `exports`, `engines`,
   `nera.generator` and the peer ranges of §S3.5 / §S4.5, every peer marked
@@ -1751,7 +1755,7 @@ of them blocks the themes: each has the workaround named.
   even though the theme supplies every layout (`src/render.js`, the
   `existsSync(viewsFolder)` check; without `theme/`, `computeFolders` also
   falls back to the legacy root `views/`). Workaround: starters keep
-  `theme/views/` (§S6.1). Should core render from the theme alone when the
+  `theme/views/` (§S6, item 1). Should core render from the theme alone when the
   site has no views folder?
 - **T3 — Theme-shipped translations.** `t()` reads only `app.translations`, so a
   theme cannot ship its German UI strings; every starter repeats them. Should
