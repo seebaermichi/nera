@@ -363,6 +363,34 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
         expect(html).not.toContain('THEME header')
         expect(html).toContain('THEME footer')
     })
+
+    it('renders from the theme alone when the site has no views folder', async () => {
+        await fs.rm(siteViews, { recursive: true, force: true })
+        // An absolute include resolves against the (missing) site basedir first,
+        // then falls through to the theme.
+        await fs.writeFile(
+            path.join(themeViews, 'layouts', 'layout.pug'),
+            'html\n  body\n    include /partials/header.pug\n    include ../partials/footer.pug'
+        )
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        await createHtmlFiles(
+            { ...pageData },
+            siteViews,
+            publicDir,
+            { viewsRoot: themeViews }
+        )
+
+        const html = await fs.readFile(
+            path.join(publicDir, 'index.html'),
+            'utf8'
+        )
+
+        expect(html).toContain('THEME header')
+        expect(html).toContain('THEME footer')
+        expect(error).not.toHaveBeenCalled()
+        error.mockRestore()
+    })
 })
 
 describe('createHtmlFiles resolves extends across the chain', () => {

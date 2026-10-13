@@ -216,6 +216,43 @@ describe('loadAppData', () => {
             warn.mockRestore()
         })
 
+        it('points views/assets at theme/ for a theme-only site, without the warning', async () => {
+            await fs.writeFile(
+                path.join(probeRoot, 'config', 'app.yaml'),
+                'name: Probe\ntheme: business\n'
+            )
+            const warn = vi
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {})
+
+            const { folders } = loadAppData().app
+
+            expect(folders.views).toBe('./theme/views')
+            expect(folders.assets).toBe('./theme/assets')
+            expect(warn).not.toHaveBeenCalledWith(
+                expect.stringContaining('deprecated')
+            )
+
+            warn.mockRestore()
+        })
+
+        it('keeps a legacy root views/ even when a theme is named', async () => {
+            await fs.mkdir(path.join(probeRoot, 'views'))
+            await fs.writeFile(
+                path.join(probeRoot, 'config', 'app.yaml'),
+                'name: Probe\ntheme: business\n'
+            )
+            const warn = vi
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {})
+
+            const { folders } = loadAppData().app
+
+            expect(folders.views).toBe('./views')
+
+            warn.mockRestore()
+        })
+
         it('lets an explicit app.yaml folders block win over the probe', async () => {
             await fs.mkdir(path.join(probeRoot, 'theme', 'views'), {
                 recursive: true,

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.16.0] - 2026-10-13
+
+### Added
+
+-   **A themed site no longer needs a views folder of its own.** With `theme:`
+    set in `config/app.yaml` and no `theme/views/` in the site, the build
+    renders every page from the theme's views instead of stopping with
+    `Views folder not found`. A site that names a theme and has neither
+    `theme/` nor a legacy root `views/` now uses the `theme/` layout, without
+    the legacy-root deprecation warning, so a later per-file override goes in
+    `theme/views/`. Sites with their own views render exactly as before.
+
 ## [4.15.2] - 2026-10-11
 
 ### Changed

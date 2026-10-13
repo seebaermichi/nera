@@ -96,11 +96,16 @@ export const computeFolders = (
     }
 
     const themeFolderExists = fs.existsSync(path.join(cwd, 'theme'))
+    // A site that names a theme package but has no presentation of its own —
+    // neither `theme/` nor a legacy root `views/` — takes the theme layout too:
+    // the theme supplies every view, and a later override lands in `theme/`.
+    const themeOnly =
+        Boolean(appConfig.theme) && !fs.existsSync(path.join(cwd, 'views'))
     const usesDefault = (key) =>
         folders[key] === defaultSettings.folders[key] &&
         appConfig.folders?.[key] === undefined
 
-    if (themeFolderExists) {
+    if (themeFolderExists || themeOnly) {
         if (usesDefault('views')) folders.views = './theme/views'
         if (usesDefault('assets')) folders.assets = './theme/assets'
     } else if (warn && usesDefault('views')) {

@@ -449,7 +449,9 @@ export const createHtmlFiles = async (
     publicFolder,
     theme = null
 ) => {
-    if (fssync.existsSync(viewsFolder)) {
+    // With a theme the site's own views folder is optional: the theme supplies
+    // every layout, and the resolver falls through a missing site root.
+    if (theme || fssync.existsSync(viewsFolder)) {
         // No theme → single root, no resolve hook: byte-identical to before.
         const roots = theme ? [viewsFolder, theme.viewsRoot] : [viewsFolder]
         const resolver = theme ? makeLayeredResolver(roots) : null
