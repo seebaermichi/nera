@@ -1,6 +1,16 @@
 # Roadmap — installable, updatable themes
 
-**Status:** design settled (2026-07-22) and **feature-complete on
+**Current state (2026-10-13):** the theme system is shipped and in use. The
+generator is **`@nera-static/core`** on npm (4.15.x), sites depend on
+`@nera-static/nera`, and `nera update` is `npm update` — see
+[`ROADMAP-core.md`](ROADMAP-core.md). Sections §1–§8 and the status notes below
+are the record of how the theme system was built in July 2026, **before** that
+consolidation: where they speak of a git-cloned generator that is "not
+npm-published", of `feat/themes-slice-1` or of `@nera-static/installer`
+(deprecated), read them as history. New theme work is specified in **Starter-ready
+themes** at the end of this file.
+
+**Status (2026-07-24, historical):** design settled (2026-07-22) and **feature-complete on
 `feat/themes-slice-1`** — slices 1–2, §1b, §2d, §1c (config merge + `app.theme`
 exposure), §5 (compatibility declarations), and §6 (caching — profiled 2026-07-24,
 template cache shipped) have all landed. The theme feature is versioned as
@@ -242,6 +252,8 @@ non-zero.
 > `theme/` wrapper *inside the package* (`<pkg>/theme/views`). That produced a
 > redundant `theme/theme/` for packages and is dropped. The shipped code and the
 > `theme-example` repo still use the old wrapper and must be refactored.
+> **Done 2026-07-24:** both were refactored (generator 4.6.0, `theme-example`
+> 0.1.0 ships its payload at the root).
 
 A theme **package** puts its payload directly at its **root** — a theme package
 contains nothing *but* the theme, so its root already is the theme root:
@@ -1634,8 +1646,9 @@ The theme guarantees its own markup (§S2.7). The rest is site content and
 plugin output, which the **starter** owns. Written here because a theme's
 acceptance build (§S7) does exactly this in its fixture site:
 
-1. Keep a `theme/views/` folder (it holds the vendor copies and the seam
-   overrides anyway; without a site views folder core renders nothing, §S9 T2).
+1. Keep a `theme/views/` folder: it holds the vendor copies and the seam
+   overrides anyway. (Core ≥ 4.16.0 also renders a themed site without one,
+   §S9 T2; the themes' `>=4.15.0` floor relies on the folder being there.)
 2. Do not ship the scaffold's `nera:scaffold-default` files
    (`theme/views/layouts/layout.pug`, `theme/views/pages/default.pug`): they
    would shadow the theme's (§S9 T4).
@@ -1750,13 +1763,15 @@ of them blocks the themes: each has the workaround named.
   home, everything in the archive, prev/next between posts. A paged list needs
   a plugin that creates list pages in `getMetaData` (as plugin-tags creates tag
   pages). Is that a new plugin, or an option of plugin-page-pagination?
-- **T2 — A themed site needs its own views folder.** `createHtmlFiles` returns
-  early with `Views folder not found` when the site's views folder is missing,
-  even though the theme supplies every layout (`src/render.js`, the
-  `existsSync(viewsFolder)` check; without `theme/`, `computeFolders` also
-  falls back to the legacy root `views/`). Workaround: starters keep
-  `theme/views/` (§S6, item 1). Should core render from the theme alone when the
-  site has no views folder?
+- **T2 — A themed site needs its own views folder. RESOLVED 2026-10-13
+  (core 4.16.0).** `createHtmlFiles` returned early with `Views folder not
+  found` when the site's views folder was missing, even though the theme
+  supplies every layout, and without `theme/` `computeFolders` fell back to the
+  legacy root `views/` with a deprecation warning. Since 4.16.0 a site with
+  `theme:` set renders from the theme alone, and one with neither `theme/` nor
+  a root `views/` uses the `theme/` layout without the warning. The themes keep
+  `nera.generator: ">=4.15.0"`, because the starters keep `theme/views/`
+  anyway (§S6, item 1).
 - **T3 — Theme-shipped translations.** `t()` reads only `app.translations`, so a
   theme cannot ship its German UI strings; every starter repeats them. Should
   core merge a theme's `config/theme.yaml` `translations` under the site's (site
