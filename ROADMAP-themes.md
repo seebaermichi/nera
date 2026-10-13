@@ -1012,7 +1012,7 @@ differs only in name, description, repository and `peerDependencies` (§S4.5):
 | `files` | `views`, `assets`, `config` only (README, LICENSE and `package.json` ship anyway). Tests, fixtures and scripts stay out of the tarball. |
 | `exports` | only `./package.json`, so core's `resolvePackageRoot` finds the root (§1b). No JS entry. |
 | `nera.generator` | **`>=4.15.0`**. The themes rely on `app.theme.config` (4.6.0), frontmatter `date` as `meta.createdAt` (4.7.0, post dates), and per-page frontmatter parsed by `yaml` (4.15.0: a page without frontmatter no longer inherits the previous page's `layout`, and `10:30` is the string `"10:30"`, not 630). 4.15.x is also the only line the acceptance builds run on. No upper bound: a core major is checked when it ships, and an upper bound would fail every site's build on the day it lands (§5). |
-| `peerDependencies` | one entry per plugin whose classes or custom properties the theme's CSS targets, all marked optional (a site without the plugin has nothing to mis-style; core stays silent, §5). The floor is the release the class list was checked against (§S7), the caret keeps the major. A plugin with no markup (sitemap, canonical-links, link-attributes) is not a peer. |
+| `peerDependencies` | one entry per plugin whose classes or custom properties the theme's CSS targets, all marked optional (a site without the plugin has nothing to mis-style; core stays silent, §5). The floor is the release the class list was checked against (§S8), the caret keeps the major. A plugin with no markup (sitemap, canonical-links, link-attributes) is not a peer. |
 | `devDependencies` | what the fixture build needs (§S7): `@nera-static/nera` `^1.10.0` and the peer plugins. Nothing at runtime. |
 
 #### S2.2 Views every page needs
