@@ -47,7 +47,7 @@ Read the sections of `.claude/issue-conventions.md` you need, by heading:
 awk -v h='Non-negotiables' '$0 ~ "^## " h "$" {f=1} f && /^## / && $0 !~ "^## " h "$" {exit} f' .claude/issue-conventions.md
 ```
 
-Always: `Non-negotiables`, `Framework correctness`, `Tests & hygiene`. When a UI
+Always: `Non-negotiables`, `Framework correctness`, `Tests & hygiene`, `Step order`. When a UI
 surface is touched: `UI / template rules` and the surface map under `UI walkthrough`.
 Hold every listed non-negotiable in mind as you plan. Do **not** re-read CLAUDE.md,
 README or CI files — they are already in context.
@@ -82,6 +82,8 @@ a hyphen matches nothing:
 
 ## Steps
 
+<!-- Ladder: <the rungs used, in order, e.g. 1 Data → 3 Behaviour → 4 UI → 5 Docs> -->
+
 ### Step 1 — <one-line goal> — ⬜ todo
 
 - **Goal:** <what is true after this step>
@@ -95,7 +97,7 @@ a hyphen matches nothing:
 Rules:
 
 - **≤ 8 steps**, each independently implementable, reviewable and committable. A step
-  block is **≤ 40 lines excluding its control inventory table**. If the issue needs
+  block is **≤ 40 lines excluding its inventory tables**. If the issue needs
   more, cut scope — put the rest under a `## Carry forward` section in the log for a
   follow-up issue, one line each in the shape `/review-step` uses
   (`- <bug|design|infra|debt> · <S|M|L> · <where> — what — why not now`).
@@ -112,6 +114,61 @@ Rules:
 - **Walkthrough:** for every UI surface the issue touches, the **last** step touching
   it says `full (<surface>)`, earlier steps on that surface say `short`, steps without
   UI say `none`. The full pass runs once per surface, in the review of that last step.
+
+### Order the steps
+
+The host's ladder is `Step order` in `.claude/issue-conventions.md`. While that
+section is missing or still `…`, use this default:
+
+1 **Data** (schema, migration, enum, model) → 2 **Contract** (route or command,
+validation, authorization, feature flag) → 3 **Behaviour** (the logic that writes and
+reads) → 4 **UI** (templates, components, labels) → 5 **Docs**.
+
+- The ladder sets the **order**; the **Verify** command still sets the **cut**. Where
+  the two disagree, the Verify command wins and the step splits. A rung may span
+  several steps; rungs share a step only when one Verify command proves all of them.
+- No step comes before a rung it depends on. One exception: a migration that
+  *tightens* existing data — a unique index, `NOT NULL`, a foreign key — comes after
+  the step whose code makes the data satisfy it.
+- Authorization sits on the contract rung: its own step, or the first concern of one,
+  named under **Review hardest**.
+- Docs are the last step, never interleaved.
+- **Tests ride along.** Each step carries the tests for the behaviour it adds, and its
+  Verify names the test that must newly pass. An end-to-end spec rides with the last
+  step on its surface, like `Walkthrough: full`. Never plan a trailing "write the
+  tests" step; a test-only step exists only to pin *existing* behaviour the issue
+  widens or narrows.
+- Never push a rung into a follow-up issue just to make a step smaller.
+
+The first line under `## Steps` names the rungs the plan uses (see the template).
+
+**A bug** has its own ladder:
+
+1. **Reproduce and fix** — one step: the test that fails for the reported reason is
+   written and seen failing *first*, then the narrowest fix makes it pass.
+2. **Widen** — every sibling of the defect: the same pattern, query or rule at
+   another call site. Fill the sibling inventory below; each affected site is fixed
+   in a step, or the plan says why the defect is isolated.
+3. **Docs** — only if documented behaviour changed.
+
+### Sibling call sites
+
+A fix tends to land in the one place the issue names, while the same defect lives on
+in three neighbours, each found later in review and fixed as its own step. So a bug — and any issue that changes a rule more
+than one entry point enforces — carries a **sibling inventory**, read from a search,
+not from memory:
+
+```markdown
+**Sibling inventory — <the pattern>** (`<the search command used>`)
+
+| call site | same defect? | handled in |
+|---|---|---|
+| `app/Foo.php:42` | yes — the reported one | Step 1 |
+| `app/Bar.php:17` | yes | Step 2 |
+| `app/Baz.php:88` | no — already ordered by id | — |
+```
+
+Record the search so the reviewer can run it again.
 
 ### Steps that touch an existing UI surface
 
@@ -154,6 +211,8 @@ Read the plan back through the helper and confirm, in one short list:
 
 - every acceptance criterion maps to at least one step;
 - every control on a touched surface is in an inventory;
+- the steps follow the ladder, and the `Ladder:` line names the rungs they use;
+- a bug, or a rule enforced in several places, has a sibling inventory;
 - no step exceeds the budget; no step depends on an undecided question;
 - `bash .claude/scripts/issue-loop.sh index <id>` lists every step with `todo`.
 

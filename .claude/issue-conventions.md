@@ -103,3 +103,29 @@ wanted (a theme or render change):
   untracked ones, and commit
   `chore(plan): remove the plan files of the resolved <short title> issue`.
   Git history keeps them; `plans/` holds only open issues.
+
+## Step order
+
+<!-- The dependency ladder /plan-issue orders steps by: one rung per line, in
+     dependency order, each with what it holds in THIS codebase and the Verify
+     that proves a step on it is done. Leave "…" to use the skill's default
+     (Data → Contract → Behaviour → UI → Docs). Examples to replace:
+
+     Laravel:
+     1. Data — migration, enum, model cast / relation, seeder — migrates up and down
+     2. Contract — route + middleware, policy, Form Request, feature flag — feature
+        test: valid input accepted, invalid refused
+     3. Behaviour — actions, services, jobs, events, queries — `php artisan test --filter=…`
+     4. UI — Livewire / Blade / Vue pages and components, labels — tests + walkthrough
+     5. Docs — handbook, README
+
+     Node / TypeScript:
+     0. Toolchain — dependencies, tsconfig, build config — build and `tsc --noEmit` pass
+     1. Data — Prisma / Drizzle migration, schema — applies and rolls back
+     2. Contract — handler registration, guard, zod schema — `vitest run -t …`
+     3. Behaviour — services, repositories, jobs — `vitest run -t …`
+     4. Client — API functions, hooks, stores — `tsc --noEmit`
+     5. UI — components, i18n strings — `tsc` + walkthrough
+     6. Docs — README, ADRs -->
+
+- …
