@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.16.1] - 2026-10-14
+
+### Changed
+
+-   HTML output is formatted with `js-beautify` 2 directly instead of through `pretty`, with the same options, so every page comes out byte for byte as before. `pretty` pinned `js-beautify` 1, whose `glob@10` printed `npm warn deprecated glob@10.5.0` on every install of `@nera-static/core` and of every site.
+
 ## [4.16.0] - 2026-10-13
 
 ### Added

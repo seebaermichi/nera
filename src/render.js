@@ -3,7 +3,7 @@ import fssync from 'fs'
 import path from 'path'
 import { createHash } from 'crypto'
 import pug from 'pug'
-import pretty from 'pretty'
+import beautify from 'js-beautify'
 import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
 import { makeLayeredResolver, resolveEntry } from './resolve.js'
@@ -13,6 +13,16 @@ import { makeLayeredResolver, resolveEntry } from './resolve.js'
 dotenv.config({ quiet: true })
 
 const SUCCESS_COLOR = '\x1b[32m%s\x1b[0m'
+
+// The defaults of the `pretty` package, which core used until 4.16.0: calling
+// js-beautify 2 directly keeps the output and drops the deprecated `glob@10`
+// that `pretty` pulled in through js-beautify 1.
+const HTML_FORMAT = {
+    unformatted: ['code', 'pre', 'em', 'strong', 'span'],
+    indent_inner_html: true,
+    indent_char: ' ',
+    indent_size: 2,
+}
 
 // --- Base-path URL rewriting (config `base_path` → `app.basePath`) ------------
 //
@@ -512,7 +522,7 @@ export const createHtmlFiles = async (
                 )
 
                 await fs.mkdir(path.dirname(htmlPath), { recursive: true })
-                await fs.writeFile(htmlPath, pretty(html), 'utf-8')
+                await fs.writeFile(htmlPath, beautify.html(html, HTML_FORMAT), 'utf-8')
 
                 // Name the file actually written, as its path under `public/`
                 // (`/de/index.html`), so every page gets a distinct line.
