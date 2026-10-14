@@ -4,6 +4,9 @@
 #   - `protect-main` ruleset (no force-push, no deletion) on the default branch
 #   - secret scanning + push protection
 #   - for packages published to npm: Test + npm version badges in README.md
+#   - package.json in the form `npm pkg fix` writes: no `bin` path starting with `./`,
+#     a `repository.url` with the `git+` prefix (else `npm publish` warns that it
+#     auto-corrected the manifest)
 # Reads GitHub only, so it also catches repos that are not cloned locally.
 # Works without credentials too (e.g. in a cloud routine): file contents come from
 # raw.githubusercontent.com, and checks that need an admin token are skipped then.
@@ -13,6 +16,7 @@
 # Usage: scripts/fleet-check.sh [--fix] [repo ...]
 #   --fix   create the ruleset and enable secret scanning/push protection where
 #           missing. Badges are only reported: they need a commit and a patch release.
+#           package.json findings are only reported too: they need a commit.
 #   repo    limit the check to these repo names (default: all Nera repos)
 set -uo pipefail
 
@@ -29,6 +33,15 @@ else
     api() { curl -fsS -H 'Accept: application/vnd.github+json' "https://api.github.com/$1"; }
 fi
 raw() { curl -fsS "https://raw.githubusercontent.com/$owner/$1/HEAD/$2"; }
+
+# Reads a package.json on stdin and prints one gap per line where it differs from what
+# `npm pkg fix` writes. Missing fields, unparsable or non-object JSON print nothing.
+pkg_fix_check='let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let p;try{p=JSON.parse(s)}catch{return};if(!p||typeof p!=="object")return
+const bins=typeof p.bin==="string"?[p.bin]:p.bin&&typeof p.bin==="object"?Object.values(p.bin):[]
+const dotted=bins.filter(b=>typeof b==="string"&&b.startsWith("./"))
+if(dotted.length)console.log("package.json: bin "+[...new Set(dotted)].map(b=>JSON.stringify(b)).join(", "))
+const url=typeof p.repository==="string"?p.repository:p.repository&&p.repository.url
+if(typeof url==="string"&&!url.startsWith("git+"))console.log("package.json: repository.url without git+")})'
 
 if [ $# -gt 0 ]; then
     repos="$*"
@@ -73,12 +86,19 @@ for r in $repos; do
         fi
     fi
 
+    # One fetch feeds both the badge lookup and the package.json check; no file (.github) → empty.
+    pkg=$(raw "$r" package.json 2>/dev/null) || pkg=
+
     # Badges only for @nera-static packages that are actually on npm (legacy packages are exempt).
-    name=$(raw "$r" package.json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);if(!p.private)console.log(p.name)}catch{}})')
+    name=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const p=JSON.parse(s);if(!p.private)console.log(p.name)}catch{}})' <<<"$pkg")
     if [[ $name == @nera-static/* ]] && npm view "$name" name >/dev/null 2>&1; then
         readme=$(raw "$r" README.md 2>/dev/null)
         grep -q "seebaermichi/$r/actions/workflows/test.yml/badge.svg" <<<"$readme" || problems+=("README: Test badge missing")
         grep -q "img.shields.io/npm/v/$name" <<<"$readme" || problems+=("README: npm badge missing")
+    fi
+
+    if [ -n "$pkg" ]; then
+        while IFS= read -r p; do problems+=("$p"); done < <(node -e "$pkg_fix_check" <<<"$pkg")
     fi
 
     if [ ${#problems[@]} -gt 0 ]; then
