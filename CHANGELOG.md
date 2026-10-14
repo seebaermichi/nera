@@ -6,11 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.16.2] - 2026-10-14
+
+### Fixed
+
+-   The README and the 4.16.1 entry no longer claim that installs are free of warnings on every Node version. `js-beautify` 2 brings `nopt` 10, which declares Node `^22.22.2 || ^24.15.0 || >=26`, so on Node 20 and on Node 22 before 22.22.2 `npm install` prints `npm warn EBADENGINE` for `nopt` and `abbrev`. Only js-beautify's command-line tool uses them, so core renders the same on every supported Node; the README says so under the Node requirement.
+
 ## [4.16.1] - 2026-10-14
 
 ### Changed
 
--   HTML output is formatted with `js-beautify` 2 directly instead of through `pretty`, with the same options, so every page comes out byte for byte as before. `pretty` pinned `js-beautify` 1, whose `glob@10` printed `npm warn deprecated glob@10.5.0` on every install of `@nera-static/core` and of every site.
+-   HTML output is formatted with `js-beautify` 2 directly instead of through `pretty`, with the same options, so every page comes out byte for byte as before. `pretty` pinned `js-beautify` 1, whose `glob@10` printed `npm warn deprecated glob@10.5.0` on every install of `@nera-static/core` and of every site. (Node 20 and Node 22 before 22.22.2 get an `EBADENGINE` warning instead, see 4.16.2.)
 
 ## [4.16.0] - 2026-10-13
 

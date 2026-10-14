@@ -54,6 +54,8 @@ Two things that are easy to miss:
 
 The package is ESM (`"type": "module"`), requires **Node 20.19 or later** (Node 21 excluded), and exposes a barrel at the root plus per-module subpath exports.
 
+On Node 20, and on Node 22 before 22.22.2, `npm install` prints `npm warn EBADENGINE` for `nopt` and `abbrev`. They come with `js-beautify` 2, which formats the HTML, and only its command-line tool uses them, never core, so the warning is harmless and every page renders the same.
+
 ```js
 import { run } from '@nera-static/core'
 
