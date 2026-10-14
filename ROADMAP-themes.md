@@ -967,7 +967,7 @@ details, and a reading-first blog.
 
 | starter | theme | why |
 |---|---|---|
-| `blank` | **none** — the scaffold's own `theme/views/` (what `nera new` makes today) | minimal by definition; the owner adds a theme later with one `theme:` line |
+| `blank` | **none** — its own `theme/views/` over the scaffold's: skip link, `main#main`, a footer linking imprint and privacy placeholders, `nera:scaffold-default` marker kept (changed 2026-10-14 from "the scaffold's own views", so a fresh site checks clean) | minimal by definition; the owner adds a theme later with one `theme:` line |
 | `business` | **`business`** | home with hero, services cards, opening hours, contact form, legal pages |
 | `blog` | **`blog`** | post list, single post, archive, tag pages, prev/next, code blocks |
 | `portfolio` | **`business`** | its `pages/list.pug` (card grid of child pages) and `pages/gallery.pug` (image grid) carry the projects; a portfolio also needs the hero, the contact page and the legal footer, which business already has |
