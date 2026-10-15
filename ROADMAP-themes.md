@@ -1053,6 +1053,15 @@ header from `meta.title` (or the hero title, §S3.1), except where a seam owns i
 a page's Markdown is a second `<h1>` (`a11y-h1`). The starters' sample pages
 follow this.
 
+**Top-level names (added 2026-10-15, found building theme-blog).** Pug compiles
+a page and every file it includes into one function, so a top-level `const` or
+`function` in a theme partial clashes with the same name in any included plugin
+template (`@nera-static/plugin-tags`' `tag-overview.pug` declares `const lang`,
+which failed every tag page). A theme therefore declares only the six helpers
+above at top level, plus at most one object named after the theme (theme-blog:
+`themeBlog`) that holds the rest; that object is internal, not contract. The
+views call `pageLang({ meta })` where this spec's prose says `lang`.
+
 #### S2.3 Blocks a site's own view extends
 
 A site adds its own page type with `extends ../layouts/layout.pug` in
@@ -1228,8 +1237,10 @@ Shown when `app.translations` has two or more languages. For each language
    `meta.slug` as the current page (the same identifier
    `@nera-static/plugin-canonical-links` uses by default for alternates), and
    `pageLang(page) === l`;
-2. else the home page of `l`: the page with `pageLang(page) === l`,
-   `meta.filename === 'index.html'` and the shortest `meta.dirname`;
+2. else the home page of `l`: the page that has a `layout`, with
+   `pageLang(page) === l`, `meta.filename === 'index.html'` and the shortest
+   `meta.dirname` (ties by `meta.href`) — a page without a `layout` is not
+   rendered, so linking it would 404 (added 2026-10-15, theme-blog);
 3. else the language is left out.
 
 Markup: `nav.lang-switch(aria-label=t('Language'))` → `ul.lang-switch__list` →
@@ -1441,10 +1452,37 @@ accent_text/accent 8.4, focus/bg 5.5 — all ≥ 4.5:1.
 `site-footer__cols`, `site-footer__col`, `site-footer__heading`,
 `site-footer__legal`, `site-footer__copy`.
 
-### S4. `@nera-static/theme-blog` — **SPECIFIED 2026-10-13**
+### S4. `@nera-static/theme-blog` — **SPECIFIED 2026-10-13 · BUILT 2026-10-15**
 
 For a personal or team blog: reading comfort first, posts by date, tags,
 prev/next, code. Carries the `blog` starter. `config/app.yaml`: `theme: blog`.
+
+**Built 2026-10-15** (`nera-theme-blog`, Snagio `01a13a62`, worked in a cloud
+session, verified locally): the package as this section specifies, peers at the
+§S8 floors (`plugin-page-pagination ^2.4.0`, `plugin-navigation ^3.1.0`,
+`plugin-social-media-links ^2.3.0`, `plugin-tags ^3.3.0`, `plugin-code-blocks
+^1.2.1`, `plugin-images ^1.0.2`). Every §S7 criterion is a vitest test (86
+tests); the en/de fixture `test/site/` passes `nera validate` and `nera check`
+with every rule at `error`, and a Chrome check (desktop, 375 px, focus) passed.
+Decisions beyond the spec:
+
+- extra contract partials `partials/page-header.pug` and `partials/post-card.pug`;
+- the top-level-names rule (§S2.2) and the `layout` requirement of §S2.8 rule 2,
+  both written back into §S2 for theme-business;
+- dates are formatted and grouped by year in UTC (a YAML date is midnight UTC);
+- `tokens.pug` also drops a group or token whose *name* is not `[A-Za-z0-9_-]+`;
+  `extra_css` also refuses `/\…` (a browser reads it as protocol-relative);
+- no `nav.site-footer__legal` when a language has no `footer_links`; the archive
+  leaves out posts whose date does not parse (the home still lists them);
+- the `--nera-code-*` mapping sits on `.nera-code-scope, .nera-code`, so plain
+  fenced blocks in a post use the theme's colours too;
+- the fixture resolves its plugins from the repo root's `node_modules` (no
+  install in `test/site`), uses plugin-tags `group_by_lang: true` and
+  plugin-code-blocks `copy_button: false` (no script ships).
+
+Found along the way and fixed in core 4.16.3: the §5 plugin check never warned,
+because it resolved `<plugin>/package.json`, which every plugin's `exports`
+refuses. Release status: see §S5 and the package's CHANGELOG.
 
 #### S4.1 Page types
 
