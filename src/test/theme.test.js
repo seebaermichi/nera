@@ -628,13 +628,13 @@ describe('checkThemeCompatibility (§5)', () => {
 
     // Install a fake plugin into the site's node_modules at a given version, so
     // the peer check can resolve its package.json exactly as it would in a real
-    // site (resolved from cwd).
-    const installPlugin = async (name, version) => {
+    // site (resolved from cwd). `extra` adds fields, e.g. an `exports` map.
+    const installPlugin = async (name, version, extra = {}) => {
         const pkgDir = path.join(tmpRoot, 'node_modules', ...name.split('/'))
         await fs.mkdir(pkgDir, { recursive: true })
         await fs.writeFile(
             path.join(pkgDir, 'package.json'),
-            JSON.stringify({ name, version })
+            JSON.stringify({ name, version, ...extra })
         )
     }
 
@@ -701,6 +701,30 @@ describe('checkThemeCompatibility (§5)', () => {
                 peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
             })
             await installPlugin('@nera-static/plugin-tags', '4.1.0')
+
+            checkThemeCompatibility(themeObj(), {
+                cwd: tmpRoot,
+                generatorVersion: '4.6.0'
+            })
+
+            expect(warn).toHaveBeenCalledWith(
+                expect.stringMatching(
+                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s
+                )
+            )
+        })
+
+        it('warns even when the plugin does not export ./package.json', async () => {
+            // Every published plugin's `exports` lists only `.`, so resolving
+            // `<plugin>/package.json` through Node's resolver throws
+            // ERR_PACKAGE_PATH_NOT_EXPORTED.
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            await writeThemePkg({
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+            })
+            await installPlugin('@nera-static/plugin-tags', '4.1.0', {
+                exports: { '.': './index.js' }
+            })
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,

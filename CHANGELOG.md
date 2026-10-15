@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.16.3] - 2026-10-15
+
+### Fixed
+
+-   A theme's plugin check (`peerDependencies`, ROADMAP-themes §5) now warns when an installed plugin is outside the theme's range. It looked the plugin up as `<plugin>/package.json`, which every published plugin's `exports` (only `.`) refuses, so the lookup failed, the plugin counted as not installed and the warning never fired. Core now reads the plugin's `package.json` from the `node_modules` folders Node would search.
+
 ## [4.16.2] - 2026-10-14
 
 ### Fixed

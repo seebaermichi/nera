@@ -274,12 +274,21 @@ function checkPluginCompatibility(theme, themePkg, cwd) {
 // The installed version of a dependency, resolved from the SITE (cwd) exactly
 // like resolvePackageRoot — the plugins are the site's dependencies, not the
 // generator's. Returns null when the package is not installed or unreadable.
+//
+// It walks the node_modules folders Node would search instead of resolving
+// `<name>/package.json`: a package whose `exports` omits `./package.json` —
+// every published plugin, whose `exports` lists only `.` — makes that resolve
+// throw ERR_PACKAGE_PATH_NOT_EXPORTED, which silenced this check.
 function installedVersion(name, cwd) {
     const requireFromSite = createRequire(path.join(cwd, 'package.json'))
-    try {
-        const pkgPath = requireFromSite.resolve(`${name}/package.json`)
-        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version || null
-    } catch {
-        return null
+    for (const dir of requireFromSite.resolve.paths(name) || []) {
+        const pkgPath = path.join(dir, name, 'package.json')
+        if (!fs.existsSync(pkgPath)) continue
+        try {
+            return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version || null
+        } catch {
+            return null
+        }
     }
+    return null
 }
