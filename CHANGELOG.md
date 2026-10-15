@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.16.4] - 2026-10-15
+
+### Fixed
+
+-   `.gitkeep` and `.keep` files are no longer copied into `public/`. They only keep an empty folder in git, and every site scaffolded by `nera new` has one in `theme/assets/`, so every build shipped `public/.gitkeep`.
+
 ## [4.16.3] - 2026-10-15
 
 ### Fixed

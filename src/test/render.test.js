@@ -114,7 +114,7 @@ describe('copyFolder', () => {
 
     // cpy skipped OS/editor clutter by default; the in-house copy keeps that.
     it('skips junk files even without a .neraignore entry', async () => {
-        for (const junk of ['.DS_Store', 'Thumbs.db', 'notes.txt~', '._image.png']) {
+        for (const junk of ['.DS_Store', 'Thumbs.db', 'notes.txt~', '._image.png', '.gitkeep', '.keep']) {
             await fs.writeFile(path.join(srcDir, junk), '')
         }
 

@@ -347,10 +347,11 @@ export function ignoreFiles(ignoreList, filePath, sourceRoot) {
 }
 
 // OS and editor clutter that never belongs in public/, matched against a file's
-// basename. The list cpy (via the `junk` package) skipped by default; kept so
-// replacing cpy changes nothing a site ships.
+// basename. The list cpy (via the `junk` package) skipped by default, plus the
+// `.gitkeep`/`.keep` markers that keep an empty folder in git (`nera new`
+// ships `theme/assets/.gitkeep`); a marker is never content to serve.
 const JUNK =
-    /^npm-debug\.log$|^\..*\.swp$|^\.DS_Store$|^\.AppleDouble$|^\.LSOverride$|^Icon\r$|^\._.*|^\.Spotlight-V100(?:$|\/)|\.Trashes|^__MACOSX$|~$|^Thumbs\.db$|^ehthumbs\.db$|^[Dd]esktop\.ini$|@eaDir$/
+    /^\.gitkeep$|^\.keep$|^npm-debug\.log$|^\..*\.swp$|^\.DS_Store$|^\.AppleDouble$|^\.LSOverride$|^Icon\r$|^\._.*|^\.Spotlight-V100(?:$|\/)|\.Trashes|^__MACOSX$|~$|^Thumbs\.db$|^ehthumbs\.db$|^[Dd]esktop\.ini$|@eaDir$/
 
 // Every file under `dir`, dotfiles included, junk excluded. Symlinks are
 // followed like cpy's glob did (a linked directory is walked, a dangling link
