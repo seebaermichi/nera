@@ -140,3 +140,98 @@ goal (header item, per-repo gap lines, counted as gaps, never FIXED) · `bash -n
 ## Step 1 — approved (2026-10-14)
 
 snagio: ticked
+commit: f7fdcd5
+
+## Step 2 — started (2026-10-15)
+
+base_sha: f7fdcd501e2b3e990a29b4a6d1528cab602611ce
+mode: fresh
+
+## Step 2 — implemented (2026-10-15)
+
+base_sha: f7fdcd5
+
+Commits (one per repo, `package.json` only, not pushed):
+- `generator` d2f3c5d · `nera-highlightjs-pug` 272dba1 · `nera-plugin-one-page` acda7a6 · `nera-plugin-utils` a142828 · `nera-installer` 7884a57
+
+### Changed
+- `generator/package.json` — `repository.url` → `git+https://github.com/seebaermichi/nera.git`
+- `nera-highlightjs-pug/package.json` — `repository.url` → `git+…/nera-highlightjs-pug.git`
+- `nera-plugin-one-page/package.json` — `repository.url` gains the `git+` prefix
+- `nera-plugin-utils/package.json` — `repository.url` gains the `git+` prefix
+- `nera-installer/package.json` — `bin.nera` `./bin/cli.js` → `bin/cli.js`, `repository.url` gains `git+`
+
+All five produced by `npm pkg fix` (npm 10.9.4, Node 22); 4-space indent and trailing newline preserved (diff is exactly the url/bin lines).
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Verification
+```
+npm pkg fix && git diff --stat → package.json only, 1 line (installer: 2 lines) in each repo
+npm publish --dry-run 2>&1 | grep -c 'auto-corrected' → 0 in all five (installer before the fix: 1 — the check is live)
+npm ci → ok ×5
+generator            Tests  143 passed (143)   lint ok
+nera-highlightjs-pug Tests  70 passed (70)     lint ok   npm run build → dist/ unchanged (git status clean)
+nera-plugin-one-page Tests  29 passed (29)     lint ok
+nera-plugin-utils    Tests  57 passed (57)     lint ok
+nera-installer       Tests  26 passed (26)     lint ok
+git show --stat HEAD → 1 file changed in each repo; generator's plans/ and .claude/.work-issue-active left uncommitted
+```
+
+### Self-critique
+- Commit body names the field(s) changed per repo and states "no release" so nobody tags it later; considered no body, rejected — the "why no bump" is the non-obvious part.
+- Not pushed (non-negotiable). fleet-check reads GitHub HEAD, so its green is verified in Step 6 after the user's push, per D4.
+- Least sure: whether `bin` without `./` still installs the `nera` shim for the deprecated installer — npm documents `bin/cli.js` as the canonical form and that is what the registry already holds, so consumers see no change.
+
+### Pressure-test questions for the reviewer
+1. Does each of the five commits touch `package.json` alone (`git -C ../<repo> show --stat HEAD`)?
+2. Is generator's commit d2f3c5d free of the plan/log files and `.claude/.work-issue-active`?
+
+Push commands for the user (also printed):
+----- START: push step 2 -----
+cd ~/workspace/nera/generator && git push
+cd ~/workspace/nera/nera-highlightjs-pug && git push
+cd ~/workspace/nera/nera-plugin-one-page && git push
+cd ~/workspace/nera/nera-plugin-utils && git push
+cd ~/workspace/nera/nera-installer && git push
+----- END -----
+
+## Step 2 — rebased (push rejected) (2026-10-15)
+
+The user's `git push` in `generator` was rejected: GitHub `main` had 3 Dependabot merges (2026-10-14, `package-lock.json` only). Rebased the unpushed local commits onto `origin/main` in the four repos that were behind (no conflicts: our commits touch `package.json` alone), re-ran `npm ci`, the tests and lint against the new lockfiles, and `npm publish --dry-run`: all green, 0 auto-corrected warnings.
+
+New SHAs (they replace the ones above):
+- `generator`: Step 1 f7fdcd5 → 9340942, Step 2 d2f3c5d → 506d89d; base for review is 9340942 (Step 2 diff = `git diff 9340942 506d89d`)
+- `nera-plugin-one-page` acda7a6 → 1055c4a · `nera-plugin-utils` a142828 → a6069ab · `nera-installer` 7884a57 → 2da3441
+- `nera-highlightjs-pug` 272dba1 unchanged (was not behind)
+
+## Step 2 — reviewed (2026-10-15)
+
+Verdict: approve
+
+### 🔴 Blocking
+- none
+
+### Fixed in review
+- none
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Checked
+Goal: each of the five repos has one `chore(package): apply npm pkg fix` commit touching `package.json` only (generator 506d89d, highlightjs-pug 272dba1, one-page 1055c4a, utils a6069ab, installer 2da3441 — the post-rebase SHAs from the "rebased" log section; the inputs' base_sha f7fdcd5 is the pre-rebase Step 1 commit, so the step diff was taken as `git diff 9340942 506d89d` → `package.json` 1 line). Verify, run by the reviewer with npm 10.9.4 / Node 22: `npm pkg fix` → no diff ×5; `npm publish --dry-run | grep -c auto-corrected` → 0 ×5; `npm ci` ok ×5; vitest 143/70/29/57/26 passed; lint ok ×5; highlightjs-pug `npm run build` leaves the tree clean. Conventions: no version bump or CHANGELOG is right, since a package.json metadata normalization ships nothing and npm already holds the corrected form. Push: the reflogs show `update by push` at 09:54, after the log's handover (09:49) and the user's rejected push, so the user pushed, not the session; all five remotes match HEAD. Self-critique: the installer's `bin/cli.js` without `./` is the form npm itself normalizes to, and the registry already serves it, so consumers see no change. Note (cosmetic, already pushed, not worth a rewrite): the installer commit body has literal backslashes around `bin`. Walkthrough n/a.
+
+### Answers to the pressure-test questions
+1. Yes. `git show --stat HEAD` → `package.json | 2 +-` in generator, highlightjs-pug, one-page and utils, and `package.json | 4 ++--` in installer. The diffs are exactly the url line(s), plus the bin line in installer.
+2. Yes. 506d89d (the rebased d2f3c5d) changes only `package.json`. `plans/…` stays modified and `.claude/.work-issue-active` stays untracked in the working tree.
+
+## Step 2 — approved (2026-10-15)
+
+snagio: ticked

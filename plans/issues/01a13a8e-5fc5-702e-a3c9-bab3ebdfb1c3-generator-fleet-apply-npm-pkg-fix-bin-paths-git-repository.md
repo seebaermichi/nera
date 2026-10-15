@@ -60,7 +60,7 @@ normalized form. `nera-website` has neither field and is clean.
 - **Risks:** fetching `package.json` once for both checks keeps the raw.githubusercontent.com calls unchanged; `nera-installer` will show a gap until Step 2 (D5).
 - **Walkthrough:** none
 
-### Step 2 — Apply `npm pkg fix` in the four url-only repos and nera-installer — ⬜ todo
+### Step 2 — Apply `npm pkg fix` in the four url-only repos and nera-installer — ✅ done
 
 - **Goal:** `generator`, `nera-highlightjs-pug`, `nera-plugin-one-page`, `nera-plugin-utils` (url only) and `nera-installer` (bin + url) each have one commit `chore(package): apply npm pkg fix` on `main`, touching only those fields.
 - **Files:** `package.json` in each of the five repos
