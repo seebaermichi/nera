@@ -430,3 +430,85 @@ goal (six commits present, `package.json` only, 2+/2− each) · Verify re-run i
 ## Step 4 — approved (2026-10-15)
 
 snagio: ticked
+commit: 48e36c9
+
+## Step 5 — started (2026-10-15)
+
+base_sha: 48e36c9
+mode: fresh
+
+## Step 5 — implemented (2026-10-15)
+
+base_sha: 48e36c9
+
+Commits (one per repo, `package.json` only, not pushed):
+- `nera-plugin-simple-page-list` e31e1e7 · `-social-media-links` 03f940e · `-stacks` 3f6abe6 · `-statistics` c86342c · `-tags` e93e31b
+
+All five were clean and 3 Dependabot commits behind `origin/main`; each was `pull --ff-only`ed first, so every repo is now exactly 1 ahead, 0 behind.
+
+### Changed
+- `nera-plugin-simple-page-list/package.json` — `bin.nera-simple-page-list` drops `./`; `repository.url` gains `git+`
+- `nera-plugin-social-media-links/package.json` — both bin entries (`publish-template`, `nera-social-media-links`) drop `./`; `repository.url` → `git+….git`
+- `nera-plugin-stacks/package.json` — `bin.nera-stacks` drops `./`; `repository.url` gains `git+`
+- `nera-plugin-statistics/package.json` — `bin.nera-statistics` drops `./`; `repository.url` → `git+….git`
+- `nera-plugin-tags/package.json` — `bin.nera-tags` drops `./`; `repository.url` → `git+….git`
+
+All produced by `npm pkg fix` (npm 10.9.4, Node 22).
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none. (Step 3's `nera-installer` commit-message cosmetics still stands.) The survey also flags `nera-plugin-main-navigation` (archived, out of scope), `pug` (read-only upstream clone) and `nera-theme-blog`. For `nera-theme-blog`, `npm pkg fix` only re-expands inline JSON objects: its url already has `git+` and it has no `bin`, so the D1 rule passes and nothing is owed.
+
+### Verification
+```
+npm publish --dry-run 2>&1 | grep -c 'auto-corrected' → before: 1, after: 0 in all five
+git diff --stat → package.json | 4 ++-- ×4; social-media-links package.json | 6 +++--- (two bin lines + url)
+npm ci → ok ×5
+nera-plugin-simple-page-list   Tests  22 passed (22)  lint ok
+nera-plugin-social-media-links Tests  25 passed (25)  lint ok
+nera-plugin-stacks             Tests  27 passed (27)  lint ok
+nera-plugin-statistics         Tests  37 passed (37)  lint ok
+nera-plugin-tags               Tests  79 passed (79)  lint ok
+grep test/tests/src for pkg.bin / './bin/ → none ×5
+git status -sb → [ahead 1] ×5, porcelain empty ×5
+survey (npm pkg fix on a temp copy, every sibling with package.json + .git, 31): clean for all 22 in scope; CHANGED only main-navigation, nera-theme-blog (format only), pug
+```
+
+### Self-critique
+- Same mechanics as Step 4; the diffs are npm's own output. Pre-commit hooks re-ran lint on commit, green.
+- Least sure: whether `nera-theme-blog`'s format-only `npm pkg fix` delta could trip the publish warning. It can't: npm warns about corrections (bin/url/etc.), not formatting, and fleet-check's two explicit tests (D1) pass for it.
+
+### Pressure-test questions for the reviewer
+1. Does `-social-media-links` normalize **both** bin entries (`git -C ../nera-plugin-social-media-links show HEAD`)?
+2. Is each of the five commits `package.json` alone and each repo exactly 1 ahead, 0 behind?
+3. Does the survey really show all 22 in-scope repos clean?
+
+## Step 5 — reviewed (2026-10-15)
+
+Verdict: approve
+
+### 🔴 Blocking
+- none
+
+### Fixed in review
+- none
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Checked
+goal (five commits e31e1e7/03f940e/3f6abe6/c86342c/e93e31b, each `package.json` only, 1 ahead/0 behind origin/main) · survey loop (npm 10.9.4, 31 siblings) → clean for all 22 in scope, CHANGED only main-navigation, nera-theme-blog, pug · `npm publish --dry-run | grep -c auto-correct` → 0 ×5 · `npx vitest run` → 22/25/27/37/79 passed · no `pkg.bin`/`'./bin/` in test/tests/src · generator diff = log + plan marker only · Non-negotiables: no push/publish/tag, no release owed (package.json metadata, no contract change) · self-critique on nera-theme-blog confirmed · walkthrough n/a
+
+### Answers to the pressure-test questions
+1. Yes — `git show 03f940e`: both `publish-template` and `nera-social-media-links` go `./bin/publish-template.js` → `bin/publish-template.js`; url → `git+https://…/nera-plugin-social-media-links.git`.
+2. Yes — `git show --stat HEAD` is `package.json` only in all five (4 lines ×4, 6 lines for social-media-links); `rev-list --left-right --count origin/main...HEAD` → `0 1` ×5.
+3. Yes — reran the survey: every in-scope repo `clean`. The three CHANGED are out of scope; nera-theme-blog has no `bin` and its url already starts with `git+`, so D1 passes and its delta is formatting only.
+
+## Step 5 — approved (2026-10-15)
+
+snagio: ticked

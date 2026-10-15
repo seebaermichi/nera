@@ -87,7 +87,7 @@ normalized form. `nera-website` has neither field and is clean.
 - **Risks:** none beyond Step 2's.
 - **Walkthrough:** none
 
-### Step 5 — Apply `npm pkg fix` in the last five plugins — ⬜ todo
+### Step 5 — Apply `npm pkg fix` in the last five plugins — ✅ done
 
 - **Goal:** `-simple-page-list`, `-social-media-links`, `-stacks`, `-statistics`, `-tags` each have the commit; all 22 repos are done.
 - **Files:** `package.json` in each of the five repos
