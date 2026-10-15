@@ -96,7 +96,7 @@ normalized form. `nera-website` has neither field and is clean.
 - **Risks:** none beyond Step 2's.
 - **Walkthrough:** none
 
-### Step 6 — Document the new fleet-check item and hand over the push — ⬜ todo
+### Step 6 — Document the new fleet-check item and hand over the push — ✅ done
 
 - **Goal:** the workspace `CLAUDE.md` paragraph on `fleet-check.sh` names the `package.json` check; the user has the paste-ready push commands for all 22 repos and, after pushing, `bash scripts/fleet-check.sh` reports all repos meet the baseline and every `test.yml` is green.
 - **Files:** `../CLAUDE.md` (workspace root, untracked)

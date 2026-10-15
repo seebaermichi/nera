@@ -512,3 +512,70 @@ goal (five commits e31e1e7/03f940e/3f6abe6/c86342c/e93e31b, each `package.json` 
 ## Step 5 — approved (2026-10-15)
 
 snagio: ticked
+commit: 6caa908
+
+## Step 6 — started (2026-10-15)
+
+base_sha: 6caa9081197ccd84c272ff324e8e39338138f89d
+mode: fresh
+
+## Step 6 — implemented (2026-10-15)
+
+base_sha: 6caa908
+
+### Changed
+- `../CLAUDE.md` (workspace root, untracked) — new bullet under the fleet-check paragraph's "By hand on top" list: the `npm pkg fix` form (`bin` without `./`, `repository.url` with `git+`), that fleet-check reports it in every repo with a `package.json` since 2026-10-15, that `--fix` leaves it alone, and the remedy (run `npm pkg fix`, commit, no release).
+- Pushed the five Step 5 commits (session pushes, per the 2026-10-15 decision / standing user instruction; plain `git push` to `main`, no tags): simple-page-list e31e1e7, social-media-links 03f940e, stacks 3f6abe6, statistics c86342c, tags e93e31b. Each was `package.json` only, 1 ahead / 0 behind before the push. Steps 2–4 commits were already on origin.
+- Plan marker Step 6 → 🔨 in progress.
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Verification
+```
+grep -n 'npm pkg fix' ../CLAUDE.md → 85:- **`package.json` in the form `npm pkg fix` writes** — …
+git status -sb (22 swept repos, after fetch + push) → ## main...origin/main ×22, nothing ahead
+bash scripts/fleet-check.sh → fleet-check: all 29 repos meet the baseline
+gh run list -R seebaermichi/$r -w test.yml -L 1 → completed success ×22, headSha == local HEAD for every repo (incl. the five just pushed)
+```
+
+### Self-critique
+- The bullet sits in the "By hand on top" list although fleet-check *reports* it; kept it there because the fix is by hand (`--fix` cannot commit), and the sentence says fleet-check reports it.
+- generator itself is 4 ahead of origin (plan/log commits of Steps 2–5 only; the fleet-check script from Step 1 is already on origin, so the weekly workflow already runs the new check). Not pushed here; the loop's approve/resolve commit can carry them.
+- AC 1 (`npm publish --dry-run` clean) was verified per batch in Steps 2–5, not re-run here.
+
+### Pressure-test questions for the reviewer
+1. Does fleet-check on origin actually contain the package.json rule (i.e. is "all 29 repos meet the baseline" meaningful for this issue)? `git diff origin/main HEAD -- scripts/fleet-check.sh` should be empty.
+2. Are all 22 swept repos at origin/main with a green `test.yml` on exactly that sha?
+3. Is the CLAUDE.md bullet accurate about `--fix` not touching the check (read `scripts/fleet-check.sh`)?
+
+## Step 6 — reviewed (2026-10-15)
+
+Verdict: approve
+
+### 🔴 Blocking
+- none
+
+### Fixed in review
+- none
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Checked
+goal (CLAUDE.md bullet present and accurate; all swept repos pushed, fleet-check green, test.yml green on HEAD) · `grep -n 'npm pkg fix' ../CLAUDE.md` → line 85 · `bash scripts/fleet-check.sh` → `fleet-check: all 29 repos meet the baseline` · per-repo `git status -sb` + `gh run list -w test.yml -L 1` → 22 repos `main...origin/main`, `success` with headSha == local HEAD (main-navigation is archived/out of scope, no run) · Non-negotiables: the "never push" rule is generator-scoped and overridden by the user's standing memory instruction to push verified commits (no tags, no publish — confirmed none) · diff since 6caa908 = plan marker + log only; CLAUDE.md is untracked, so it is not in the diff · self-critique: bullet placement acceptable (sentence says fleet-check reports it); generator 4 ahead with plan/log only is fine for the approve commit · walkthrough n/a.
+
+### Answers to the pressure-test questions
+1. Yes — `git diff origin/main HEAD -- scripts/fleet-check.sh` is empty after fetch; origin's script carries `pkg_fix_check` (lines 38–44, used at line 101), so the green baseline covers this issue's rule.
+2. Yes — all 22 swept repos are `## main...origin/main` with nothing ahead, and the latest `test.yml` run of each is `success` on exactly the local HEAD sha.
+3. Yes — `--fix` (fix=1) gates only the ruleset POST (line 71) and the security_and_analysis PATCH (line 82); the package.json check (line 101) only appends to `problems`, never writes.
+
+## Step 6 — approved (2026-10-15)
+
+snagio: ticked
