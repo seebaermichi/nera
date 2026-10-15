@@ -1043,7 +1043,7 @@ theme's; `nera validate` warns (`theme-shadowed`) on a site that kept them.
 | `partials/tokens.pug` | the design tokens as CSS custom properties (§S2.5). |
 | `partials/helpers.pug` | the shared Pug functions the views call, defined with `-` code: `pageLang(page)` (`page.meta.lang \|\| app.lang`), `sameLang(page)`, `homeHref(lang)`, `formatDate(value, lang)`, `isoDate(value)`, `hrefFor(value, lang)` (a string, or a `{ <lang>: href }` map). Included by the layout before anything that uses them. |
 | `partials/header.pug` | `header.site-header` → `.site-header__inner` → `a.site-header__brand(href=homeHref(lang))` with `app.name` as text → `nav.site-header__nav(aria-label=t('Main navigation'))` containing `include nav-main.pug` → `include lang-switch.pug`. |
-| `partials/lang-switch.pug` | rendered only when `Object.keys(app.translations \|\| {})` has two or more languages (§S2.8). |
+| `partials/lang-switch.pug` | rendered only when `Object.keys(app.translations \|\| {})` has two or more languages and at least one other language has a target (§S2.8). |
 | `partials/footer.pug` | `footer.site-footer` → `.site-footer__inner`; theme-specific content (§S3, §S4); then `include footer-extra.pug`; then `nav.site-footer__legal(aria-label=t('Legal'))` with one link per `footer_links` entry; then `p.site-footer__copy` (`© <build year> <app.name>`). |
 | `partials/scripts.pug` | `include scripts-extra.pug` and nothing else — the themes ship no JavaScript (§S2.7). |
 
@@ -1242,6 +1242,11 @@ Shown when `app.translations` has two or more languages. For each language
    `meta.dirname` (ties by `meta.href`) — a page without a `layout` is not
    rendered, so linking it would 404 (added 2026-10-15, theme-blog);
 3. else the language is left out.
+
+If that leaves no language but the page's own, the switch is not rendered at
+all (added 2026-10-15, theme-blog 1.0.3): `nera new --lang de` copies the
+starter's `en` entry to `de` and keeps `en`, so a German-only site has two
+`translations` entries and no English page, and showed a one-item switch.
 
 Markup: `nav.lang-switch(aria-label=t('Language'))` → `ul.lang-switch__list` →
 `li.lang-switch__item` → `a.lang-switch__link(href, hreflang=l, lang=l)`; the
