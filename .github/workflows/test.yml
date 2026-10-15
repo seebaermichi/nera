@@ -13,11 +13,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Node 18 reached EOL 2025-04-30 and the toolchain
-                # (vitest 4 / vite 8 / eslint 10) requires Node 20+, so the
-                # floor is Node 20 to match the `engines` field
-                # (`^20.19.0 || >=22.0.0`; setup-node's `20` is the latest 20.x).
-                node-version: [20, 22]
+                # Node 20 reached end of life on 2026-04-30, and the dev
+                # toolchain (vitest 5) needs Node 22.12 or later, so CI tests
+                # 22 and 24. `engines` is unchanged: a CI-only change.
+                node-version: [22, 24]
 
         steps:
             - uses: actions/checkout@v7
