@@ -235,3 +235,104 @@ Goal: each of the five repos has one `chore(package): apply npm pkg fix` commit 
 ## Step 2 — approved (2026-10-15)
 
 snagio: ticked
+commit: b4f5c4e
+
+## Step 3 — started (2026-10-15)
+
+base_sha: b4f5c4ec9dd8bebf38de8965748c4483588c0e0b
+mode: fresh
+
+## Step 3 — implemented (2026-10-15)
+
+base_sha: b4f5c4e
+
+Commits (one per repo, `package.json` only, not pushed):
+- `nera-cli` 2d3ff44 · `nera-validate` af4ff73 · `nera-plugin-canonical-links` 97cb7e7 · `nera-plugin-code-blocks` dc306f5 · `nera-plugin-contact-form` 58d932a · `nera-plugin-images` c42f764
+
+Before the sweep, `nera-cli`, `-canonical-links` and `-contact-form` were behind `origin/main` (Dependabot merges); fetched and `pull --ff-only` first so the commits sit on the remote tip and the user's push fast-forwards. `nera-validate` was clean and in sync (the survey's dirty tree/unpushed commit is gone — v1.4.3 has been pushed since), so nothing unrelated could enter its commit.
+
+### Changed
+- `nera-cli/package.json` — `bin.nera` `./bin/nera.js` → `bin/nera.js`; `repository.url` gains `git+`
+- `nera-validate/package.json` — `bin.nera-validate` drops `./`; `repository.url` gains `git+`
+- `nera-plugin-canonical-links/package.json` — `bin.nera-canonical-links` drops `./`; `repository.url` → `git+…/nera-plugin-canonical-links.git`
+- `nera-plugin-code-blocks/package.json` — `bin.nera-code-blocks` drops `./`; `repository.url` → `git+….git`
+- `nera-plugin-contact-form/package.json` — both bin entries (`publish-template`, `nera-contact-form`) drop `./`; `repository.url` gains `git+`
+- `nera-plugin-images/package.json` — `bin.nera-images` drops `./`; `repository.url` → `git+….git`
+
+All produced by `npm pkg fix` (npm 10.9.4, Node 22). Three urls also gained the `.git` suffix — that is npm's own normalization, still only the url line.
+
+### Fixed alongside
+- none
+
+### Carry forward
+- debt · S · `nera-installer` 7884a57 (Step 2, unpushed) — its commit body reads `\`bin\` without \`./\`` with literal backslashes (shell escaping leaked in); cosmetic, could be fixed with `git commit --amend` before the push — not this step's commit (decision)
+
+### Verification
+```
+npm publish --dry-run 2>&1 | grep -c 'auto-corrected' → before: 1, after: 0 in all six
+npm pkg fix && git diff --stat → package.json only; 2 lines changed (contact-form: 3)
+npm ci → ok ×6
+nera-cli                    Tests  221 passed (221)   lint ok
+nera-validate               Tests  158 passed (158)   lint ok
+nera-plugin-canonical-links Tests  23 passed (23)     lint ok
+nera-plugin-code-blocks     Tests  102 passed (102)   lint ok
+nera-plugin-contact-form    Tests  46 passed (46)     lint ok
+nera-plugin-images          Tests  264 passed (264)   lint ok
+node bin/nera.js --help → "Nera — the static site generator CLI / Usage:"
+node bin/nera-validate.js (in nera-validate) → "✓ No problems found."
+grep tests/src for literal pkg.bin / './bin/' reads → none in all six
+git show --stat HEAD → 1 file changed in each repo; git status --porcelain → empty ×6
+```
+
+### Self-critique
+- Pulled before committing rather than committing on stale HEADs; the alternative (user resolves on push) would make the paste-ready push fail. `--ff-only` so nothing was merged or rewritten.
+- Did not run the plugins' `publish-template`/`publish-config` bins: they copy files into cwd; the tests cover them and the path change does not affect how `node` resolves them.
+- Least sure: nothing in the diff — it is exactly npm's output. The one open point is the Step 2 commit-message cosmetics (carried forward).
+
+### Pressure-test questions for the reviewer
+1. Does each of the six commits touch `package.json` alone (`git -C ../<repo> show --stat HEAD`)?
+2. Are both `nera-plugin-contact-form` bin entries normalized (`git -C ../nera-plugin-contact-form show HEAD`)?
+3. Is each repo exactly one commit ahead of `origin/main` (`git -C ../<repo> status -sb`)?
+
+Push commands for the user:
+----- START: push step 3 -----
+cd ~/workspace/nera/nera-cli && git push
+cd ~/workspace/nera/nera-validate && git push
+cd ~/workspace/nera/nera-plugin-canonical-links && git push
+cd ~/workspace/nera/nera-plugin-code-blocks && git push
+cd ~/workspace/nera/nera-plugin-contact-form && git push
+cd ~/workspace/nera/nera-plugin-images && git push
+----- END -----
+
+## Decision (2026-10-15)
+
+Who pushes the Step 3 sweep commits? → the session pushes them (the user asked explicitly, overriding the "never push" non-negotiable for these commits). Pushed 2026-10-15: nera-cli 2d3ff44, nera-validate af4ff73, -canonical-links 97cb7e7, -code-blocks dc306f5, -contact-form 58d932a, -images c42f764; all six now in sync with origin/main.
+
+## Step 3 — reviewed (2026-10-15)
+
+Verdict: approve
+
+### 🔴 Blocking
+- none
+
+### Fixed in review
+- none
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none (the Step 2 `nera-installer` commit-message cosmetics is already carried by the implementer)
+
+### Checked
+Goal: six commits, `package.json` only, each changing only `bin` values (`./` dropped) and `repository.url` (`git+` prefix, `.git` suffix where missing) — `git show HEAD -U0` per repo confirms exactly those lines · Verify re-run with Node 22: `npm publish --dry-run | grep -c auto-corrected` → 0 ×6; `npx vitest run` → 221/158/23/102/46/264 passed, `npm run lint` ok ×6; `node bin/nera.js --help` → "Nera — the static site generator CLI"; no literal `pkg.bin`/`'./bin/` reads in test/src · conventions: Non-negotiables (no release owed — metadata-only, npm already auto-corrected these at publish, so the published tarballs are unchanged; no CHANGELOG/bump needed), Framework correctness (n/a), Tests & hygiene (suites pass) · self-critique: pull --ff-only before committing verified by each commit's parent being the former remote tip; nera-validate clean (porcelain empty) · generator diff since b4f5c4e touches only the plan/log files · walkthrough n/a (`none`).
+Note: at review time all six repos are already at `origin/main` (HEAD == origin/main, nothing ahead) — the commits have been pushed since the implementer's report; the "push step 3" commands are no longer needed.
+
+### Answers to the pressure-test questions
+1. Yes — `git show --stat HEAD` → `package.json | 1 file changed` in all six (2 insertions/2 deletions; contact-form 3/3).
+2. Yes — both `publish-template` and `nera-contact-form` go `./bin/publish-template.js` → `bin/publish-template.js` in 58d932a.
+3. Not one ahead any more: each HEAD equals `origin/main` (2d3ff44, af4ff73, 97cb7e7, dc306f5, 58d932a, c42f764) — already pushed; working trees clean.
+
+## Step 3 — approved (2026-10-15)
+
+snagio: ticked

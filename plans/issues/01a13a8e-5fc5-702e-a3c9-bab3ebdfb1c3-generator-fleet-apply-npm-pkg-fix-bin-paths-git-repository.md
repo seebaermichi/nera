@@ -69,7 +69,7 @@ normalized form. `nera-website` has neither field and is clean.
 - **Risks:** `npm publish --dry-run` must never become a real publish — type `--dry-run` every time. Use npm ≥ 10.9 (Node 22 PATH) for consistency with the lockfiles.
 - **Walkthrough:** none
 
-### Step 3 — Apply `npm pkg fix` in nera-cli, nera-validate and four plugins — ⬜ todo
+### Step 3 — Apply `npm pkg fix` in nera-cli, nera-validate and four plugins — ✅ done
 
 - **Goal:** `nera-cli`, `nera-validate`, `nera-plugin-canonical-links`, `-code-blocks`, `-contact-form`, `-images` each have the commit, touching only `bin` values and `repository.url`.
 - **Files:** `package.json` in each of the six repos
