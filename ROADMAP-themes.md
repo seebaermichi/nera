@@ -1482,7 +1482,11 @@ Decisions beyond the spec:
 
 Found along the way and fixed in core 4.16.3: the §5 plugin check never warned,
 because it resolved `<plugin>/package.json`, which every plugin's `exports`
-refuses. Release status: see §S5 and the package's CHANGELOG.
+refuses. **Released 2026-10-15:** 1.0.0 published by hand; the `v1.0.1` CI
+publish failed in the package test under npm 12 (`npm pack --json` now prints
+an object keyed by package name), so 1.0.2 is the first CI OIDC release and
+validated the Trusted Publisher. 1.0.2 also documents the `feed-link` seam's
+plugin-feed override (`include /vendor/plugin-feed/feed-link`).
 
 #### S4.1 Page types
 
