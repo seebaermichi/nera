@@ -78,7 +78,7 @@ normalized form. `nera-website` has neither field and is clean.
 - **Risks:** a bin path change could break a test that reads `pkg.bin` literally — the tests catch it.
 - **Walkthrough:** none
 
-### Step 4 — Apply `npm pkg fix` in six more plugins — ⬜ todo
+### Step 4 — Apply `npm pkg fix` in six more plugins — ✅ done
 
 - **Goal:** `-link-attributes`, `-navigation`, `-page-navigation`, `-page-pagination`, `-popular-content`, `-search` each have the commit.
 - **Files:** `package.json` in each of the six repos

@@ -336,3 +336,97 @@ Note: at review time all six repos are already at `origin/main` (HEAD == origin/
 ## Step 3 — approved (2026-10-15)
 
 snagio: ticked
+commit: d96c9f2
+
+## Step 4 — started (2026-10-15)
+
+base_sha: d96c9f2b2136d9408e5816557430f81faf753c90
+mode: fresh
+
+## Step 4 — implemented (2026-10-15)
+
+base_sha: d96c9f2
+
+Commits (one per repo, `package.json` only, not pushed):
+- `nera-plugin-link-attributes` d71e442 · `-navigation` e2e4ce3 · `-page-navigation` 3971b72 · `-page-pagination` 6537a10 · `-popular-content` ee8017f · `-search` 51e9e3d
+
+All six were behind `origin/main` by 2–3 Dependabot commits; the five clean ones were `pull --ff-only`ed first. `-search` had diverged (its local `chore(claude)` commit 3590a28, touching only `.claude/`, vs. two Dependabot commits touching deps): rebased that unpushed commit onto `origin/main` (now 096f1d7, no conflict), so the push fast-forwards and carries both commits.
+
+### Changed
+- `nera-plugin-link-attributes/package.json` — `bin.nera-link-attributes` drops `./`; `repository.url` → `git+….git`
+- `nera-plugin-navigation/package.json` — `bin.nera-navigation` drops `./`; `repository.url` gains `git+`
+- `nera-plugin-page-navigation/package.json` — `bin.nera-page-navigation` drops `./`; `repository.url` → `git+….git`
+- `nera-plugin-page-pagination/package.json` — `repository.url` → `git+….git` (comes first, field order url-before-bin kept); `bin.nera-page-pagination` drops `./`
+- `nera-plugin-popular-content/package.json` — `bin.nera-popular-content` drops `./`; `repository.url` gains `git+`
+- `nera-plugin-search/package.json` — `bin.nera-search` drops `./`; `repository.url` gains `git+`
+
+All produced by `npm pkg fix` (npm 10.9.4, Node 22).
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none (Step 3's `nera-installer` commit-message cosmetics still stands)
+
+### Verification
+```
+npm publish --dry-run 2>&1 | grep -c 'auto-corrected' → before: 1, after: 0 in all six
+npm pkg fix && git diff --stat → package.json | 4 ++-- (2 lines) in all six, incl. page-pagination
+npm ci → ok ×6
+nera-plugin-link-attributes Tests  15 passed (15)  lint ok
+nera-plugin-navigation      Tests  36 passed (36)  lint ok
+nera-plugin-page-navigation Tests  24 passed (24)  lint ok
+nera-plugin-page-pagination Tests  28 passed (28)  lint ok
+nera-plugin-popular-content Tests  20 passed (20)  lint ok
+nera-plugin-search          Tests  67 passed (67)  lint ok
+grep test/tests/src for literal pkg.bin / './bin/' → none in all six
+git show --stat HEAD → 1 file changed, 2 insertions(+), 2 deletions(-) ×6; git status --porcelain → empty ×6
+status -sb → ahead 1 ×5; -search ahead 2 (chore(claude) + this)
+```
+
+### Self-critique
+- Rebasing `-search`'s unpushed commit changes its sha (3590a28 → 096f1d7); acceptable since it was never pushed, and the alternative (a merge commit, or a push that fails non-fast-forward) is worse.
+- Least sure: nothing in the diffs — they are npm's own output. Pre-commit hooks ran lint again on commit, green.
+
+### Pressure-test questions for the reviewer
+1. Does each of the six commits touch `package.json` alone, two lines (`git -C ../<repo> show --stat HEAD`)?
+2. Is `-search`'s extra commit only `.claude/` (`git -C ../nera-plugin-search show --stat HEAD~1`) and the repo exactly 2 ahead, 0 behind?
+3. Are the five others exactly 1 ahead, 0 behind `origin/main`?
+
+Push commands for the user (`-search` also pushes its `chore(claude)` commit):
+----- START: push step 4 -----
+cd ~/workspace/nera/nera-plugin-link-attributes && git push
+cd ~/workspace/nera/nera-plugin-navigation && git push
+cd ~/workspace/nera/nera-plugin-page-navigation && git push
+cd ~/workspace/nera/nera-plugin-page-pagination && git push
+cd ~/workspace/nera/nera-plugin-popular-content && git push
+cd ~/workspace/nera/nera-plugin-search && git push
+----- END -----
+
+## Step 4 — reviewed (2026-10-15)
+
+Verdict: approve
+
+### 🔴 Blocking
+- none
+
+### Fixed in review
+- none
+
+### Fixed alongside
+- none
+
+### Carry forward
+- none
+
+### Checked
+goal (six commits present, `package.json` only, 2+/2− each) · Verify re-run in all six under Node 22: `npm publish --dry-run | grep -c auto-corrected` → 0 ×6; `npm pkg fix` → working tree clean ×6; `npx vitest run` → 15/36/24/28/20/67 passed; `npm run lint` → ok ×6 · conventions Non-negotiables (no push/publish/tag; no release owed — npm already published the corrected form, commit message says so; START/END block for the hand-over) · self-critique (search rebase 3590a28 → 096f1d7 never pushed, fine) · walkthrough n/a (none)
+
+### Answers to the pressure-test questions
+1. Yes. `git show --stat HEAD` → `package.json | 4 ++--`, 1 file, 2 insertions, 2 deletions in all six (d71e442, e2e4ce3, 3971b72, 6537a10, ee8017f, 51e9e3d). page-pagination's hunks are `repository.url` (line ~39) then `bin` (line ~63) — field order kept, still two lines.
+2. Yes. `nera-plugin-search` HEAD~1 = 096f1d7 `chore(claude): …` touching only `.claude/issue-conventions.md` and `.claude/skills/plan-issue/SKILL.md`; after `git fetch`, `rev-list --left-right --count origin/main...HEAD` → `0 2`.
+3. Yes. After `git fetch`, `0 1` for link-attributes, navigation, page-navigation, page-pagination, popular-content; `git status --porcelain` empty in all six.
+
+## Step 4 — approved (2026-10-15)
+
+snagio: ticked
