@@ -13,3 +13,4 @@ ISSUES.md
 # Browser-test artifacts (Playwright MCP)
 .playwright-mcp/
 plans/
+.claude/.work-issue-active
