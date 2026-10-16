@@ -27,7 +27,7 @@ checks per diff.
   existing site, plugin or theme would notice. Spec, test, CI and `.claude/` changes
   ship nothing and get no release.
 - **The version line continues** (4.x): theme `nera.generator` ranges depend on it.
-  A rising Node floor follows the real dependencies (`^20.19.0 || >=22.0.0` today).
+  A rising Node floor follows the real dependencies (`>=22.12.0` today).
 - **Never publish or push.** No `npm publish`, no `git push`, no tags pushed, no
   posts anywhere public. Releases go out from CI on a pushed `v*` tag; the session
   hands over the exact commands.

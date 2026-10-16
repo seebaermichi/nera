@@ -999,7 +999,7 @@ differs only in name, description, repository and `peerDependencies` (§S4.5):
     "keywords": ["nera", "nera-theme"],
     "files": ["views", "assets", "config"],
     "exports": { "./package.json": "./package.json" },
-    "engines": { "node": "^20.19.0 || >=22.0.0" },
+    "engines": { "node": ">=22.12.0" },
     "nera": { "generator": ">=4.15.0" },
     "peerDependencies": {
         "@nera-static/plugin-contact-form": "^1.1.1",
