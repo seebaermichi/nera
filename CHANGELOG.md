@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.17.0] - 2026-10-16
+
+### Changed
+
+-   `engines.node` is now `>=22.12.0` (was `^20.19.0 || >=22.0.0`), documenting the real floor. A site installs core next to `@nera-static/nera`, which brings vite 8, and the npm 10.8.2 bundled with Node 20 crashes in arborist (`Cannot read properties of null (reading 'edgesOut')`) on the optional peer dependencies of current vite 8 releases, so a fresh site cannot be installed there. Node 22.12 bundles npm 10.9, which installs it, and Node 20 is past its end of life. Core renders the same as before.
+-   The `npm warn EBADENGINE` for `nopt` and `abbrev` on Node 22 before 22.22.2 (see 4.16.2) stays an accepted warning: only `js-beautify`'s command-line tool uses them, never core.
+
 ## [4.16.4] - 2026-10-15
 
 ### Fixed
