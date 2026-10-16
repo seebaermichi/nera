@@ -16,7 +16,7 @@ const distFolder = path.resolve('public')
 
 // Read the site's .neraignore from the site root ('.'), matching the render
 // pipeline — it stays there even though assets now live under theme/assets.
-const initialCopy = () => copyFolder(sourceFolder, distFolder, '.')
+const initialCopy = () => copyFolder(sourceFolder, distFolder, '.', 'site assets')
 
 // Initial copy
 await initialCopy()

@@ -67,13 +67,13 @@ const run = async (settings = defaultSettings) => {
     // the site's own .neraignore from the site root ('.'), so it keeps filtering
     // the site's assets even though they now live under `theme/assets`.
     if (theme) {
-        await copyFolder(theme.assetsRoot, dist, null)
+        await copyFolder(theme.assetsRoot, dist, null, 'theme assets')
     }
     // Plugin assets (`getAssets`) sit between the two: they override the
     // theme and the site overrides them. Unfiltered like the theme pass — the
     // payload is plugin-controlled.
     await copyPluginAssets(data.assets, dist)
-    await copyFolder(assets, dist, '.')
+    await copyFolder(assets, dist, '.', 'site assets')
 
     // Subdirectory deploys: prefix root-absolute URLs inside copied assets that
     // the HTML rewrite can't reach (CSS `url(/…)`, the web app manifest). Runs

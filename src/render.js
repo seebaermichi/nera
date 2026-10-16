@@ -395,7 +395,15 @@ const copyPreserving = async (from, to) => {
 //     list keeps filtering its assets after they move under `theme/`, §2d)
 //   - null → skip ignore entirely, as the theme pass does: a theme package's
 //     payload is author-controlled (`files:`), so nobody's `.neraignore` filters it
-export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
+// `label` names the source in the build log ("Theme assets copied", "No site
+// assets found"), so the theme, plugin and site passes are told apart. Omitted,
+// the log keeps the unlabelled "Assets copied" / "No Assets found".
+export const copyFolder = async (
+    sourceFolder,
+    targetFolder,
+    ignoreBase,
+    label = 'Assets'
+) => {
     if (fssync.existsSync(sourceFolder)) {
         const base =
             ignoreBase === undefined ? path.dirname(sourceFolder) : ignoreBase
@@ -409,12 +417,15 @@ export const copyFolder = async (sourceFolder, targetFolder, ignoreBase) => {
                     path.join(targetFolder, path.relative(sourceFolder, file))
                 )
             }
-            console.log(SUCCESS_COLOR, 'Assets copied')
+            console.log(
+                SUCCESS_COLOR,
+                `${label.charAt(0).toUpperCase()}${label.slice(1)} copied`
+            )
         } catch (err) {
             console.error('Copy failed:', err)
         }
     } else {
-        console.log(SUCCESS_COLOR, 'No Assets found')
+        console.log(SUCCESS_COLOR, `No ${label} found`)
     }
 }
 
@@ -438,7 +449,7 @@ export const copyPluginAssets = async (assets = [], targetFolder) => {
         }
 
         if (stat.isDirectory()) {
-            await copyFolder(from, target, null)
+            await copyFolder(from, target, null, `plugin "${plugin}" assets`)
         } else if (to === '') {
             console.warn(
                 `⚠️ Plugin "${plugin}" asset ${from} is a file and needs a file path as "to", skipped`

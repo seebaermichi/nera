@@ -7,6 +7,7 @@ import fssync from 'fs'
 import os from 'os'
 import {
     copyFolder,
+    copyPluginAssets,
     createHtmlFiles,
     deleteFolder,
     rewriteHtmlUrls,
@@ -192,6 +193,77 @@ describe('copyFolder', () => {
         // the explicit base's list wins; the parent's src/.neraignore is not read
         expect(files).not.toContain('include.txt')
         expect(files).toContain('ignore.txt')
+    })
+
+    // The theme, plugin and site passes each log a line; the label tells
+    // them apart in the build log instead of three bare "Assets copied".
+    describe('log line', () => {
+        let log
+
+        beforeEach(() => {
+            log = vi.spyOn(console, 'log').mockImplementation(() => {})
+        })
+
+        afterEach(() => {
+            log.mockRestore()
+        })
+
+        const logged = () => log.mock.calls.map((args) => args.at(-1))
+
+        it('names the source when labelled', async () => {
+            await copyFolder(srcDir, publicDir, null, 'theme assets')
+            await copyFolder(
+                path.join(tmpRoot, 'missing'),
+                publicDir,
+                null,
+                'site assets'
+            )
+
+            expect(logged()).toEqual([
+                'Theme assets copied',
+                'No site assets found',
+            ])
+        })
+
+        it('keeps the unlabelled text when the label is omitted', async () => {
+            await copyFolder(srcDir, publicDir, null)
+            await copyFolder(path.join(tmpRoot, 'missing'), publicDir, null)
+
+            expect(logged()).toEqual(['Assets copied', 'No Assets found'])
+        })
+    })
+})
+
+describe('copyPluginAssets', () => {
+    let tmpRoot, log
+
+    beforeEach(async () => {
+        tmpRoot = createTempPath()
+        await fs.mkdir(path.join(tmpRoot, 'payload'), { recursive: true })
+        await fs.writeFile(path.join(tmpRoot, 'payload', 'a.css'), 'a {}')
+        log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    })
+
+    afterEach(async () => {
+        log.mockRestore()
+        await fs.rm(tmpRoot, { recursive: true, force: true })
+    })
+
+    it('names the plugin in the log line of a directory entry', async () => {
+        await copyPluginAssets(
+            [
+                {
+                    from: path.join(tmpRoot, 'payload'),
+                    to: '_nera',
+                    plugin: 'code-blocks',
+                },
+            ],
+            path.join(tmpRoot, 'public')
+        )
+
+        expect(log.mock.calls.map((args) => args.at(-1))).toEqual([
+            'Plugin "code-blocks" assets copied',
+        ])
     })
 })
 

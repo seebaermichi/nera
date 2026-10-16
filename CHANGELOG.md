@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -   `engines.node` is now `>=22.12.0` (was `^20.19.0 || >=22.0.0`), documenting the real floor. A site installs core next to `@nera-static/nera`, which brings vite 8, and the npm 10.8.2 bundled with Node 20 crashes in arborist (`Cannot read properties of null (reading 'edgesOut')`) on the optional peer dependencies of current vite 8 releases, so a fresh site cannot be installed there. Node 22.12 bundles npm 10.9, which installs it, and Node 20 is past its end of life. Core renders the same as before.
 -   The `npm warn EBADENGINE` for `nopt` and `abbrev` on Node 22 before 22.22.2 (see 4.16.2) stays an accepted warning: only `js-beautify`'s command-line tool uses them, never core.
+-   The build log names where copied assets come from: "Theme assets copied", `Plugin "<name>" assets copied` and "Site assets copied" (likewise "No site assets found") instead of up to three bare "Assets copied" lines. `copyFolder` takes the label as an optional fourth argument; without it the log keeps the old text.
 
 ## [4.16.4] - 2026-10-15
 
