@@ -23,6 +23,8 @@ a real install→update dry-run. The branch is ready to merge to `main` and rele
 **Starter-ready themes (2026-10-13):** `@nera-static/theme-business` and
 `@nera-static/theme-blog`, the themes the `ROADMAP-ai.md` L5 starters need, are
 specified in the section **Starter-ready themes** at the end of this file.
+theme-blog was built and released 2026-10-15 (§S4), theme-business built
+2026-10-16 (§S3, 1.0.0 awaiting its bootstrap publish).
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
@@ -1004,8 +1006,8 @@ differs only in name, description, repository and `peerDependencies` (§S4.5):
     "peerDependencies": {
         "@nera-static/plugin-contact-form": "^1.1.1",
         "@nera-static/plugin-images": "^1.0.2",
-        "@nera-static/plugin-navigation": "^3.0.3",
-        "@nera-static/plugin-social-media-links": "^2.2.2"
+        "@nera-static/plugin-navigation": "^3.1.0",
+        "@nera-static/plugin-social-media-links": "^2.3.0"
     },
     "peerDependenciesMeta": {
         "@nera-static/plugin-contact-form": { "optional": true },
@@ -1025,7 +1027,7 @@ differs only in name, description, repository and `peerDependencies` (§S4.5):
 | `exports` | only `./package.json`, so core's `resolvePackageRoot` finds the root (§1b). No JS entry. |
 | `nera.generator` | **`>=4.15.0`**. The themes rely on `app.theme.config` (4.6.0), frontmatter `date` as `meta.createdAt` (4.7.0, post dates), and per-page frontmatter parsed by `yaml` (4.15.0: a page without frontmatter no longer inherits the previous page's `layout`, and `10:30` is the string `"10:30"`, not 630). 4.15.x is also the only line the acceptance builds run on. No upper bound: a core major is checked when it ships, and an upper bound would fail every site's build on the day it lands (§5). |
 | `peerDependencies` | one entry per plugin whose classes or custom properties the theme's CSS targets, all marked optional (a site without the plugin has nothing to mis-style; core stays silent, §5). The floor is the release the class list was checked against (§S8), the caret keeps the major. A plugin with no markup (sitemap, canonical-links, link-attributes) is not a peer. |
-| `devDependencies` | what the fixture build needs (§S7): `@nera-static/nera` `^1.10.0` and the peer plugins. Nothing at runtime. |
+| `devDependencies` | what the fixture build needs (§S7): `@nera-static/nera` `^1.10.0` (theme-business: `^1.12.0`, current when it was built) and the peer plugins at the peer ranges. Nothing at runtime. |
 
 #### S2.2 Views every page needs
 
@@ -1154,7 +1156,7 @@ Other keys in the theme's `config/theme.yaml` (contract, same in both themes):
 | key | type | default | meaning |
 |---|---|---|---|
 | `label` | string | `Business` / `Blog` | human label, for a future themes UI |
-| `extra_css` | array of root-absolute paths | `[]` | stylesheets linked after `theme.css`, in order (§2a). An entry not starting with a single `/` is ignored, so no third-party stylesheet can come in this way. The blog starter sets `['/_nera/code-blocks.css']`; a site's own `custom.css` goes here too. |
+| `extra_css` | array of root-absolute paths | `[]` | stylesheets linked after `theme.css`, in order (§2a). An entry not starting with a single `/` is ignored, so no third-party stylesheet can come in this way; so is one starting with `/\` (a browser reads it as protocol-relative) or containing a tab, CR or LF anywhere (the URL parser drops them, so `/<tab>/host` would become `//host`) — both added 2026-10-16 in theme-business, the second in theme-blog 1.1.1 (2026-10-17). The blog starter sets `['/_nera/code-blocks.css']`; a site's own `custom.css` goes here too. |
 | `footer_links` | array of `{ label, href }` | `[]` | the footer's legal nav. `label` goes through `t()`; `href` is a path or a `{ <lang>: path }` map, resolved for the page's language (an entry without a path for that language is left out). The starters put the imprint and privacy pages here, which is what `legal-imprint-link` / `legal-privacy-link` look for. |
 
 Arrays are replaced wholesale by the merge (§1c), so a site's `footer_links`
@@ -1267,11 +1269,49 @@ link. `homeHref(lang)` (brand link) uses rule 2, falling back to `/`.
 The site never overrides `assets/css/theme.css` unless it accepts losing its
 updates (§2b).
 
-### S3. `@nera-static/theme-business` — **SPECIFIED 2026-10-13**
+### S3. `@nera-static/theme-business` — **SPECIFIED 2026-10-13 · BUILT 2026-10-16**
 
 For a small business, an association or a portfolio: a front page with a hero,
 cards, opening hours, a contact page with the form, and legal pages. Carries the
 `business` and `portfolio` starters. `config/app.yaml`: `theme: business`.
+
+**Built 2026-10-16** (`nera-theme-business`, Snagio `01a1453e`, worked
+locally): the package as this section specifies, peers at the §S8
+carry-forward floors (`plugin-contact-form ^1.1.1`, `plugin-images ^1.0.2`,
+`plugin-navigation ^3.1.0`, `plugin-social-media-links ^2.3.0`), the look
+from a Claude Design export (`design/` in the repo, its 21 MB of demo images
+git-ignored). Every §S7 criterion is a vitest test (139 tests); the en/de
+fixture `test/site/` (the business starter's pages plus a portfolio list and
+a gallery project) passes `nera validate` and `nera check` with every rule at
+`error`, with and without the plugins. Decisions beyond the spec:
+
+- the look is the design's token set **"Crust"**, not "Clear and sturdy"
+  (§S3.4, rewritten); its serif heading stack names `Fraunces` first, but no
+  font file ships;
+- where the design's HTML differed from §S3.1 (spans for opening hours,
+  `section` wrappers, a `div` legal row, extra footer headings that would be
+  new `t()` keys), the spec's markup won and the design's CSS was rewritten
+  onto it;
+- the footer's third column holds the `footer-extra.pug` seam (§S3.1
+  "Footer", rewritten); an empty column collapses (`:empty`, `auto-fit`);
+- extra contract partials `partials/page-header.pug` and `partials/cards.pug`
+  (next to `address.pug` and `opening-hours.pug`); helpers as theme-blog's,
+  the internal object is `themeBusiness` (§S2.2 "Top-level names");
+- the hero and card images come from the page's `image` / `image_alt`
+  frontmatter (`frontmatter_keys: [image]` in `config/images.yaml`), not from
+  `hero`, which plugin-images cannot read a path from (§S3.2, corrected);
+- child pages tie-break by href after `order` and `title`, so the list never
+  depends on `pagesData`'s order; a `lang` that is no valid locale tag falls
+  back to the default collation instead of failing the build;
+- `extra_css` also refuses entries with a tab, CR or LF (§S2.5);
+- the contact-form fixture publishes the plugin's client script
+  (`theme/assets/js/contact-form.js`): the theme ships no JavaScript, the
+  site's plugin does.
+
+Closed before the 1.0.0 publish (2026-10-17): the fixture's form has a
+checkbox and a radio field, so those plugin classes are built and checked;
+opening hours on a default or home page come under `h2` `t('Opening hours')`,
+like the contact page.
 
 #### S3.1 Page types
 
@@ -1281,8 +1321,8 @@ All `extends ../layouts/layout.pug` and fill `block main`. "Header" below means
 
 | view (`layout:` value) | for | renders, in order |
 |---|---|---|
-| `pages/default.pug` | about, services, legal pages, any standard page | header; body; cards (`meta.cards`, when set); opening hours (when `meta.show_hours` and `app.business.hours`) |
-| `pages/home.pug` | the front page | `section.hero` (§S3.1a, holds the `<h1>`); body; cards; opening hours (when `meta.show_hours`) |
+| `pages/default.pug` | about, services, legal pages, any standard page | header; body; cards (`meta.cards`, when set); `h2` `t('Opening hours')` + `partials/opening-hours.pug` (when `meta.show_hours` and a row of `app.business.hours` is left) |
+| `pages/home.pug` | the front page | `section.hero` (§S3.1a, holds the `<h1>`); body; cards; `h2` `t('Opening hours')` + `partials/opening-hours.pug` (when `meta.show_hours` and a row is left) |
 | `pages/contact.pug` | the contact page | header; body; `div.contact` with `div.contact__form` (seam `partials/contact-form.pug`) and `aside.contact__aside` (`h2` `t('Contact details')` + `partials/address.pug`; `h2` `t('Opening hours')` + `partials/opening-hours.pug`, when hours are set) |
 | `pages/list.pug` | a section index: the portfolio's projects, a team, an offer list | header; body; `ul.cards.cards--list` with one card per **child page** (§S3.1b) |
 | `pages/gallery.pug` | one portfolio project, a photo page | header; `div.page__body.gallery`: the body, with every `figure.nera-image` directly in it laid out as an image grid |
@@ -1365,16 +1405,20 @@ per set line and `a.address__link` for phone and email. Both partials render
 nothing when their data is missing.
 
 **Footer** (business part of `partials/footer.pug`): `div.site-footer__cols` →
-`div.site-footer__col` ×3: brand name + `partials/address.pug`;
+`div.site-footer__col` ×3: `h2.site-footer__heading` with the business name
+(`app.business.name || app.name`) + `partials/address.pug`;
 `h2.site-footer__heading` `t('Opening hours')` + `partials/opening-hours.pug`
 (when `footer.show_hours` and hours are set); `partials/footer-extra.pug`
-sits after the columns (§S2.2).
+(changed 2026-10-16, theme-business: the seam is the third column, not after
+the columns, so the three columns have three contents; still before the legal
+nav, §S2.2). A column with nothing to show stays an empty `div` and the CSS
+collapses it.
 
 #### S3.2 Business seams
 
 | seam | included from | in scope | the starter overrides it with |
 |---|---|---|---|
-| `partials/hero-media.pug` | `div.hero__media` | `meta` | `include /vendor/plugin-images/picture` + `+picture(meta.images && meta.images.hero, { alt: meta.hero.image_alt, class: 'hero__image', loading: 'eager' })` |
+| `partials/hero-media.pug` | `div.hero__media` | `meta` | `include /vendor/plugin-images/picture` + `+picture(meta.images && meta.images.image, { alt: meta.image_alt, class: 'hero__image', loading: 'eager' })` — the home page's `image` / `image_alt` frontmatter (corrected 2026-10-16: `hero` holds the texts, and plugin-images reads image paths from top-level `frontmatter_keys` only) |
 | `partials/card-media.pug` | `div.card__media` in `list.pug` | `item` (the child page) | the same mixin with `item.meta.images && item.meta.images.image` and `class: 'card__image'` |
 | `partials/contact-form.pug` | `div.contact__form` | `app`, `meta` | `include /vendor/plugin-contact-form/contact-form` |
 
@@ -1387,38 +1431,44 @@ the shared keys (§S2.6).
 
 #### S3.4 Look and token defaults
 
-**"Clear and sturdy."** A white page with warm-grey bands; a system sans-serif
-throughout; a deep-blue accent. The header is one bar (brand left, nav right,
-hairline below) that wraps on narrow screens. The home hero is a full-width
-`surface` band with a large `h1` (fluid, `clamp()`), a short text and a solid
-accent button next to an outlined one. Cards sit in an auto-fill grid (min
-`16rem`) with a hairline border and `size.radius`, no shadows. Running text is
-held to `size.measure`, grids and the header to `size.width`. The footer is a
-`surface` band with three columns that collapse to one. Galleries are a 2–4
-column grid with muted captions. Nothing moves.
+**"Crust"** (changed 2026-10-16 from the specified "Clear and sturdy" — a
+white page, system sans-serif throughout, deep-blue accent — to the token set
+of the Claude Design export the theme was built from, chosen by the
+maintainer). A cream page under a 5px rust top rule; a system sans-serif for
+running text, a serif for headings (`Fraunces` first in the stack, used only
+where installed: no font file ships, §S2.5 "Fonts"); a rust accent. The header
+is one bar (brand left, nav right, hairline below) that wraps on narrow
+screens. The home hero is a full-width dark band (`text` as background, `bg`
+as text) with a large `h1` (fluid, `clamp()`), a short text and a solid accent
+button next to an outlined one, and the `hero-media` seam beside it from
+48em when filled. Cards sit in an auto-fill grid (min `16rem`) on `surface`
+with a hairline border and `size.radius`, no shadows. Running text is held to
+`size.measure`, grids and the header to `size.width`. The footer is a dark
+band like the hero with three columns that collapse to one. Galleries are a
+2–4 column grid with muted captions. Nothing moves.
 
 ```yaml
-# nera-theme-business/config/theme.yaml — defaults
+# nera-theme-business/config/theme.yaml — defaults (token set "Crust")
 label: Business
 tokens:
     color:
-        bg: '#ffffff'
-        surface: '#f4f1ec'
-        text: '#1c2024'
-        muted: '#545b63'
-        accent: '#1d4e89'
+        bg: '#fbf2e3'
+        surface: '#f1e0c3'
+        text: '#3b2314'
+        muted: '#6e4b2e'
+        accent: '#a1400f'
         accent_text: '#ffffff'
-        border: '#d6d2ca'
-        focus: '#b04a00'
+        border: '#dcc6a3'
+        focus: '#1c5f74'
     font:
-        body: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-        heading: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-        mono: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace"
+        body: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        heading: "'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif"
+        mono: "ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace"
     size:
         base: '1.0625rem'
-        measure: '42rem'
+        measure: '38rem'
         width: '72rem'
-        radius: '0.375rem'
+        radius: '0.5rem'
         space: '1.5rem'
 extra_css: []
 footer_links: []
@@ -1426,9 +1476,12 @@ footer:
     show_hours: true
 ```
 
-Contrast of the defaults (computed 2026-10-13): text/bg 16.4, text/surface
-14.6, muted/bg 6.9, muted/surface 6.1, accent/bg 8.4, accent/surface 7.5,
-accent_text/accent 8.4, focus/bg 5.5 — all ≥ 4.5:1.
+Contrast of the defaults (computed 2026-10-16, checked in CI): text/bg 13.17,
+text/surface 11.27, muted/bg 6.98, muted/surface 5.98, accent/bg 5.81,
+accent/surface 4.97, accent_text/accent 6.45, focus/bg 6.44 — all ≥ 4.5:1. On
+the dark hero and footer, bg/text is 13.17 and the focus outline is drawn in
+`bg`. The body stays sans-serif, so §S7 "Distinct" holds against theme-blog's
+serif body.
 
 #### S3.5 Plugin classes business styles
 
@@ -1438,9 +1491,9 @@ accent_text/accent 8.4, focus/bg 5.5 — all ≥ 4.5:1.
 | plugin (peer range) | classes styled | notes |
 |---|---|---|
 | `@nera-static/plugin-contact-form` `^1.1.1` | `contact-form`, `contact-form__intro`, `contact-form__field`, `contact-form__label`, `contact-form__label--checkbox`, `contact-form__label--radio`, `contact-form__label-text`, `contact-form__input`, `contact-form__input--textarea`, `contact-form__input--select`, `contact-form__input--checkbox`, `contact-form__input--radio`, `contact-form__input--error`, `contact-form__options`, `contact-form__consent`, `contact-form__status`, `contact-form__submit` | never styles `contact-form__decoy` or `contact-form__recipient`: both must stay hidden |
-| `@nera-static/plugin-navigation` `^3.0.3` | `nav`, `nav--list`, `nav__item`, `nav__link`, `nav__link--active`, `nav__link--active-path` | only under `.site-header__nav`; these are the defaults of `app.nav.navClass` / `activeClass` / `activePathClass`, so the starter keeps those config keys unset |
+| `@nera-static/plugin-navigation` `^3.1.0` | `nav`, `nav--list`, `nav__item`, `nav__link`, `nav__link--active`, `nav__link--active-path` | only under `.site-header__nav`; these are the defaults of `app.nav.navClass` / `activeClass` / `activePathClass`, so the starter keeps those config keys unset |
 | `@nera-static/plugin-images` `^1.0.2` | `nera-image`, `nera-image__caption` | the Markdown content pass; theme images from the `picture` mixin get theme classes (`hero__image`, `card__image`) |
-| `@nera-static/plugin-social-media-links` `^2.2.2` | `social-media-links`, `social-media-links__list`, `social-media-links__item`, `social-media-links__link`, `social-media-links__icon`, `social-media-links__label` | only under `.site-footer` |
+| `@nera-static/plugin-social-media-links` `^2.3.0` | `social-media-links`, `social-media-links__list`, `social-media-links__item`, `social-media-links__link`, `social-media-links__icon`, `social-media-links__label` | only under `.site-footer` |
 
 #### S3.6 Business public classes (contract)
 
@@ -1808,7 +1861,11 @@ plugin-page-pagination 2.4.0 (labelled `<nav>`), plugin-navigation 3.1.0
 template deprecated), plugin-tags 3.3.0 (`t('Read more')`) — classes and
 structure unchanged in all of them. When a theme repo is built, raise those
 peer floors to these releases (`^2.4.0`, `^3.1.0`, `^2.3.0`, `^3.3.0`) and
-re-run the class check against them.
+re-run the class check against them. Done in both theme repos: theme-blog
+2026-10-15, theme-business 2026-10-16 (navigation `^3.1.0` checked against
+3.1.1, the version its lockfile resolves, which changed no class;
+social-media-links `^2.3.0`; contact-form and images unchanged at 1.1.1 and
+1.0.2) — all classes found.
 
 ### S9. Open questions
 
