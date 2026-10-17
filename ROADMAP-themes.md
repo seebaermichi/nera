@@ -24,7 +24,8 @@ a real install→update dry-run. The branch is ready to merge to `main` and rele
 `@nera-static/theme-blog`, the themes the `ROADMAP-ai.md` L5 starters need, are
 specified in the section **Starter-ready themes** at the end of this file.
 theme-blog was built and released 2026-10-15 (§S4), theme-business built
-2026-10-16 (§S3, 1.0.0 awaiting its bootstrap publish).
+2026-10-16 and released 2026-10-17 (§S3; 1.0.0 and 1.0.1 by hand, 1.0.2
+via CI OIDC, which validated the Trusted Publisher).
 
 > **REVISED 2026-07-23 — folder layout changed (§1b).** The theme package has its
 > payload at its **root** (`<pkg>/views`, `<pkg>/assets`), with **no inner
