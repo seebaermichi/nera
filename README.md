@@ -82,8 +82,10 @@ Subpath exports (`@nera-static/core/resolve`, `/site-model`, `/core`, `/render`,
 import { resolveSiteModel } from '@nera-static/core/site-model'
 
 const model = resolveSiteModel({ cwd: '/path/to/site' })
-// → { folders, theme, roots, appConfigError, themeError, ... }  (never throws)
+// → { folders, theme, roots, appConfigError, appConfigErrorLine, themeError, ... }  (never throws)
 ```
+
+A malformed `config/app.yaml` comes back as `appConfigError` (the parser's message) and `appConfigErrorLine` (its 1-based line, core ≥ 4.18.0; `null` when the file is missing or parses, or the parser gives no position).
 
 ---
 
