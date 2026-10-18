@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.18.0] - 2026-10-18
+
+### Added
+
+-   `resolveSiteModel` returns `appConfigErrorLine`: the 1-based line the YAML parser reports for a malformed `config/app.yaml`, or `null` when the file parses (or is missing) or the parser gives no position. `appConfigError` keeps its message. `@nera-static/validate` can now point its `yaml-parse` finding for `config/app.yaml` at that line instead of `line: null`. The build is unchanged.
+
 ## [4.17.0] - 2026-10-16
 
 ### Changed

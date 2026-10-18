@@ -33,6 +33,8 @@ describe('resolveSiteModel', () => {
         expect(model.roots).toEqual([path.join(cwd, 'theme', 'views')])
         expect(model.theme).toBeNull()
         expect(model.themeError).toBeNull()
+        expect(model.appConfigError).toBeNull()
+        expect(model.appConfigErrorLine).toBeNull()
     })
 
     it('falls back to the legacy root views/ without warning', async () => {
@@ -85,14 +87,38 @@ describe('resolveSiteModel', () => {
         const model = resolveSiteModel({ cwd })
 
         expect(model.appConfigError).toBeTruthy()
+        expect(model.appConfigErrorLine).toEqual(expect.any(Number))
         // Degrades to defaults rather than aborting.
         expect(model.folders.views).toBe('./views')
+    })
+
+    it('reports the parser\'s line for a malformed app.yaml as appConfigErrorLine', async () => {
+        // The duplicate key sits on line 3 of 4, so neither an off-by-one nor
+        // the end-of-file line would match.
+        await writeApp('name: Probe\nlang: en\nname: Duplicate\nfooter: x\n')
+
+        const model = resolveSiteModel({ cwd })
+
+        expect(model.appConfigError).toEqual(expect.stringContaining('unique'))
+        expect(model.appConfigErrorLine).toBe(3)
+    })
+
+    it('leaves appConfigErrorLine null when the error carries no position', async () => {
+        // A directory named app.yaml fails in readFileSync (EISDIR), not in
+        // the parser, so there is no line to report.
+        await fs.mkdir(path.join(cwd, 'config', 'app.yaml'))
+
+        const model = resolveSiteModel({ cwd })
+
+        expect(model.appConfigError).toBeTruthy()
+        expect(model.appConfigErrorLine).toBeNull()
     })
 
     it('treats a site with no app.yaml as empty config', async () => {
         const model = resolveSiteModel({ cwd })
 
         expect(model.appConfigError).toBeNull()
+        expect(model.appConfigErrorLine).toBeNull()
         expect(model.appConfig).toEqual({})
         expect(model.roots).toHaveLength(1)
     })

@@ -16,7 +16,9 @@ import { resolveTheme } from './theme.js'
 // pages, never warns, and never throws on a missing or broken theme. A theme
 // that cannot be resolved (unset package, missing `views/`) is returned as
 // `themeError` and a malformed app.yaml as `appConfigError`, for the caller to
-// surface as a validation finding rather than aborting.
+// surface as a validation finding rather than aborting. `appConfigErrorLine`
+// carries the parser's 1-based line for that error, or `null` when there is no
+// error or the parser gives no position.
 export function resolveSiteModel({
     cwd = process.cwd(),
     settings = defaultSettings,
@@ -27,11 +29,13 @@ export function resolveSiteModel({
 
     let appConfig = {}
     let appConfigError = null
+    let appConfigErrorLine = null
     if (fs.existsSync(appConfigPath)) {
         try {
             appConfig = yaml.parse(fs.readFileSync(appConfigPath, 'utf-8')) || {}
         } catch (err) {
             appConfigError = err.message
+            appConfigErrorLine = err.linePos?.[0]?.line ?? null
         }
     }
 
@@ -55,6 +59,7 @@ export function resolveSiteModel({
         cwd,
         appConfig,
         appConfigError,
+        appConfigErrorLine,
         folders,
         viewsRoot,
         theme,
