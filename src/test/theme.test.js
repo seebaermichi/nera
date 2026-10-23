@@ -21,6 +21,16 @@ const createTempPath = (sub = '') =>
             .slice(2)}${sub}`
     )
 
+// The exact text resolveTheme throws for a theme root without views/ (D1/D2):
+// the root site-relative, the fix after ' — '. An Error instance makes toThrow
+// compare the whole message, not a substring, so a trailing period fails too.
+const noViews = (spec, rel) =>
+    new Error(
+        `theme: "${spec}" resolved to ${rel}, but it has no views/ folder — ` +
+            'point `theme:` in config/app.yaml (or NERA_THEME) at a theme ' +
+            'folder with views/, or remove it to build without a theme'
+    )
+
 describe('resolveTheme', () => {
     let tmpRoot
 
@@ -110,13 +120,51 @@ describe('resolveTheme', () => {
         )
         expect(() =>
             resolveTheme({ app: { theme: 'nope' }, cwd: tmpRoot })
-        ).toThrow(/not installed/)
+        ).toThrow(
+            new Error(
+                'theme: "nope" — package @nera-static/theme-nope is not ' +
+                    'installed; run `npm install @nera-static/theme-nope`'
+            )
+        )
     })
 
     it('fails loudly when a local theme is missing', () => {
         expect(() =>
             resolveTheme({ app: { theme: './nope' }, cwd: tmpRoot })
-        ).toThrow(/does not exist/)
+        ).toThrow(noViews('./nope', 'nope'))
+    })
+
+    it('names the site itself as `.` when `theme: .` has no views/', () => {
+        expect(() =>
+            resolveTheme({ app: { theme: '.' }, cwd: tmpRoot })
+        ).toThrow(noViews('.', '.'))
+    })
+
+    it('names an installed package without views/ site-relative', async () => {
+        // The resolved package root is a realpath (macOS /var → /private/var)
+        // while cwd is not; the message must still read node_modules/…, never
+        // ../../private/….
+        const pkgRoot = path.join(
+            tmpRoot,
+            'node_modules',
+            '@nera-static',
+            'theme-bare'
+        )
+        await fs.mkdir(pkgRoot, { recursive: true })
+        await fs.writeFile(
+            path.join(pkgRoot, 'package.json'),
+            JSON.stringify({ name: '@nera-static/theme-bare', version: '1.0.0' })
+        )
+        await fs.writeFile(
+            path.join(tmpRoot, 'package.json'),
+            JSON.stringify({ name: 'site' })
+        )
+
+        expect(() =>
+            resolveTheme({ app: { theme: 'bare' }, cwd: tmpRoot })
+        ).toThrow(
+            noViews('bare', path.join('node_modules', '@nera-static', 'theme-bare'))
+        )
     })
 
     describe('NERA_THEME override', () => {
@@ -166,7 +214,7 @@ describe('resolveTheme', () => {
                     cwd: tmpRoot,
                     env: { NERA_THEME: './themes/nope' }
                 })
-            ).toThrow(/does not exist/)
+            ).toThrow(noViews('./themes/nope', path.join('themes', 'nope')))
         })
     })
 })

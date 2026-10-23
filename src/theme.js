@@ -49,7 +49,10 @@ export function resolveTheme({
 
     if (!fs.existsSync(viewsRoot)) {
         throw new Error(
-            `theme: "${spec}" resolved to ${root}, but ${viewsRoot} does not exist`
+            `theme: "${spec}" resolved to ${siteRelative(cwd, root)}, but it ` +
+                'has no views/ folder — point `theme:` in config/app.yaml (or ' +
+                'NERA_THEME) at a theme folder with views/, or remove it to ' +
+                'build without a theme'
         )
     }
 
@@ -63,6 +66,26 @@ export function resolveTheme({
         assetsRoot,
         config,
     }
+}
+
+// A theme root as the site sees it, for error messages: relative to cwd, `.`
+// when it is the site itself. A resolved package root is already a realpath, so
+// when the root exists both sides go through realpath — otherwise a macOS temp
+// dir (/var → /private/var) or an `npm link`ed theme reads `../../private/…`. A
+// root that does not exist has no realpath, and its plain path is relative to
+// the plain cwd it was resolved from.
+function siteRelative(cwd, root) {
+    const real = (p) => {
+        try {
+            return fs.realpathSync(p)
+        } catch {
+            return p
+        }
+    }
+    const exists = fs.existsSync(root)
+    const from = exists ? real(cwd) : cwd
+    const to = exists ? real(root) : root
+    return path.relative(from, to) || '.'
 }
 
 // The theme spec in effect: NERA_THEME over `app.theme`. An empty NERA_THEME is
@@ -148,8 +171,8 @@ function resolvePackageRoot(spec, cwd) {
         return path.dirname(requireFromSite.resolve(`${pkg}/package.json`))
     } catch {
         throw new Error(
-            `theme: "${spec}" — package ${pkg} is not installed. ` +
-                `Run: npm install ${pkg}`
+            `theme: "${spec}" — package ${pkg} is not installed; ` +
+                `run \`npm install ${pkg}\``
         )
     }
 }
