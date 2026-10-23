@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.18.1] - 2026-10-23
+
+### Changed
+
+-   The three theme errors read `<what> — <what to do>`, like every `@nera-static/validate` message: lower-case start, no trailing period, paths relative to the site. Only their text changes; the build still fails with the same exit code, and the API is unchanged.
+    -   A theme root without `views/` names the root site-relative (`.` for the site itself) instead of two absolute paths, and now carries a fix: `theme: "<spec>" resolved to <path>, but it has no views/ folder — point \`theme:\` in config/app.yaml (or NERA_THEME) at a theme folder with views/, or remove it to build without a theme`.
+    -   A theme package that is not installed: `theme: "<spec>" — package <pkg> is not installed; run \`npm install <pkg>\`` (was `… is not installed. Run: npm install <pkg>`).
+    -   A theme whose `nera.generator` range excludes the running core: `theme "<name>" requires Nera generator <range>, but this generator is <version> — update the generator (\`nera update\`) or install a theme version compatible with <version>` (was two sentences ending in a period).
+-   `@nera-static/validate` 1.6.1 and earlier append their own fix to the old `… does not exist` text of the first error. The new text no longer ends that way, so validate passes it through unchanged and the fix is never doubled.
+
 ## [4.18.0] - 2026-10-18
 
 ### Added

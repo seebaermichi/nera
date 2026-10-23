@@ -263,9 +263,9 @@ function checkGeneratorCompatibility(theme, themePkg, generatorVersion) {
     if (!satisfies(generatorVersion, range)) {
         throw new Error(
             `theme "${theme.name}" requires Nera generator ${range}, but this ` +
-                `generator is ${generatorVersion}. Update the generator ` +
-                '(nera update) or install a theme version compatible with ' +
-                `${generatorVersion}.`
+                `generator is ${generatorVersion} — update the generator ` +
+                '(`nera update`) or install a theme version compatible with ' +
+                generatorVersion
         )
     }
 }

@@ -31,6 +31,15 @@ const noViews = (spec, rel) =>
             'folder with views/, or remove it to build without a theme'
     )
 
+// The exact text checkGeneratorCompatibility throws (D1): the fix after ' — ',
+// no trailing period.
+const tooOld = (name, range, version) =>
+    new Error(
+        `theme "${name}" requires Nera generator ${range}, but this generator ` +
+            `is ${version} — update the generator (\`nera update\`) or install ` +
+            `a theme version compatible with ${version}`
+    )
+
 describe('resolveTheme', () => {
     let tmpRoot
 
@@ -704,7 +713,7 @@ describe('checkThemeCompatibility (§5)', () => {
                     cwd: tmpRoot,
                     generatorVersion: '4.6.0'
                 })
-            ).toThrow(/requires Nera generator >=5\.0\.0.*4\.6\.0/s)
+            ).toThrow(tooOld('@nera-static/theme-x', '>=5.0.0', '4.6.0'))
         })
 
         it('does nothing when the theme declares no nera.generator', async () => {
@@ -914,7 +923,9 @@ describe('run() with an incompatible theme (§5, generator check fails the build
                     plugins: path.join(tmpRoot, 'src/plugins')
                 }
             })
-        ).rejects.toThrow(/requires Nera generator >=999\.0\.0/)
+        ).rejects.toThrow(
+            tooOld('./base', '>=999.0.0', readGeneratorVersion())
+        )
     })
 })
 

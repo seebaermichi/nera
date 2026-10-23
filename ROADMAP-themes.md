@@ -249,6 +249,15 @@ class of silent failure as the pre-4.3.0 async-hook bug. Error with an
 actionable message (`run: npm install @nera-static/theme-docs`) and exit
 non-zero.
 
+**Theme errors read `<what> — <what to do>`** (since core 4.18.1, 2026-10-23), the
+shape of every `@nera-static/validate` message (`nera-cli/ROADMAP-ai.md` L3):
+lower-case start, no trailing period, paths relative to the site (`.` for the site
+itself). All three throws in `src/theme.js` follow it — the theme root without
+`views/`, the package that is not installed (`… is not installed; run \`npm install
+<pkg>\``), and the `nera.generator` range that excludes the running core (§5) — and
+`src/test/theme.test.js` pins their exact text. validate passes them through as
+`theme-unresolved` findings unchanged, so a new theme error keeps the shape.
+
 #### 1b. Folder layout — package root is the theme root; the site groups its own under `theme/` — **REVISED 2026-07-23**
 
 > Supersedes the original design, in which the payload lived under an inner
