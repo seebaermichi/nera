@@ -32,8 +32,8 @@ if it says so, stop and ask for the full id. Below, `<id>` means that id.
 ## Step 1 — Gather the rest
 
 - The conventions, by section (`Non-negotiables`, `Framework correctness`,
-  `Tests & hygiene`; `UI / template rules` and the surface map when the step touches
-  UI):
+  `Tests & hygiene`, `Static analysis`; `UI / template rules` and the surface map when
+  the step touches UI):
 
   ```bash
   awk -v h='Non-negotiables' '$0 ~ "^## " h "$" {f=1} f && /^## / && $0 !~ "^## " h "$" {exit} f' .claude/issue-conventions.md
@@ -54,7 +54,9 @@ if it says so, stop and ask for the full id. Below, `<id>` means that id.
 Work through, in this order:
 
 1. **The step's goal and Verify line.** Does the diff make the goal true? Run the
-   Verify commands yourself and quote the result.
+   Verify commands yourself and quote the result. Run the `## Static analysis` command
+   over the whole project too: any error is a 🔴, and so is a new baseline entry, an
+   ignore comment or a type widened to silence one.
 2. **The implementer's self-critique and pressure-test questions.** Verify every
    claim; answer every question with evidence from the diff or a command you ran.
 3. **The conventions checklist** — every non-negotiable, framework rule, UI/template
@@ -149,7 +151,7 @@ Verdict: approve
 - none  |  <bug|design|infra|debt> · <S|M|L> · `file:line` — what — why not now
 
 ### Checked
-<one line: goal · verify commands run · conventions sections · self-critique claims · pressure-test answers · walkthrough or n/a>
+<one line: goal · verify commands run · static analysis result · conventions sections · self-critique claims · pressure-test answers · walkthrough or n/a>
 
 ### Answers to the pressure-test questions
 1. <answer with evidence>

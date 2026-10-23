@@ -245,6 +245,14 @@ Perform the reconciliation steps listed under `## Reconciliation steps` in
 `.claude/issue-conventions.md` (e.g. version bump, changelog entry, docs reindex).
 If that section is empty, skip this.
 
+Then run the command under `## Static analysis` over the whole project, after the
+reconciliation edits, and quote its result line. The issue is resolved only when it is
+green: fix every error at its cause (no baseline entry, no ignore comment, no widened
+type), commit the fix with the reconciliation edits, and run it again. A command of
+`none — <reason>` is skipped with that reason quoted. If the section is missing or still
+reads `- Command: …`, do not resolve: ask the user for the command and add the section
+to `.claude/issue-conventions.md` first.
+
 Offer the `file` items — usually none — to the user as candidates for `/issue`, one
 line each with its reason (size or separate feature). Do not implement any of them.
 

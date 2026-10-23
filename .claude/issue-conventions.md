@@ -129,3 +129,12 @@ wanted (a theme or render change):
      6. Docs — README, ADRs -->
 
 - …
+
+## Static analysis
+
+<!-- Read by /implement-step, /review-step and /work-issue: the command runs over the
+     WHOLE project before review, in review and before resolving; red blocks all three. -->
+
+- Command: `npm run lint` (ESLint over the whole package; plain JavaScript, no type checker)
+- Green: exit code 0, no output
+- Suppressions: fix every finding at its cause — no `eslint-disable` comments, no rule switched off to get green.

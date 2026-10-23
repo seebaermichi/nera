@@ -52,7 +52,8 @@ bash .claude/scripts/issue-loop.sh section <id> N reviewed   # rework mode: the 
 ```
 
 Plus the conventions sections, by heading (`Non-negotiables`, `Framework correctness`,
-`Tests & hygiene`; `UI / template rules` and the surface map when the step touches UI):
+`Tests & hygiene`, `Static analysis`; `UI / template rules` and the surface map when the
+step touches UI):
 
 ```bash
 awk -v h='Non-negotiables' '$0 ~ "^## " h "$" {f=1} f && /^## / && $0 !~ "^## " h "$" {exit} f' .claude/issue-conventions.md
@@ -107,6 +108,17 @@ Do not touch the issue's status (`/work-issue`) and do not report progress to Sn
 
 Run the step's **Verify** commands exactly as written, plus the formatter/linter on the
 changed files (from `## Tests & hygiene`). Keep the output lines you will quote.
+
+Then run the command under `## Static analysis` over the **whole project** and quote its
+result line under `### Verification`. The step goes to review only when it is green.
+Fix every error at its cause — also one in a file this step never touched, since a type
+you changed is how it got there. Never add a baseline entry or an ignore comment, and
+never widen a type to make an error go away. An error that already existed before this
+step and that you cannot fix within the step: stop and ask the user. A command of
+`none — <reason>` is skipped with that reason quoted. If the section is missing or still
+reads `- Command: …`, stop: tell the user to fill in `## Static analysis` in
+`.claude/issue-conventions.md` (the installer appends the stub with examples) and do not
+hand the step to review.
 
 ## Step 6 — Self-review, as the reviewer will
 
