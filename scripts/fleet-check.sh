@@ -7,6 +7,8 @@
 #   - package.json in the form `npm pkg fix` writes: no `bin` path starting with `./`,
 #     a `repository.url` with the `git+` prefix (else `npm publish` warns that it
 #     auto-corrected the manifest)
+#   - no internal development file on the default branch: plans/, .claude/, .mcp.json,
+#     ROADMAP*.md, DESIGN-BRIEF.md at the repo root (git-ignored fleet-wide since 2026-10-25)
 # Reads GitHub only, so it also catches repos that are not cloned locally.
 # Works without credentials too (e.g. in a cloud routine): file contents come from
 # raw.githubusercontent.com, and checks that need an admin token are skipped then.
@@ -17,6 +19,7 @@
 #   --fix   create the ruleset and enable secret scanning/push protection where
 #           missing. Badges are only reported: they need a commit and a patch release.
 #           package.json findings are only reported too: they need a commit.
+#           Internal files are only reported: untrack them and ignore them.
 #   repo    limit the check to these repo names (default: all Nera repos)
 set -uo pipefail
 
@@ -99,6 +102,14 @@ for r in $repos; do
 
     if [ -n "$pkg" ]; then
         while IFS= read -r p; do problems+=("$p"); done < <(node -e "$pkg_fix_check" <<<"$pkg")
+    fi
+
+    # Root-anchored like the fleet's .gitignore, so test fixtures with a .claude/ stay allowed.
+    if ! tree=$(api "repos/$owner/$r/git/trees/HEAD?recursive=1" 2>/dev/null); then
+        problems+=("internal files: could not check")
+    else
+        internal=$(jq -r '.tree[].path' <<<"$tree" | grep -E '^(plans|plan|\.claude)(/|$)|^\.mcp\.json$|^ROADMAP[^/]*\.md$|^DESIGN-BRIEF\.md$' | cut -d/ -f1 | sort -u | xargs)
+        [ -n "$internal" ] && problems+=("internal files tracked: $internal")
     fi
 
     if [ ${#problems[@]} -gt 0 ]; then
