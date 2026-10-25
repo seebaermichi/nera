@@ -124,8 +124,6 @@ Views resolve **layered**: a site's `theme/views/<file>` overrides an installed 
 
 The `NERA_THEME` environment variable overrides `theme:` in `config/app.yaml` for one run, in any of its forms (`NERA_THEME=./themes/classic nera build`), so you can build or preview another design without editing the config. An empty value falls back to `app.yaml`.
 
-The design lives in [`ROADMAP-themes.md`](./ROADMAP-themes.md); the consolidation that made this package importable is in [`ROADMAP-core.md`](./ROADMAP-core.md).
-
 ---
 
 ## 📁 Deploying to a subdirectory (`base_path`)
