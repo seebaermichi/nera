@@ -3,6 +3,7 @@
 # for the fleet's baseline:
 #   - `protect-main` ruleset (no force-push, no deletion) on the default branch
 #   - secret scanning + push protection
+#   - Dependabot alerts + Dependabot security updates (off on 10 newer repos until 2026-11-09)
 #   - for packages published to npm: Test + npm version badges in README.md
 #   - package.json in the form `npm pkg fix` writes: no `bin` path starting with `./`,
 #     a `repository.url` with the `git+` prefix (else `npm publish` warns that it
@@ -16,8 +17,8 @@
 # Runs weekly in .github/workflows/fleet-check.yml; a gap fails the run.
 #
 # Usage: scripts/fleet-check.sh [--fix] [repo ...]
-#   --fix   create the ruleset and enable secret scanning/push protection where
-#           missing. Badges are only reported: they need a commit and a patch release.
+#   --fix   create the ruleset and enable secret scanning/push protection and
+#           Dependabot alerts/security updates where missing. Badges are only reported: they need a commit and a patch release.
 #           package.json findings are only reported too: they need a commit.
 #           Internal files are only reported: untrack them and ignore them.
 #   repo    limit the check to these repo names (default: all Nera repos)
@@ -79,13 +80,43 @@ for r in $repos; do
     fi
 
     # security_and_analysis is only visible to an admin token.
-    [ $authed = 1 ] && ss=$(gh api "repos/$owner/$r" --jq '[.security_and_analysis.secret_scanning.status, .security_and_analysis.secret_scanning_push_protection.status] | join(" ")')
+    ss= dsu=
+    if [ $authed = 1 ]; then
+        sa=$(gh api "repos/$owner/$r" --jq '[.security_and_analysis.secret_scanning.status, .security_and_analysis.secret_scanning_push_protection.status, .security_and_analysis.dependabot_security_updates.status] | join(" ")')
+        ss=$(cut -d' ' -f1,2 <<<"$sa")
+        dsu=$(cut -d' ' -f3 <<<"$sa")
+    fi
     # A token without admin rights sees no status at all: skip rather than report a gap.
     if [ $authed = 1 ] && [ -n "${ss// /}" ] && [ "$ss" != "enabled enabled" ]; then
         if [ $fix = 1 ] && gh api -X PATCH "repos/$owner/$r" --input - >/dev/null <<<'{"security_and_analysis":{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}}'; then
             problems+=("secret scanning: FIXED")
         else
             problems+=("secret scanning: $ss")
+        fi
+    fi
+
+    # Dependabot alerts: 204 = on, 404 = off, anything else = unknown. Same admin-only
+    # guard as above, since a non-admin token gets 404 here whether alerts are on or not.
+    # Security updates need alerts, so alerts are enabled first.
+    if [ $authed = 1 ] && [ -n "${ss// /}" ]; then
+        code=$(gh api -i "repos/$owner/$r/vulnerability-alerts" 2>/dev/null | head -1 | awk '{print $2}')
+        case $code in
+            204) ;;
+            404)
+                if [ $fix = 1 ] && gh api -X PUT "repos/$owner/$r/vulnerability-alerts" >/dev/null; then
+                    problems+=("Dependabot alerts: FIXED")
+                else
+                    problems+=("Dependabot alerts: disabled")
+                fi
+                ;;
+            *) problems+=("Dependabot alerts: could not check") ;;
+        esac
+        if [ "$dsu" != enabled ]; then
+            if [ $fix = 1 ] && gh api -X PUT "repos/$owner/$r/automated-security-fixes" >/dev/null; then
+                problems+=("Dependabot security updates: FIXED")
+            else
+                problems+=("Dependabot security updates: ${dsu:-unknown}")
+            fi
         fi
     fi
 
@@ -118,6 +149,6 @@ for r in $repos; do
     fi
 done
 
-[ $authed = 0 ] && echo "fleet-check: not logged in to gh, secret scanning not checked"
+[ $authed = 0 ] && echo "fleet-check: not logged in to gh, secret scanning and Dependabot alerts not checked"
 [ $gaps = 0 ] && echo "fleet-check: all $(wc -w <<<"$repos" | tr -d ' ') repos meet the baseline" || echo "fleet-check: $gaps open gap(s)"
 [ $gaps = 0 ]
