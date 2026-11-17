@@ -56,6 +56,19 @@ The package is ESM (`"type": "module"`), requires **Node 22.12 or later**, and e
 
 On Node 22 before 22.22.2, `npm install` prints `npm warn EBADENGINE` for `nopt` and `abbrev`. They come with `js-beautify` 2, which formats the HTML, and only its command-line tool uses them, never core, so the warning is harmless and every page renders the same.
 
+`npm audit` reports [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) (`glob`) and [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) (`minimatch`) through `js-beautify` 2.0.3, and `npm audit fix` cannot resolve them: no `js-beautify` release depends on a fixed `glob` (14.0.2 or later) yet. Only its command-line tool loads `glob` and `editorconfig`; core calls `beautify.html()`, which never does, so neither advisory reaches a build. To silence the finding until core requires a fixed `js-beautify`, add this scoped override to your site's `package.json` and run `npm install`. It only replaces the copies under `js-beautify`, not the `minimatch` your other tools (eslint and the like) use, and every page renders the same. Remove it once a core release names a fixed `js-beautify` in its changelog.
+
+```json
+"overrides": {
+    "js-beautify": {
+        "glob": "^14.0.2",
+        "editorconfig": {
+            "minimatch": "^11.0.1"
+        }
+    }
+}
+```
+
 ```js
 import { run } from '@nera-static/core'
 

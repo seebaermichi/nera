@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.18.3] - 2026-11-17
+
+### Fixed
+
+-   README: explain the `glob` (GHSA-3g3m-2fjr-6pw4) and `minimatch` (GHSA-g3hv-75wg-m249) findings `npm audit` reports through `js-beautify` 2.0.3: only its command-line tool loads them, never core, so no build is affected. A scoped `overrides` block for a site's `package.json` silences them until core requires a `js-beautify` release on a fixed `glob`.
+
 ## [4.18.2] - 2026-10-25
 
 ### Fixed
