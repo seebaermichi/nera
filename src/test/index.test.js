@@ -4,7 +4,9 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
 import dotenv from 'dotenv'
-import run from '../index.js'
+import run, * as core from '../index.js'
+import * as engineSubpath from '@nera-static/core/engine'
+import pkg from '../../package.json' with { type: 'json' }
 
 dotenv.config()
 
@@ -92,5 +94,23 @@ html
         const html = await fs.readFile(path.join(DIST, 'index.html'), 'utf-8')
         expect(html).toMatch(/<title>Site<\/title>/)
         expect(html).toMatch(/<h1[^>]*>Hello World<\/h1>/)
+    })
+})
+
+describe('public API: the template-engine seam', () => {
+    it('exports compileLayout and templateExtension from the barrel', () => {
+        expect(typeof core.compileLayout).toBe('function')
+        expect(core.templateExtension).toBe('.pug')
+    })
+
+    it('exports the same bindings as @nera-static/core/engine', () => {
+        expect(engineSubpath.compileLayout).toBe(core.compileLayout)
+        expect(engineSubpath.templateExtension).toBe(core.templateExtension)
+    })
+
+    it('ships the module the ./engine export points at', () => {
+        const target = pkg.exports['./engine']
+        expect(target).toBe('./src/engine.js')
+        expect(pkg.files).toContain(target.replace(/^\.\//, ''))
     })
 })

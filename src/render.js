@@ -2,11 +2,11 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import path from 'path'
 import { createHash } from 'crypto'
-import pug from 'pug'
 import beautify from 'js-beautify'
 import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
-import { makeLayeredResolver, resolveEntry } from './resolve.js'
+import { resolveEntry } from './resolve.js'
+import { compileLayout } from './engine.js'
 
 // `quiet` drops dotenv's `◇ injected env (N) from .env` banner from every build;
 // the `.env` values are still loaded into `process.env`.
@@ -461,9 +461,11 @@ export const copyPluginAssets = async (assets = [], targetFolder) => {
     }
 }
 
-// The layered view resolver (`makeLayeredResolver`/`resolveEntry`) now lives in
-// `./resolve.js` so `@nera-static/validate` can reuse the exact same logic; it
-// is imported at the top of this file.
+// The layered view resolver (`makeLayeredResolver`/`resolveEntry`) lives in
+// `./resolve.js` so `@nera-static/validate` can reuse the exact same logic.
+// Compiling a layout goes through the engine seam in `./engine.js`, the only
+// module in core that imports Pug; this file uses `resolveEntry` to find the
+// layout and `compileLayout` to compile it.
 
 export const createHtmlFiles = async (
     data,
@@ -475,13 +477,9 @@ export const createHtmlFiles = async (
     // every layout, and the resolver falls through a missing site root.
     if (theme || fssync.existsSync(viewsFolder)) {
         // No theme → single root, no resolve hook: byte-identical to before.
+        // One array per build, so the engine builds its layered resolver once
+        // for the whole page loop (`compileLayout` in ./engine.js).
         const roots = theme ? [viewsFolder, theme.viewsRoot] : [viewsFolder]
-        const resolver = theme ? makeLayeredResolver(roots) : null
-
-        // Compile options are constant across the page loop — hoist them out.
-        const compileOptions = resolver
-            ? { basedir: viewsFolder, plugins: [{ resolve: resolver }] }
-            : { basedir: viewsFolder }
 
         // Compile each distinct layout once per build, then reuse the template
         // function for every page that uses it (ROADMAP-themes.md §6). This loop
@@ -512,13 +510,13 @@ export const createHtmlFiles = async (
 
                 let html = pageData.content
 
-                const entry = resolver
+                const entry = theme
                     ? resolveEntry(pageData.meta.layout, roots)
                     : `${viewsFolder}/${pageData.meta.layout}`
 
                 let fn = compiled.get(entry)
                 if (!fn) {
-                    fn = pug.compileFile(entry, compileOptions)
+                    fn = compileLayout(entry, { roots })
                     compiled.set(entry, fn)
                 }
                 html = fn({ ...data, ...pageData })

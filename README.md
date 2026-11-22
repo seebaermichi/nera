@@ -86,10 +86,11 @@ await run()
 | `loadAppData`, `getPagesData`, `computeFolders`, `defaultSettings`, `normalizeBasePath` | `./core` | Pipeline stages 1–2 and the folder/base-path helpers. |
 | `getPluginsData` | (`.` / `setup-plugins`) | Pipeline stage 3 — load and apply plugins. |
 | `makeLayeredResolver`, `resolveEntry`, `defaultResolvePath` | `./resolve` | The layered Pug view resolver (site over theme, per file). |
+| `compileLayout`, `templateExtension` | `./engine` | The template-engine seam: compile a layout against the view-root chain into `fn(data) → html`, and the templates' file extension (`.pug`). The only module in core that calls Pug. |
 | `resolveSiteModel` | `./site-model` | Read-only: the folders, theme, and resolver `roots` chain for a directory **without building it** — the bridge `@nera-static/validate` and the platform use to agree with the engine on "how this site resolves." |
 | `resolveTheme`, `checkThemeCompatibility`, `deepMerge` | `./theme` | Theme discovery, `nera.generator`/peer-dependency compatibility checks, config merge. |
 
-Subpath exports (`@nera-static/core/resolve`, `/site-model`, `/core`, `/render`, `/theme`) are available for callers that want a single module without pulling in the whole barrel.
+Subpath exports (`@nera-static/core/resolve`, `/engine`, `/site-model`, `/core`, `/render`, `/theme`) are available for callers that want a single module without pulling in the whole barrel.
 
 ```js
 import { resolveSiteModel } from '@nera-static/core/site-model'

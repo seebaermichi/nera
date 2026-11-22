@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.19.0] - 2026-11-22
+
+### Added
+
+-   The template-engine seam `src/engine.js`, exported from the barrel and as `@nera-static/core/engine`: `compileLayout(entry, { roots })` compiles a layout against the view-root chain (site first, theme second) into `fn(data) → html`, and `templateExtension` names the templates' file extension (`'.pug'`). It is now the only module in core that calls Pug; the render loop compiles every layout through it. Additive: the rendered output is byte-identical to 4.18.3, and no existing export, option or behaviour changes.
+
 ## [4.18.3] - 2026-11-17
 
 ### Fixed

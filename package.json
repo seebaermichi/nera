@@ -1,6 +1,6 @@
 {
     "name": "@nera-static/core",
-    "version": "4.18.3",
+    "version": "4.19.0",
     "description": "The Nera static site generator engine — the build pipeline and the layered theme/view resolver, importable by the Nera CLI, @nera-static/validate and tooling",
     "main": "./src/index.js",
     "exports": {
@@ -8,12 +8,14 @@
         "./core": "./src/core.js",
         "./render": "./src/render.js",
         "./resolve": "./src/resolve.js",
+        "./engine": "./src/engine.js",
         "./theme": "./src/theme.js",
         "./site-model": "./src/site-model.js",
         "./package.json": "./package.json"
     },
     "files": [
         "src/core.js",
+        "src/engine.js",
         "src/index.js",
         "src/render.js",
         "src/resolve.js",

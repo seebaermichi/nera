@@ -90,9 +90,10 @@ export default run
 
 // Public API barrel for `@nera-static/core`. `run` (the whole build) doubles as
 // the default and a named export; the rest is what the CLI, `@nera-static/validate`
-// and tooling reuse — the pipeline stages, the layered resolver, and the
-// read-only site-model loader. Subpath exports (`@nera-static/core/resolve`,
-// `/site-model`, …) stay available for callers that want only one module.
+// and tooling reuse — the pipeline stages, the layered resolver, the template-
+// engine seam, and the read-only site-model loader. Subpath exports
+// (`@nera-static/core/resolve`, `/engine`, `/site-model`, …) stay available for
+// callers that want only one module.
 export { run }
 export {
     loadAppData,
@@ -107,6 +108,7 @@ export {
     resolveEntry,
     defaultResolvePath,
 } from './resolve.js'
+export { compileLayout, templateExtension } from './engine.js'
 export { resolveSiteModel } from './site-model.js'
 export {
     resolveTheme,
