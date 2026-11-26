@@ -452,6 +452,46 @@ describe('rewriteHtmlUrls (base_path)', () => {
         const html = '<a href="/a.html">a</a>'
         expect(rewriteHtmlUrls(html, '')).toBe(html)
     })
+
+    it('leaves quoted attributes in inline code text untouched', () => {
+        const html =
+            '<p>Use <code>script(src="/js/search.js")</code> and ' +
+            '<code>link(href=\'/css/main.css\')</code>.</p>'
+        expect(rewriteHtmlUrls(html, BP)).toBe(html)
+    })
+
+    it('leaves <pre> text untouched but prefixes elements inside it', () => {
+        const html =
+            '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
+            '<span class="x">a(href="/b.html")</span>' +
+            '<a href="/c.html">c</a></code></pre>'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
+                '<span class="x">a(href="/b.html")</span>' +
+                '<a href="/nera-website/c.html">c</a></code></pre>'
+        )
+    })
+
+    it('prefixes every attribute of a tag with ">" in another value', () => {
+        const html =
+            '<a title="a > b" href="/a.html">a</a>' +
+            '<img alt=\'x > y\' src="/i.png" srcset="/i.png 1x, /j.png 2x">'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<a title="a > b" href="/nera-website/a.html">a</a>' +
+                '<img alt=\'x > y\' src="/nera-website/i.png" ' +
+                'srcset="/nera-website/i.png 1x, /nera-website/j.png 2x">'
+        )
+    })
+
+    it('keeps text with a bare "<", comments and the doctype intact', () => {
+        const html =
+            '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
+            '<script src="/app.js"></script>'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
+                '<script src="/nera-website/app.js"></script>'
+        )
+    })
 })
 
 describe('rewriteAssetUrls (base_path)', () => {

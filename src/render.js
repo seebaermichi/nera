@@ -49,30 +49,44 @@ const shouldPrefix = (val, basePath) =>
 const prefixUrl = (val, basePath) =>
     shouldPrefix(val, basePath) ? `${basePath}${val}` : val
 
+// A start tag: `<` + a letter, then anything up to the first `>` outside a
+// quoted attribute value (so `title="a > b"` does not end it). Comments,
+// `<!doctype>` and end tags start with another character and never match.
+const START_TAG = /<[a-zA-Z](?:"[^"]*"|'[^']*'|[^'">])*>/g
+
+// Apply `fn` to every start tag of an HTML string and copy the text between
+// them as is. URL rewrites go through this so a quoted attribute that is only
+// text — `script(src="/js/app.js")` inside <code> — is never touched.
+const mapStartTags = (html, fn) => html.replace(START_TAG, (tag) => fn(tag))
+
 // Rewrite the URL-bearing attributes in a rendered HTML string. Covers the
 // attributes Nera and its plugins actually emit; `srcset` is handled specially
 // because it holds a comma-separated list of `url descriptor` pairs.
 export const rewriteHtmlUrls = (html, basePath) => {
     if (!basePath) return html
 
-    return html
-        .replace(
-            /\b(href|src|poster|data-search-index)=("|')(\/[^"']*)\2/gi,
-            (m, attr, quote, val) =>
-                `${attr}=${quote}${prefixUrl(val, basePath)}${quote}`
-        )
-        .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
-            const rewritten = list
-                .split(',')
-                .map((part) => {
-                    const seg = part.trim()
-                    if (!seg) return part
-                    const [url, ...descriptor] = seg.split(/\s+/)
-                    return [prefixUrl(url, basePath), ...descriptor].join(' ')
-                })
-                .join(', ')
-            return `srcset=${quote}${rewritten}${quote}`
-        })
+    return mapStartTags(html, (tag) =>
+        tag
+            .replace(
+                /\b(href|src|poster|data-search-index)=("|')(\/[^"']*)\2/gi,
+                (m, attr, quote, val) =>
+                    `${attr}=${quote}${prefixUrl(val, basePath)}${quote}`
+            )
+            .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
+                const rewritten = list
+                    .split(',')
+                    .map((part) => {
+                        const seg = part.trim()
+                        if (!seg) return part
+                        const [url, ...descriptor] = seg.split(/\s+/)
+                        return [prefixUrl(url, basePath), ...descriptor].join(
+                            ' '
+                        )
+                    })
+                    .join(', ')
+                return `srcset=${quote}${rewritten}${quote}`
+            })
+    )
 }
 
 // Rewrite `url(/…)` references inside a CSS string (fonts, background images).
@@ -255,26 +269,31 @@ const makeHasher = (publicFolder, basePath) => {
 }
 
 // Version the URL-bearing attributes of one HTML document. Mirrors the
-// attribute set of the base-path rewrite, but also accepts relative values.
+// attribute set of the base-path rewrite, but also accepts relative values;
+// like it, it only looks inside start tags.
 export const hashHtmlUrls = (html, htmlFile, hashUrl) =>
-    html
-        .replace(
-            /\b(href|src|poster|data-search-index)=("|')([^"']*)\2/gi,
-            (m, attr, quote, val) =>
-                `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`
-        )
-        .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
-            const rewritten = list
-                .split(',')
-                .map((part) => {
-                    const seg = part.trim()
-                    if (!seg) return part
-                    const [url, ...descriptor] = seg.split(/\s+/)
-                    return [hashUrl(url, htmlFile), ...descriptor].join(' ')
-                })
-                .join(', ')
-            return `srcset=${quote}${rewritten}${quote}`
-        })
+    mapStartTags(html, (tag) =>
+        tag
+            .replace(
+                /\b(href|src|poster|data-search-index)=("|')([^"']*)\2/gi,
+                (m, attr, quote, val) =>
+                    `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`
+            )
+            .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
+                const rewritten = list
+                    .split(',')
+                    .map((part) => {
+                        const seg = part.trim()
+                        if (!seg) return part
+                        const [url, ...descriptor] = seg.split(/\s+/)
+                        return [hashUrl(url, htmlFile), ...descriptor].join(
+                            ' '
+                        )
+                    })
+                    .join(', ')
+                return `srcset=${quote}${rewritten}${quote}`
+            })
+    )
 
 // Version the `url()` references of one CSS file (root-absolute or relative).
 export const hashCssUrls = (css, cssFile, hashUrl) =>

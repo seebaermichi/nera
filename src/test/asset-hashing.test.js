@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import os from 'os'
 import { createHash } from 'crypto'
-import { hashAssetUrls } from '../render.js'
+import { hashAssetUrls, hashHtmlUrls } from '../render.js'
 import run from '../index.js'
 
 const createTempPath = () =>
@@ -149,6 +149,53 @@ describe('hashAssetUrls', () => {
 
         expect(await read('search/index.html')).toContain(
             `data-search-index="/search-index.json?v=${hashOf('[]')}"`
+        )
+    })
+})
+
+describe('hashHtmlUrls (start tags only)', () => {
+    // A stub hasher: versions every non-empty URL, so a test sees exactly
+    // which values the pass reached.
+    const hashUrl = (url) => (url ? `${url}?v=h` : url)
+    const hash = (html) => hashHtmlUrls(html, '/pub/index.html', hashUrl)
+
+    it('leaves quoted attributes in inline code text untouched', () => {
+        const html =
+            '<p>Use <code>script(src="/js/search.js")</code> and ' +
+            '<code>link(href=\'/css/main.css\')</code>.</p>'
+        expect(hash(html)).toBe(html)
+    })
+
+    it('leaves <pre> text untouched but hashes elements inside it', () => {
+        const html =
+            '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
+            '<span class="x">a(href="/b.html")</span>' +
+            '<a href="/c.html">c</a></code></pre>'
+        expect(hash(html)).toBe(
+            '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
+                '<span class="x">a(href="/b.html")</span>' +
+                '<a href="/c.html?v=h">c</a></code></pre>'
+        )
+    })
+
+    it('hashes every attribute of a tag with ">" in another value', () => {
+        const html =
+            '<a title="a > b" href="/a.html">a</a>' +
+            '<img alt=\'x > y\' src="/i.png" srcset="/i.png 1x, /j.png 2x">'
+        expect(hash(html)).toBe(
+            '<a title="a > b" href="/a.html?v=h">a</a>' +
+                '<img alt=\'x > y\' src="/i.png?v=h" ' +
+                'srcset="/i.png?v=h 1x, /j.png?v=h 2x">'
+        )
+    })
+
+    it('keeps text with a bare "<", comments and the doctype intact', () => {
+        const html =
+            '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
+            '<script src="/app.js"></script>'
+        expect(hash(html)).toBe(
+            '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
+                '<script src="/app.js?v=h"></script>'
         )
     })
 })
