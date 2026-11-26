@@ -254,4 +254,32 @@ describe('run() with asset_hashing', () => {
             `href="/repo/css/main.css?v=${hashOf('body{}')}"`
         )
     })
+
+    describe('with a quoted attribute in page text', () => {
+        const codeText = 'script(src="/css/main.css")'
+
+        beforeEach(async () => {
+            await write(
+                path.join(TMP_DIR, 'views/layout.pug'),
+                'doctype html\nhtml\n  head\n    link(rel="stylesheet", href="/css/main.css")\n' +
+                    `  body\n    p\n      code ${codeText}\n`
+            )
+        })
+
+        it('versions the link but leaves the text', async () => {
+            const html = await build(
+                'name: Site\nlang: en\nasset_hashing: true'
+            )
+            expect(html).toContain(
+                `href="/css/main.css?v=${hashOf('body{}')}"`
+            )
+            expect(html).toContain(`<code>${codeText}</code>`)
+        })
+
+        it('prefixes the link with base_path but leaves the text', async () => {
+            const html = await build('name: Site\nlang: en\nbase_path: /repo')
+            expect(html).toContain('href="/repo/css/main.css"')
+            expect(html).toContain(`<code>${codeText}</code>`)
+        })
+    })
 })

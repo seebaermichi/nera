@@ -150,7 +150,7 @@ Set `base_path` in `config/app.yaml`:
 base_path: /my-repo
 ```
 
-The engine then prefixes every root-absolute URL in the built output — links, `<script>`/`<link>`/`<img>` sources, `srcset`, CSS `url(…)`, the web app manifest, and `href`/`url` values in JSON assets such as the search index. The physical output layout is unchanged, and `meta.href` stays in the site's logical (un-prefixed) namespace so template URL logic keeps working.
+The engine then prefixes every root-absolute URL in the built output — links, `<script>`/`<link>`/`<img>` sources, `srcset`, CSS `url(…)`, the web app manifest, and `href`/`url` values in JSON assets such as the search index. Only real attributes are rewritten, inside an element's start tag: text that merely quotes one, such as `script(src="/js/app.js")` in a `<code>` sample, is left as written. The physical output layout is unchanged, and `meta.href` stays in the site's logical (un-prefixed) namespace so template URL logic keeps working.
 
 It is fully additive: with no `base_path` (or `base_path: ''`) the build is byte-identical. Remove it when you move the site to a domain root.
 
@@ -168,7 +168,7 @@ asset_hashing: true
 
 As the last build step the engine appends `?v=<hash>` — the first 10 hex chars of the file's SHA-256 — to every local asset URL in the output: `<link>`/`<script>`/`<img>` sources, `srcset`, `poster`, `data-search-index`, and `url(…)` inside CSS. The hash is taken from the file that actually landed in `public/`, so site assets, theme-package assets and plugin output are all covered, and templates keep writing plain `/css/main.css`. Each file is versioned on its own: its URL changes exactly when its content does, and stays cacheable otherwise. A stylesheet is hashed after its `url()` references are rewritten, so a changed font busts the CSS as well.
 
-Left untouched: links to pages (`.html`, directories), external and protocol-relative URLs, other schemes (`data:`, `mailto:`), fragment-only refs, URLs that already carry a query string, and references that don't resolve to a file in `public/`. It composes with `base_path`. URLs a script builds at runtime (a `fetch('/data.json')` literal in JS) are not rewritten — pass them in through an attribute such as `data-search-index` instead.
+Left untouched: links to pages (`.html`, directories), external and protocol-relative URLs, other schemes (`data:`, `mailto:`), fragment-only refs, URLs that already carry a query string, and references that don't resolve to a file in `public/`. Text is left alone too: a tutorial's `<code>link(href="/css/main.css")</code>` stays as written, since only attributes inside an element's start tag are versioned. It composes with `base_path`. URLs a script builds at runtime (a `fetch('/data.json')` literal in JS) are not rewritten — pass them in through an attribute such as `data-search-index` instead.
 
 Opt-in and additive: without the key the build is byte-identical.
 

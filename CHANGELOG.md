@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.19.1] - 2026-11-26
+
+### Fixed
+
+-   `asset_hashing` and `base_path` rewrite URLs only inside an element's start tag. Before, they also changed text that quotes an attribute, so a code sample such as `<code>script(src="/js/search.js")</code>` came out as `src="/js/search.js?v=<hash>"` or with the base path prepended. Real attributes, including those on elements inside `<pre>`, are rewritten exactly as before; a site whose text quotes no attributes builds byte-identically.
+
 ## [4.19.0] - 2026-11-22
 
 ### Added
