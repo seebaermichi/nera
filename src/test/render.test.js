@@ -492,6 +492,26 @@ describe('rewriteHtmlUrls (base_path)', () => {
                 '<script src="/nera-website/app.js"></script>'
         )
     })
+
+    it('stays linear on many stray, never-closed "<a x" in text', () => {
+        const html = '<a x'.repeat(50000)
+        const start = performance.now()
+        expect(rewriteHtmlUrls(html, BP)).toBe(html)
+        // The scan that let `<` into a tag took ~20 s here; linear is ms.
+        expect(performance.now() - start).toBeLessThan(1000)
+    })
+
+    it('leaves text after a stray "<a x" alone, prefixes the next tag', () => {
+        expect(
+            rewriteHtmlUrls('<p>if a <a x(href="/z")</p><link href="/m.css">', BP)
+        ).toBe('<p>if a <a x(href="/z")</p><link href="/nera-website/m.css">')
+    })
+
+    it('prefixes a tag whose quoted value holds a "<"', () => {
+        expect(
+            rewriteHtmlUrls('<a title="a < b" href="/a.html">a</a>', BP)
+        ).toBe('<a title="a < b" href="/nera-website/a.html">a</a>')
+    })
 })
 
 describe('rewriteAssetUrls (base_path)', () => {

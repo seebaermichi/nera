@@ -198,6 +198,26 @@ describe('hashHtmlUrls (start tags only)', () => {
                 '<script src="/app.js?v=h"></script>'
         )
     })
+
+    it('stays linear on many stray, never-closed "<a x" in text', () => {
+        const html = '<a x'.repeat(50000)
+        const start = performance.now()
+        expect(hash(html)).toBe(html)
+        // The scan that let `<` into a tag took ~20 s here; linear is ms.
+        expect(performance.now() - start).toBeLessThan(1000)
+    })
+
+    it('leaves text after a stray "<a x" alone, hashes the next tag', () => {
+        expect(hash('<p>if a <a x(href="/z")</p><link href="/m.css">')).toBe(
+            '<p>if a <a x(href="/z")</p><link href="/m.css?v=h">'
+        )
+    })
+
+    it('hashes a tag whose quoted value holds a "<"', () => {
+        expect(hash('<a title="a < b" href="/a.html">a</a>')).toBe(
+            '<a title="a < b" href="/a.html?v=h">a</a>'
+        )
+    })
 })
 
 describe('run() with asset_hashing', () => {

@@ -52,7 +52,10 @@ const prefixUrl = (val, basePath) =>
 // A start tag: `<` + a letter, then anything up to the first `>` outside a
 // quoted attribute value (so `title="a > b"` does not end it). Comments,
 // `<!doctype>` and end tags start with another character and never match.
-const START_TAG = /<[a-zA-Z](?:"[^"]*"|'[^']*'|[^'">])*>/g
+// An unquoted `<` ends the attempt: it is invalid inside a real tag, and it
+// keeps the scan linear when text holds a stray `<x` that never closes, so
+// the real tag after it still matches.
+const START_TAG = /<[a-zA-Z](?:"[^"]*"|'[^']*'|[^'"<>])*>/g
 
 // Apply `fn` to every start tag of an HTML string and copy the text between
 // them as is. URL rewrites go through this so a quoted attribute that is only
