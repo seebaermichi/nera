@@ -345,7 +345,8 @@ describe('style-check.js', () => {
         expect(result.stdout).toContain('| nera-plugin-b | `husky` — none: no `prepare` script, no pre-commit or pre-push hook |')
         expect(result.stdout).toContain('| engines / nera-plugin-a / engines.node | matches no finding: remove it |')
         expect(result.stdout).toContain('Could not check (1):')
-        expect(result.stdout.trim().split('\n').at(-1)).toBe('style-check: 2 findings, 1 allowed, 1 could not check, across 2 repos (report only, exit 0)')
+        // The second "could not check" is the helper scan's: no nera-plugin-utils here.
+        expect(result.stdout.trim().split('\n').at(-1)).toBe('style-check: 2 findings, 1 allowed, 2 could not check, across 2 repos (report only, exit 0)')
         expect(fs.readFileSync(summary, 'utf8')).toBe(result.stdout)
     })
 })

@@ -15,9 +15,17 @@ import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { findRepos } from './style-check/repos.js'
 import { HYGIENE_CHECKS } from './style-check/hygiene.js'
+import { checkHelpers, HELPER_COLUMNS } from './style-check/helpers.js'
+import { checkIdentical } from './style-check/identical.js'
 import { loadAllowList, applyAllowList, renderReport } from './style-check/report.js'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+
+// The cross-repo sections, before the per-repo hygiene ones.
+const DUPLICATION_CHECKS = [
+    { id: 'helpers', title: 'Helpers defined in 2+ repos', run: checkHelpers, columns: HELPER_COLUMNS },
+    { id: 'identical', title: 'Files that must be identical', run: checkIdentical },
+]
 
 const DEFAULTS = {
     workspace: path.resolve(scriptDir, '../..'),
@@ -39,11 +47,11 @@ export function styleCheck({ workspace, allow }) {
     }
     const allowList = loadAllowList(allow)
     const used = new Set()
-    const sections = HYGIENE_CHECKS.map((check) => {
+    const sections = [...DUPLICATION_CHECKS, ...HYGIENE_CHECKS].map((check) => {
         const { findings, notes, tables } = check.run(repos, { workspace })
         const { open, allowed, used: matched } = applyAllowList(findings, allowList.entries)
         for (const entry of matched) used.add(entry)
-        return { title: check.title, open, allowed, notes, tables }
+        return { title: check.title, open, allowed, notes, tables, columns: check.columns }
     })
     const unused = allowList.entries.filter((entry) => !used.has(entry))
     const { markdown } = renderReport({ workspace, repos, skipped, sections, allow: { invalid: allowList.invalid, unused } })

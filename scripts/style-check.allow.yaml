@@ -2,10 +2,11 @@
 # finding exactly and says why it stays; an entry without a reason is not applied.
 # Allowed findings are still listed in the report, with the reason.
 #
-# - check: gitignore            # the check id (license, husky, engines, changelog-files,
-#                               # plugin-config, gitignore)
-#   repo: nera-website          # the repo as the report names it
-#   item: public                # the finding's item, as in the report (without backticks)
+# - check: gitignore            # the check id (helpers, identical, license, husky, engines,
+#                               # changelog-files, plugin-config, gitignore)
+#   repo: nera-website          # the repo as the report names it; `(fleet)` for helpers
+#   item: public                # the finding's item, as in the report (without backticks):
+#                               # the helper's name, the identical file's path
 #   reason: the site's build output, never committed
 - check: gitignore
   repo: nera-highlightjs-pug
@@ -15,3 +16,11 @@
   repo: nera-website
   item: public
   reason: the site's build output, never committed
+- check: identical
+  repo: nera-theme-example
+  item: eslint.config.js
+  reason: the example theme has no JavaScript; its CI compiles the Pug templates instead of linting
+- check: identical
+  repo: nera-theme-example
+  item: test/helpers/html.js
+  reason: the example theme has no test suite; its CI compiles the Pug templates instead

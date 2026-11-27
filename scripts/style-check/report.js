@@ -80,12 +80,17 @@ const describe = (f) => joinItems([`\`${f.item}\``], f.detail)
 
 /**
  * Render one section: open findings, allowed findings with their reason, notes
- * ("could not check") and the check's own context tables.
- * @param {{ title: string, open: Array, allowed: Array, notes: Array, tables: Array }} section
+ * ("could not check") and the check's own context tables. A section with `columns`
+ * (`{ header, row(finding) }`) renders its open findings one row each, in its own
+ * columns, instead of one row per repo.
+ * @param {{ title: string, open: Array, allowed: Array, notes: Array, tables: Array,
+ *   columns?: { header: string[], row: Function } }} section
  */
 export function renderSection(section) {
     const parts = [`## ${section.title} (${section.open.length})`]
-    parts.push(section.open.length ? table(['repo', 'finding'], byRepo(section.open)) : 'No findings.')
+    if (!section.open.length) parts.push('No findings.')
+    else if (section.columns) parts.push(table(section.columns.header, section.open.map(section.columns.row)))
+    else parts.push(table(['repo', 'finding'], byRepo(section.open)))
     if (section.allowed.length) {
         parts.push(`Allowed (${section.allowed.length}):`, table(['repo', 'finding', 'reason'], section.allowed.map((f) => [f.repo, describe(f), f.reason])))
     }
