@@ -12,11 +12,14 @@ import { execFileSync } from 'child_process'
 // workspace root. A CI clone of the public fleet does not have it.
 export const CANONICAL_GITIGNORE = '.claude/skills/new-repo/gitignore.txt'
 
-// Lines a repo of a kind may add to the canonical .gitignore (`/new-repo` Step 2).
+// Lines a repo of a kind may add to the canonical .gitignore (`/new-repo` Step 2), in
+// its `# <repo>-specific` block: the build output and search index of the site a
+// theme's fixture, a starter's own pages or the website itself render.
 export const GITIGNORE_ADDITIONS = {
     all: ['/design'],
-    theme: ['test/site/public'],
-    starter: ['test/site/public'],
+    theme: ['test/site/public', 'test/site/theme/assets/search-index*.json'],
+    starter: ['test/site/public', '/public', '/theme/assets/search-index*.json'],
+    site: ['public'],
 }
 
 const LICENSE_FILES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt']

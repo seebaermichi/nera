@@ -267,6 +267,28 @@ describe('.gitignore', () => {
         ])
     })
 
+    it('allows a kind\'s additions only to repos of that kind', () => {
+        write({ [CANONICAL_GITIGNORE]: 'node_modules/\n' })
+        cleanRepo('nera-starter-a')
+        cleanRepo('nera-theme-a')
+        cleanRepo('nera-website')
+        cleanRepo('nera-plugin-a')
+        const block = '/public/\n/theme/assets/search-index*.json\ntest/site/theme/assets/search-index*.json\npublic\n'
+        write({
+            'nera-starter-a/.gitignore': 'node_modules/\n# nera-starter-a-specific\n/public/\n/theme/assets/search-index*.json\n',
+            'nera-theme-a/.gitignore': 'node_modules/\n# nera-theme-a-specific\ntest/site/theme/assets/search-index*.json\n',
+            'nera-website/.gitignore': 'node_modules/\n# nera-website-specific\npublic\n',
+            'nera-plugin-a/.gitignore': `node_modules/\n${block}`,
+        })
+
+        expect(checkGitignore(repos(), { workspace }).findings.map((f) => [f.repo, f.item, f.detail])).toEqual([
+            ['nera-plugin-a', '/public', 'extra'],
+            ['nera-plugin-a', '/theme/assets/search-index*.json', 'extra'],
+            ['nera-plugin-a', 'test/site/theme/assets/search-index*.json', 'extra'],
+            ['nera-plugin-a', 'public', 'extra'],
+        ])
+    })
+
     it('ignores comments and blank lines and drops a trailing slash, never a leading one', () => {
         expect(gitignoreLines('# c\n\n  node_modules/  \n/.claude/\n/\n')).toEqual(['node_modules', '/.claude', '/'])
     })

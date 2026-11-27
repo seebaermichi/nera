@@ -13,9 +13,33 @@
   item: dist
   reason: dist/ is the committed esbuild output; test.yml fails when it is stale
 - check: gitignore
-  repo: nera-website
+  repo: generator
   item: public
-  reason: the site's build output, never committed
+  reason: the build output of the engine's bundled demo site (npm run render)
+- check: gitignore
+  repo: generator
+  item: '*.tgz'
+  reason: npm pack tarballs of the engine, installed by path to try a release before it is tagged
+- check: gitignore
+  repo: nera-mcp
+  item: '*.mcpb'
+  reason: the Desktop extension bundle `npm run mcpb` writes into the repo root
+- check: gitignore
+  repo: nera-mcp
+  item: /docs
+  reason: written by prepack (scripts/fetch-docs.js) and shipped through `files`, never committed
+- check: gitignore
+  repo: nera-mcp
+  item: /skills
+  reason: written by prepack (scripts/sync-skill.js) and shipped through `files`, never committed
+- check: gitignore
+  repo: nera-plugin-simple-page-list
+  item: test-temp
+  reason: the publish-template test writes its throwaway site into test-temp/
+- check: gitignore
+  repo: nera-website
+  item: .theme-demos
+  reason: the theme demo sites scripts/theme-demos.js builds for deploy.yml, never committed
 - check: identical
   repo: nera-theme-example
   item: eslint.config.js
