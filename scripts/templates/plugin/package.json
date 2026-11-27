@@ -1,0 +1,24 @@
+{
+    "main": "index.js",
+    "exports": {
+        ".": "./index.js"
+    },
+    "files": [
+        "config",
+        "index.js",
+        "src",
+        "CHANGELOG.md"
+    ],
+    "keywords": [
+        "nera",
+        "nera-plugin",
+        "static-site-generator"
+    ],
+    "sideEffects": false,
+    "dependencies": {
+        "@nera-static/plugin-utils": "^1.8.0"
+    },
+    "devDependencies": {
+        "@nera-static/core": "^4.19.1"
+    }
+}

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Writes the canonical file set of a new Nera repo from scripts/templates/ (roadmap
 // "One handwriting", issue "Repo templates replace copy a sibling"): the common layer,
-// then the layer of the kind, whose files replace common ones of the same path.
+// then the layer of the kind, whose files replace common ones of the same path. The
+// one exception is package.json, which the kind's layer extends (see mergePackage).
+// Placeholders are filled in file names too (config/{{short}}.yaml).
 // It writes files only: git init, snagio install, .env and the first commit stay with
 // the workspace skill /new-repo.
 //
@@ -32,6 +34,19 @@ export const RENAMES = { gitignore: '.gitignore', editorconfig: '.editorconfig' 
 
 const PLACEHOLDER = /\{\{([a-z]+)\}\}/g
 const NAME = /^nera-[a-z0-9]+(-[a-z0-9]+)*$/
+
+const PACKAGE = 'package.json'
+
+// The top-level key order of package.json (2-plugin-anatomy §4.4); keys not listed
+// follow in the order the templates give them.
+export const PACKAGE_KEYS = [
+    'name', 'version', 'description', 'main', 'type', 'exports', 'bin', 'scripts', 'files',
+    'keywords', 'author', 'license', 'repository', 'bugs', 'homepage', 'publishConfig',
+    'sideEffects', 'engines', 'peerDependencies', 'dependencies', 'devDependencies',
+]
+
+// Dependency maps, written in name order as npm writes them.
+const DEPENDENCY_KEYS = ['peerDependencies', 'dependencies', 'devDependencies']
 
 /** The folder prefix a repo of the kind carries: `nera-<kind>-`, or `nera-` for a tool. */
 const kindPrefix = (kind) => (kind === 'tool' ? 'nera-' : `nera-${kind}-`)
@@ -86,23 +101,76 @@ function fill(text, values, json) {
     return { text: out, unresolved }
 }
 
+const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * The kind's package.json over the common one: objects (scripts, dependencies, …) are
+ * merged key by key, everything else, arrays included, is replaced, so a kind lists
+ * its whole `files` and `keywords`.
+ */
+export function mergePackage(base, overlay) {
+    const merged = { ...base }
+    for (const [key, value] of Object.entries(overlay)) {
+        merged[key] = isPlainObject(value) && isPlainObject(base[key]) ? mergePackage(base[key], value) : value
+    }
+    return merged
+}
+
+/** package.json in the key order of PACKAGE_KEYS, dependencies by name, as npm writes it. */
+export function formatPackage(pkg) {
+    const keys = Object.keys(pkg)
+    const ordered = [
+        ...PACKAGE_KEYS.filter((key) => keys.includes(key)),
+        ...keys.filter((key) => !PACKAGE_KEYS.includes(key)),
+    ]
+    const out = {}
+    for (const key of ordered) {
+        out[key] = DEPENDENCY_KEYS.includes(key) && isPlainObject(pkg[key])
+            ? Object.fromEntries(Object.entries(pkg[key]).sort(([a], [b]) => a.localeCompare(b, 'en')))
+            : pkg[key]
+    }
+    return `${JSON.stringify(out, null, 4)}\n`
+}
+
 /**
  * Render the file set of a kind in memory: common first, then the kind's layer, whose
- * files replace common ones at the same output path.
+ * files replace common ones at the same output path, except package.json, whose layers
+ * are merged (mergePackage) and written in the canonical key order (formatPackage).
  * @returns {{ files: Map<string, { text: string, mode: number }>, errors: string[] }}
  */
 export function renderTemplates({ kind, values, templates = TEMPLATES }) {
     const files = new Map()
     const errors = []
+    const packages = []
     for (const layer of ['common', kind]) {
         const dir = path.join(templates, layer)
         if (!fs.existsSync(dir)) continue
         for (const rel of listFiles(dir)) {
             const source = path.join(dir, rel)
+            const where = fill(rel, values, false)
             const { text, unresolved } = fill(fs.readFileSync(source, 'utf8'), values, rel.endsWith('.json'))
-            for (const match of unresolved) errors.push(`${layer}/${rel}: unresolved placeholder ${match}`)
-            files.set(outputPath(rel), { text, mode: fs.statSync(source).mode & 0o777 })
+            for (const match of [...where.unresolved, ...unresolved]) {
+                errors.push(`${layer}/${rel}: unresolved placeholder ${match}`)
+            }
+            const out = outputPath(where.text)
+            const mode = fs.statSync(source).mode & 0o777
+            if (out !== PACKAGE) {
+                files.set(out, { text, mode })
+                continue
+            }
+            let pkg
+            try {
+                pkg = JSON.parse(text)
+            } catch (error) {
+                errors.push(`${layer}/${rel}: not valid JSON (${error.message})`)
+                continue
+            }
+            packages.push({ pkg, mode })
         }
+    }
+    if (packages.length) {
+        const pkg = packages.map((layer) => layer.pkg).reduce(mergePackage)
+        files.set(PACKAGE, { text: formatPackage(pkg), mode: packages.at(-1).mode })
     }
     return { files, errors }
 }

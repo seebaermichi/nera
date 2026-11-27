@@ -1,0 +1,5 @@
+# {{package}}: every key is optional.
+# Copy this file to your site's config/ folder and edit it there.
+
+# The key the plugin writes under: app.<property> and every page's meta.<property>.
+property: '{{short}}'

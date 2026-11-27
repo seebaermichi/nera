@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
-import { newRepo, placeholders, TEMPLATES } from '../../scripts/new-repo.js'
+import { formatPackage, mergePackage, newRepo, PACKAGE_KEYS, placeholders, TEMPLATES } from '../../scripts/new-repo.js'
 
 const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/new-repo.js')
 
@@ -25,7 +25,24 @@ const COMMON = [
     'vitest.config.js',
 ]
 
+// What the plugin kind adds to the common set (2-plugin-anatomy §4.1).
+const PLUGIN = [
+    'README.md',
+    'config/demo.yaml',
+    'index.js',
+    'src/config.js',
+    'test/config.test.js',
+    'test/index.test.js',
+    'test/shipped-config.test.js',
+]
+
 const PLACEHOLDER = /\{\{[a-z]+\}\}/
+
+/** Every file below `dir`, relative to it. */
+const filesBelow = (dir) => fs.readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)))
+    .sort()
 
 let parent
 
@@ -63,12 +80,7 @@ describe('new-repo.js tool', () => {
         expect(result.status).toBe(0)
         expect(result.stdout).toContain(`wrote ${COMMON.length} files`)
 
-        const target = path.join(parent, 'nera-demo')
-        const written = fs.readdirSync(target, { recursive: true, withFileTypes: true })
-            .filter((entry) => entry.isFile())
-            .map((entry) => path.relative(target, path.join(entry.parentPath, entry.name)))
-            .sort()
-        expect(written).toEqual([...COMMON].sort())
+        expect(filesBelow(path.join(parent, 'nera-demo'))).toEqual([...COMMON].sort())
         for (const rel of COMMON) expect(read(rel), rel).not.toMatch(PLACEHOLDER)
     })
 
@@ -94,6 +106,69 @@ describe('new-repo.js tool', () => {
         expect(read('.github/workflows/test.yml')).toContain('${{ matrix.node-version }}')
         expect(read('eslint.config.js')).toBe('import nera from \'@nera-static/stan\'\n\nexport default [...nera]\n')
         expect(fs.statSync(path.join(parent, 'nera-demo', '.husky/pre-commit')).mode & 0o111).not.toBe(0)
+    })
+})
+
+describe('new-repo.js plugin', () => {
+    const plugin = (rel) => fs.readFileSync(path.join(parent, 'nera-plugin-demo', rel), 'utf8')
+
+    it('writes the common set plus the plugin tree, the config file named after the plugin', () => {
+        const result = run('plugin', 'nera-plugin-demo', '--dir', parent)
+        expect(result.status).toBe(0)
+        const written = filesBelow(path.join(parent, 'nera-plugin-demo'))
+        expect(written).toEqual([...COMMON, ...PLUGIN].sort())
+        for (const rel of written) expect(plugin(rel), rel).not.toMatch(PLACEHOLDER)
+    })
+
+    it('merges the plugin package.json over the common one in the canonical key order', () => {
+        run('plugin', 'nera-plugin-demo', '--dir', parent)
+        const text = plugin('package.json')
+        const pkg = JSON.parse(text)
+        expect(Object.keys(pkg)).toEqual(PACKAGE_KEYS.filter((key) => key in pkg))
+        expect(Object.keys(pkg)).not.toContain('bin')
+        expect(pkg).toMatchObject({
+            name: '@nera-static/plugin-demo',
+            main: 'index.js',
+            exports: { '.': './index.js' },
+            scripts: { lint: 'nera-stan', test: 'vitest run', prepare: 'husky' },
+            files: ['config', 'index.js', 'src', 'CHANGELOG.md'],
+            keywords: ['nera', 'nera-plugin', 'static-site-generator'],
+            sideEffects: false,
+            dependencies: { '@nera-static/plugin-utils': '^1.8.0' },
+        })
+        expect(Object.keys(pkg.devDependencies)).toEqual([
+            '@nera-static/core', '@nera-static/stan', '@nera-static/test-utils', 'husky', 'vitest',
+        ])
+        expect(text).toBe(formatPackage(pkg))
+    })
+
+    it('names the logger, the config file and the app key after the plugin', () => {
+        run('plugin', 'nera-plugin-demo', '--dir', parent)
+        expect(plugin('index.js')).toContain('createLogger(\'plugin-demo\')')
+        expect(plugin('src/config.js')).toContain('export const CONFIG_NAME = \'demo\'')
+        expect(plugin('config/demo.yaml')).toContain('property: \'demo\'')
+        expect(plugin('README.md')).toMatch(/^# @nera-static\/plugin-demo\n\n\[!\[Test\]/)
+    })
+})
+
+describe('mergePackage and formatPackage', () => {
+    it('merges objects key by key and replaces arrays and values', () => {
+        const base = { files: ['CHANGELOG.md'], scripts: { lint: 'nera-stan' }, version: '1.0.0' }
+        const overlay = { files: ['index.js'], scripts: { test: 'vitest run' }, version: '2.0.0' }
+        expect(mergePackage(base, overlay)).toEqual({
+            files: ['index.js'],
+            scripts: { lint: 'nera-stan', test: 'vitest run' },
+            version: '2.0.0',
+        })
+        expect(base.scripts).toEqual({ lint: 'nera-stan' })
+    })
+
+    it('orders the keys canonically, unknown keys last, dependencies by name', () => {
+        const text = formatPackage({ nera: {}, dependencies: { b: '1', a: '1' }, scripts: { z: 'z', a: 'a' }, name: 'x' })
+        expect(Object.keys(JSON.parse(text))).toEqual(['name', 'scripts', 'dependencies', 'nera'])
+        expect(Object.keys(JSON.parse(text).dependencies)).toEqual(['a', 'b'])
+        expect(Object.keys(JSON.parse(text).scripts)).toEqual(['z', 'a'])
+        expect(text.endsWith('}\n')).toBe(true)
     })
 })
 
@@ -132,6 +207,18 @@ describe('new-repo.js refusals', () => {
         const result = newRepo({ kind: 'tool', name: 'nera-demo', dir: parent, templates })
         expect(result.code).toBe(1)
         expect(result.error).toContain('common/README.md: unresolved placeholder {{tagline}}')
+        expect(fs.existsSync(path.join(parent, 'nera-demo'))).toBe(false)
+    })
+
+    it('exits 1 and writes nothing for an unknown placeholder in a file name or a broken package.json', () => {
+        const templates = path.join(parent, 'templates')
+        fs.mkdirSync(path.join(templates, 'common', 'config'), { recursive: true })
+        fs.writeFileSync(path.join(templates, 'common', 'config', '{{slug}}.yaml'), '')
+        fs.writeFileSync(path.join(templates, 'common', 'package.json'), '{ "name": }')
+        const result = newRepo({ kind: 'tool', name: 'nera-demo', dir: parent, templates })
+        expect(result.code).toBe(1)
+        expect(result.error).toContain('common/config/{{slug}}.yaml: unresolved placeholder {{slug}}')
+        expect(result.error).toContain('common/package.json: not valid JSON')
         expect(fs.existsSync(path.join(parent, 'nera-demo'))).toBe(false)
     })
 })
