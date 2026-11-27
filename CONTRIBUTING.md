@@ -54,6 +54,12 @@ Please write or update tests if you contribute core functionality.
 
 ## 🧹 Code Style & Linting
 
+Every Nera package is written in one handwriting: generic helpers come from
+`@nera-static/plugin-utils`, never a copy from another repository, and plugins,
+themes, starters and tests share one layout. The
+[Nera style guide](https://nera.js.org/docs/style-guide/) describes it; read it
+before writing a helper or a new package.
+
 -   ESLint (Flat config) is used for all `.js` files
 -   Config lives in `eslint.config.js`
 -   Format/lint errors will show on save in supported editors (e.g., VS Code)
