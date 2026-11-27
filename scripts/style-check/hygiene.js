@@ -8,11 +8,12 @@ import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
 
-// The canonical .gitignore every new repo starts from (`/new-repo`), relative to the
-// workspace root. A CI clone of the public fleet does not have it.
-export const CANONICAL_GITIGNORE = '.claude/skills/new-repo/gitignore.txt'
+// The canonical .gitignore every new repo starts from (scripts/new-repo.js), relative
+// to the workspace root: the common template of the generator repo, so a CI clone of
+// the public fleet (which clones seebaermichi/nera as generator/) has it too.
+export const CANONICAL_GITIGNORE = 'generator/scripts/templates/common/gitignore'
 
-// Lines a repo of a kind may add to the canonical .gitignore (`/new-repo` Step 2), in
+// Lines a repo of a kind may add to the canonical .gitignore (the templates of its kind), in
 // its `# <repo>-specific` block: the build output and search index of the site a
 // theme's fixture, a starter's own pages or the website itself render.
 export const GITIGNORE_ADDITIONS = {
@@ -177,9 +178,10 @@ export function gitignoreLines(text) {
 }
 
 /**
- * The repo's .gitignore against the canonical one of `/new-repo`: canonical lines it
+ * The repo's .gitignore against the canonical one of the templates: canonical lines it
  * lacks, and lines beyond it and its kind's additions (D7). Without the canonical file
- * (a CI clone) the check is skipped with one note, never a finding per repo.
+ * (a workspace without generator/) the check is skipped with one note, never a finding
+ * per repo.
  * @param {Array} repos
  * @param {{ workspace: string }} ctx
  */

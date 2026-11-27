@@ -2,9 +2,10 @@
 # finding exactly and says why it stays; an entry without a reason is not applied.
 # Allowed findings are still listed in the report, with the reason.
 #
-# - check: gitignore            # the check id (helpers, identical, copies, license, husky,
-#                               # engines, changelog-files, plugin-config, gitignore)
-#   repo: nera-website          # the repo as the report names it; `(fleet)` for helpers
+# - check: gitignore            # the check id (helpers, identical, templates, copies, license,
+#                               # husky, engines, changelog-files, plugin-config, gitignore)
+#   repo: nera-website          # the repo as the report names it; `(fleet)` for helpers,
+#                               # `templates/<layer>` for a template file
 #   item: public                # the finding's item, as in the report (without backticks):
 #                               # the helper's name, the identical file's path, the copy's path
 #   reason: the site's build output, never committed
@@ -52,3 +53,7 @@
   repo: nera-theme-example
   item: husky
   reason: the example theme has no lint and no tests (its CI compiles the Pug templates), so a pre-commit or pre-push hook would have nothing to run
+- check: templates
+  repo: templates/common
+  item: eslint.config.js
+  reason: the templates lint with the @nera-static/stan editor export (D5), which the fleet adopts when nera-stan 1.0.0 is released

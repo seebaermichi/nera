@@ -18,14 +18,17 @@ import { HYGIENE_CHECKS } from './style-check/hygiene.js'
 import { checkHelpers, HELPER_COLUMNS } from './style-check/helpers.js'
 import { checkIdentical } from './style-check/identical.js'
 import { checkCopies } from './style-check/copies.js'
+import { checkTemplates } from './style-check/templates.js'
 import { loadAllowList, applyAllowList, renderReport } from './style-check/report.js'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 
-// The cross-repo sections, before the per-repo hygiene ones.
+// The cross-repo sections, before the per-repo hygiene ones. `templates` compares the
+// repo templates of scripts/new-repo.js with the fleet.
 const DUPLICATION_CHECKS = [
     { id: 'helpers', title: 'Helpers defined in 2+ repos', run: checkHelpers, columns: HELPER_COLUMNS },
     { id: 'identical', title: 'Files that must be identical', run: checkIdentical },
+    { id: 'templates', title: 'Templates', run: checkTemplates },
     { id: 'copies', title: 'Copied plugin files', run: checkCopies },
 ]
 
@@ -51,7 +54,7 @@ export function styleCheck({ workspace, allow }) {
     const used = new Set()
     // `check/repo` pairs a check could not look at ('(all)' = every repo): an allow-list
     // entry there matched nothing because nothing was compared, so it is not stale
-    // (a CI clone of the fleet has no canonical .gitignore, for one).
+    // (a workspace without generator/ has no canonical .gitignore, for one).
     const unchecked = new Set()
     const sections = [...DUPLICATION_CHECKS, ...HYGIENE_CHECKS].map((check) => {
         const { findings, notes, tables } = check.run(repos, { workspace })

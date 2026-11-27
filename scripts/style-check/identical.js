@@ -29,7 +29,8 @@ export function contentHash(text) {
     return crypto.createHash('sha256').update(text.replace(/\r\n/g, '\n').replace(/\s+$/, '')).digest('hex')
 }
 
-function members(repos, group) {
+/** The repos a group compares: those with hygiene checks, narrowed by `kinds` and `published`. */
+export function groupMembers(repos, group) {
     return repos.filter((repo) => {
         if (!repo.hygiene) return false
         if (group.kinds && !group.kinds.includes(repo.kind)) return false
@@ -39,15 +40,18 @@ function members(repos, group) {
 }
 
 /**
- * Compare one file across one set of repos and push its findings. With fewer than two
- * repos holding the file there is nothing to compare. A tie for the most common
- * content is no majority: every holder is reported, none is assumed right.
+ * The contents of one file across a set of repos, most common first.
+ *   sorted    `[hash, repo names]` per variant, the largest group first
+ *   missing   the repos without the file
+ *   majority  the hash two or more repos agree on and no other variant ties, else null
+ * @param {string} rel the path inside each repo
+ * @param {Array} repos
  */
-function compare(group, scope, repos, out) {
+export function fileVariants(rel, repos) {
     const variants = new Map()
     const missing = []
     for (const repo of repos) {
-        const file = path.join(repo.dir, group.file)
+        const file = path.join(repo.dir, rel)
         if (!fs.existsSync(file)) {
             missing.push(repo.name)
             continue
@@ -57,10 +61,26 @@ function compare(group, scope, repos, out) {
         variants.get(hash).push(repo.name)
     }
     const present = repos.length - missing.length
+    const sorted = [...variants].sort((a, b) => b[1].length - a[1].length)
+    const tie = sorted.length > 1 && sorted[0][1].length === sorted[1][1].length
+    const majority = present >= 2 && !tie ? sorted[0][0] : null
+    return { sorted, missing, present, majority }
+}
+
+/** The scope a group's findings name: `<kind> repos` per kind, its `kinds`, or every repo. */
+export const groupScope = (group, kind) => (kind ? `${kind} repos` : group.kinds ? `${group.kinds.join('/')} repos` : 'repos')
+
+/**
+ * Compare one file across one set of repos and push its findings. With fewer than two
+ * repos holding the file there is nothing to compare. A tie for the most common
+ * content is no majority: every holder is reported, none is assumed right.
+ */
+function compare(group, scope, repos, out) {
+    const { sorted: variants, missing, present, majority } = fileVariants(group.file, repos)
     if (present < 2) return
 
-    const sorted = [...variants.values()].sort((a, b) => b.length - a.length)
-    const tie = sorted.length > 1 && sorted[0].length === sorted[1].length
+    const sorted = variants.map(([, names]) => names)
+    const tie = !majority
     const add = (repo, detail) => out.findings.push({ check: 'identical', repo, item: group.file, detail })
     if (tie) {
         for (const names of sorted) for (const repo of names) add(repo, `no majority: ${sorted.length} variants among ${present} ${scope}`)
@@ -83,13 +103,13 @@ function compare(group, scope, repos, out) {
 export function checkIdentical(repos, ctx, groups = IDENTICAL_GROUPS) {
     const out = { findings: [], notes: [], tables: [{ caption: 'Groups compared', header: ['file', 'scope', 'repos', 'variants', 'majority'], rows: [] }] }
     for (const group of groups) {
-        const set = members(repos, group)
+        const set = groupMembers(repos, group)
         if (!group.perKind) {
-            compare(group, group.kinds ? `${group.kinds.join('/')} repos` : 'repos', set, out)
+            compare(group, groupScope(group), set, out)
             continue
         }
         const kinds = [...new Set(set.map((repo) => repo.kind))].sort()
-        for (const kind of kinds) compare(group, `${kind} repos`, set.filter((repo) => repo.kind === kind), out)
+        for (const kind of kinds) compare(group, groupScope(group, kind), set.filter((repo) => repo.kind === kind), out)
     }
     return out
 }
