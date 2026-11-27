@@ -1,0 +1,41 @@
+{
+    "name": "{{package}}",
+    "version": "1.0.0",
+    "description": "{{description}}",
+    "type": "module",
+    "scripts": {
+        "lint": "nera-stan",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "prepare": "husky"
+    },
+    "files": [
+        "CHANGELOG.md"
+    ],
+    "keywords": [
+        "nera",
+        "static-site-generator"
+    ],
+    "author": "Michael Becker",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/seebaermichi/{{name}}.git"
+    },
+    "bugs": {
+        "url": "https://github.com/seebaermichi/{{name}}/issues"
+    },
+    "homepage": "https://github.com/seebaermichi/{{name}}#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "engines": {
+        "node": ">=22.12.0"
+    },
+    "devDependencies": {
+        "@nera-static/stan": "^1.0.1",
+        "@nera-static/test-utils": "^1.0.0",
+        "husky": "^9.1.7",
+        "vitest": "^5.0.2"
+    }
+}

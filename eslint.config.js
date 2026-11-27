@@ -1,6 +1,8 @@
 export default [
     {
-        ignores: ['node_modules', 'public', 'dist'],
+        // scripts/templates/ holds the files of new repos (scripts/new-repo.js), written
+        // for nera-stan; its eslint.config.js imports @nera-static/stan, which core lacks.
+        ignores: ['node_modules', 'public', 'dist', 'scripts/templates'],
     },
     {
         files: ['**/*.js'],
