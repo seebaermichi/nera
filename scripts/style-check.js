@@ -17,6 +17,7 @@ import { findRepos } from './style-check/repos.js'
 import { HYGIENE_CHECKS } from './style-check/hygiene.js'
 import { checkHelpers, HELPER_COLUMNS } from './style-check/helpers.js'
 import { checkIdentical } from './style-check/identical.js'
+import { checkCopies } from './style-check/copies.js'
 import { loadAllowList, applyAllowList, renderReport } from './style-check/report.js'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
@@ -25,6 +26,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const DUPLICATION_CHECKS = [
     { id: 'helpers', title: 'Helpers defined in 2+ repos', run: checkHelpers, columns: HELPER_COLUMNS },
     { id: 'identical', title: 'Files that must be identical', run: checkIdentical },
+    { id: 'copies', title: 'Copied plugin files', run: checkCopies },
 ]
 
 const DEFAULTS = {

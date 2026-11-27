@@ -2,11 +2,11 @@
 # finding exactly and says why it stays; an entry without a reason is not applied.
 # Allowed findings are still listed in the report, with the reason.
 #
-# - check: gitignore            # the check id (helpers, identical, license, husky, engines,
-#                               # changelog-files, plugin-config, gitignore)
+# - check: gitignore            # the check id (helpers, identical, copies, license, husky,
+#                               # engines, changelog-files, plugin-config, gitignore)
 #   repo: nera-website          # the repo as the report names it; `(fleet)` for helpers
 #   item: public                # the finding's item, as in the report (without backticks):
-#                               # the helper's name, the identical file's path
+#                               # the helper's name, the identical file's path, the copy's path
 #   reason: the site's build output, never committed
 - check: gitignore
   repo: nera-highlightjs-pug
