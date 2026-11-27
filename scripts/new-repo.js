@@ -42,12 +42,13 @@ const PACKAGE = 'package.json'
 // the canonical .gitignore stays verbatim, the kind adds its own block below it.
 const APPENDED = '.gitignore'
 
-// The top-level key order of package.json (2-plugin-anatomy §4.4); keys not listed
-// follow in the order the templates give them.
+// The top-level key order of package.json (2-plugin-anatomy §4.4): `nera` (a theme's
+// core range, a starter's label) right after `engines`, the other requirement; keys
+// not listed follow in the order the templates give them.
 export const PACKAGE_KEYS = [
     'name', 'version', 'description', 'main', 'type', 'exports', 'bin', 'scripts', 'files',
     'keywords', 'author', 'license', 'repository', 'bugs', 'homepage', 'publishConfig',
-    'sideEffects', 'engines', 'peerDependencies', 'dependencies', 'devDependencies',
+    'sideEffects', 'engines', 'nera', 'peerDependencies', 'dependencies', 'devDependencies',
 ]
 
 // Dependency maps, written in name order as npm writes them.
@@ -59,17 +60,28 @@ const kindPrefix = (kind) => (kind === 'tool' ? 'nera-' : `nera-${kind}-`)
 const USAGE = 'usage: node scripts/new-repo.js <plugin|theme|starter|tool> <name> [--dir <parent>] [--description <text>]'
 
 /**
+ * `photo-blog` → `Photo blog`: dashes as spaces, the first letter capitalised, as the
+ * fleet's starter labels are written ("Blog for developers", "Travel blog").
+ */
+const asTitle = (short) => {
+    const words = short.replaceAll('-', ' ')
+    return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/**
  * The placeholder values for a repo: `{{name}}` the folder, `{{package}}` the npm name,
- * `{{short}}` the name without its kind prefix, `{{year}}`, `{{description}}`.
+ * `{{short}}` the name without its kind prefix, `{{title}}` that short name as a
+ * title (a starter's label), `{{year}}`, `{{description}}`.
  * @param {{ kind: string, name: string, description?: string, year?: number }} options
  * @returns {Record<string, string>}
  */
 export function placeholders({ kind, name, description, year = new Date().getFullYear() }) {
-    const prefix = kindPrefix(kind)
+    const short = name.slice(kindPrefix(kind).length)
     return {
         name,
         package: `@nera-static/${name.slice('nera-'.length)}`,
-        short: name.slice(prefix.length),
+        short,
+        title: asTitle(short),
         year: String(year),
         description: description || `A ${kind} for the Nera static site generator.`,
     }

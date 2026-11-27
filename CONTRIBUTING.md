@@ -205,11 +205,10 @@ node scripts/new-repo.js <plugin|theme|starter|tool> <name> [--dir <parent>] [--
 
 It writes the canonical file set of the kind (`package.json`, `nera-stan` as
 `npm run lint` with the husky hooks, the vitest preset, `.editorconfig`, the CI
-workflows, Dependabot, FUNDING, LICENSE, `.gitignore`, and for a plugin, theme or
-starter a README outline with source and test skeletons) into `<parent>/<name>`
+workflows, Dependabot, FUNDING, LICENSE, `.gitignore`, source and test skeletons,
+and for a plugin, theme or starter a README outline) into `<parent>/<name>`
 (default: next to this repository), and refuses a folder that already exists. Then
-run `git init`, `npm install`, `npm run lint` and `npx vitest run` there (a tool has
-no test skeleton yet, so it runs lint only until its first tests exist).
+run `git init`, `npm install`, `npm run lint` and `npx vitest run` there.
 
 ---
 

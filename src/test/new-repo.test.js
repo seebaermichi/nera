@@ -39,16 +39,21 @@ const PLUGIN = [
 ]
 
 // What the theme kind adds: the views, the one stylesheet, the config with the
-// tokens, the fixture site and the tests on the test-utils theme suites.
+// tokens, the fixture site with its legal pages and the tests on the test-utils
+// theme suites and expectCleanBuild.
 const THEME = [
     'README.md',
     'assets/css/theme.css',
     'config/theme.yaml',
+    'test/clean-build.test.js',
     'test/contract.test.js',
     'test/global-setup.js',
     'test/site/config/app.yaml',
     'test/site/package.json',
+    'test/site/pages/imprint.md',
     'test/site/pages/index.md',
+    'test/site/pages/privacy.md',
+    'test/site/theme/views/partials/footer-extra.pug',
     'test/tokens.test.js',
     'test/variants.js',
     'views/layouts/layout.pug',
@@ -70,6 +75,12 @@ const STARTER = [
     'test/scaffold.test.js',
     'theme/views/layouts/layout.pug',
     'theme/views/pages/default.pug',
+]
+
+// What the tool kind adds: an entry point on a plugin-utils subpath and its test.
+const TOOL = [
+    'src/index.js',
+    'test/index.test.js',
 ]
 
 const PLACEHOLDER = /\{\{[a-z]+\}\}/
@@ -99,6 +110,7 @@ describe('placeholders', () => {
             name: 'nera-plugin-sitemap',
             package: '@nera-static/plugin-sitemap',
             short: 'sitemap',
+            title: 'Sitemap',
             year: '2030',
             description: 'A plugin for the Nera static site generator.',
         })
@@ -107,17 +119,34 @@ describe('placeholders', () => {
             short: 'stan',
             description: 'Lint.',
         })
+        expect(placeholders({ kind: 'starter', name: 'nera-starter-photo-blog' }).title).toBe('Photo blog')
     })
 })
 
 describe('new-repo.js tool', () => {
-    it('writes the common set with every placeholder resolved', () => {
+    it('writes the common set plus the entry point and its test, every placeholder resolved', () => {
         const result = run('tool', 'nera-demo', '--dir', parent, '--description', 'A "demo" tool.')
         expect(result.status).toBe(0)
-        expect(result.stdout).toContain(`wrote ${COMMON.length} files`)
+        expect(result.stdout).toContain(`wrote ${COMMON.length + TOOL.length} files`)
 
-        expect(filesBelow(path.join(parent, 'nera-demo'))).toEqual([...COMMON].sort())
-        for (const rel of COMMON) expect(read(rel), rel).not.toMatch(PLACEHOLDER)
+        const written = filesBelow(path.join(parent, 'nera-demo'))
+        expect(written).toEqual([...COMMON, ...TOOL].sort())
+        for (const rel of written) expect(read(rel), rel).not.toMatch(PLACEHOLDER)
+    })
+
+    it('exports src/index.js, ships src and tests the entry through its own package name', () => {
+        run('tool', 'nera-demo', '--dir', parent)
+        const text = read('package.json')
+        const pkg = JSON.parse(text)
+        expect(pkg).toMatchObject({
+            main: 'src/index.js',
+            exports: { '.': './src/index.js', './package.json': './package.json' },
+            files: ['src', 'CHANGELOG.md'],
+            dependencies: { '@nera-static/plugin-utils': '^1.8.0' },
+        })
+        expect(text).toBe(formatPackage(pkg))
+        expect(read('src/index.js')).toContain('from \'@nera-static/plugin-utils/packages\'')
+        expect(read('test/index.test.js')).toContain('import * as entry from \'@nera-static/demo\'')
     })
 
     it('fills package.json and LICENSE from the name, year and description', () => {
@@ -215,8 +244,18 @@ describe('new-repo.js theme', () => {
             keywords: ['nera', 'nera-theme', 'static-site-generator'],
             nera: { generator: '>=4.15.0' },
         })
+        const keys = Object.keys(pkg)
+        expect(keys[keys.indexOf('engines') + 1]).toBe('nera')
         expect(pkg.devDependencies).toHaveProperty('@nera-static/nera')
         expect(text).toBe(formatPackage(pkg))
+    })
+
+    it('fills the footer seam of its fixture with the legal links and tests a strict clean build', () => {
+        run('theme', 'nera-theme-demo', '--dir', parent)
+        const footer = theme('test/site/theme/views/partials/footer-extra.pug')
+        expect(footer).toContain('a(href=\'/imprint.html\')')
+        expect(footer).toContain('a(href=\'/privacy.html\')')
+        expect(theme('test/clean-build.test.js')).toMatch(/STRICT_VALIDATE[\s\S]*expectCleanBuild\(site, \{ root \}\)/)
     })
 
     it('emits the tokens through neraTheme and tests on the test-utils theme suites', () => {
@@ -264,7 +303,7 @@ describe('new-repo.js starter', () => {
             name: '@nera-static/starter-demo',
             files: ['config', 'pages', 'theme', 'CHANGELOG.md'],
             keywords: ['nera', 'nera-starter', 'static-site-generator', 'starter'],
-            nera: { starter: { label: 'demo', description: 'A demo site.' } },
+            nera: { starter: { label: 'Demo', description: 'A demo site.' } },
         })
         expect(pkg).not.toHaveProperty('dependencies')
         expect(pkg.devDependencies).toHaveProperty('@nera-static/nera')
@@ -301,8 +340,8 @@ describe('mergePackage and formatPackage', () => {
     })
 
     it('orders the keys canonically, unknown keys last, dependencies by name', () => {
-        const text = formatPackage({ nera: {}, dependencies: { b: '1', a: '1' }, scripts: { z: 'z', a: 'a' }, name: 'x' })
-        expect(Object.keys(JSON.parse(text))).toEqual(['name', 'scripts', 'dependencies', 'nera'])
+        const text = formatPackage({ custom: {}, dependencies: { b: '1', a: '1' }, nera: {}, engines: {}, scripts: { z: 'z', a: 'a' }, name: 'x' })
+        expect(Object.keys(JSON.parse(text))).toEqual(['name', 'scripts', 'engines', 'nera', 'dependencies', 'custom'])
         expect(Object.keys(JSON.parse(text).dependencies)).toEqual(['a', 'b'])
         expect(Object.keys(JSON.parse(text).scripts)).toEqual(['z', 'a'])
         expect(text.endsWith('}\n')).toBe(true)

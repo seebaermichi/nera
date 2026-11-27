@@ -1,0 +1,14 @@
+{
+    "main": "src/index.js",
+    "exports": {
+        ".": "./src/index.js",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "src",
+        "CHANGELOG.md"
+    ],
+    "dependencies": {
+        "@nera-static/plugin-utils": "^1.8.0"
+    }
+}
