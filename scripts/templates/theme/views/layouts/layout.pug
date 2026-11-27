@@ -1,0 +1,22 @@
+//- The shell every page type extends. Blocks: head, main, footer.
+include ../partials/helpers.pug
+doctype html
+html(lang=pageLang(meta))
+    head
+        meta(charset='utf-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1')
+        title= meta.title ? `${meta.title} – ${app.name}` : app.name
+        if meta.description
+            meta(name='description' content=meta.description)
+        include ../partials/tokens.pug
+        link(rel='stylesheet' href='/css/theme.css')
+        include ../partials/head-extra.pug
+        block head
+    body
+        a.skip-link(href='#main')= t('Skip to content')
+        main#main.site-main
+            block main
+                != content
+        block footer
+            footer.site-footer
+                include ../partials/footer-extra.pug

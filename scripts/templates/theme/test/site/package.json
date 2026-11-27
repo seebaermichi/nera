@@ -1,0 +1,7 @@
+{
+    "name": "{{name}}-fixture",
+    "version": "1.0.0",
+    "private": true,
+    "description": "The fixture site the tests of {{package}} build. List a plugin the theme styles here so core discovers it, and install it as a devDependency of the repo.",
+    "type": "module"
+}

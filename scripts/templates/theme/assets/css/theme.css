@@ -1,0 +1,36 @@
+/* {{package}}: the one stylesheet. Every --theme-* token is read with the
+   default of config/theme.yaml as its fallback. */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--theme-color-bg, #ffffff);
+    color: var(--theme-color-text, #1b1b1f);
+    font-family: var(--theme-font-body, system-ui, sans-serif);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--theme-color-accent, #0b57d0);
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+}
+
+.skip-link:focus {
+    position: static;
+}
+
+.site-main,
+.site-footer {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}

@@ -1,0 +1,19 @@
+//- The site's layout. A starter on a theme drops it and names the theme in
+//- config/app.yaml instead; theme/views/ then holds seam overrides only.
+doctype html
+html(lang=meta.lang || app.lang)
+    head
+        meta(charset='utf-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1')
+        title= meta.title ? `${meta.title} – ${app.name}` : app.name
+        if meta.description
+            meta(name='description' content=meta.description)
+    body
+        a(href='#main')= t('Skip to content')
+        main#main
+            block main
+                != content
+        footer
+            a(href='/imprint.html')= t('Imprint')
+            = ' · '
+            a(href='/privacy.html')= t('Privacy')

@@ -1,0 +1,3 @@
+# {{name}}-specific
+# what a `nera build` of the fixture in place writes (the tests build in a temp copy)
+test/site/public/

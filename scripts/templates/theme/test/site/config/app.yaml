@@ -1,0 +1,6 @@
+# The fixture site the tests build: the theme from this repo, by path.
+lang: en
+name: Fixture
+origin: https://example.org
+robots: index,follow
+theme: ../..

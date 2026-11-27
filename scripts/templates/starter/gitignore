@@ -1,0 +1,3 @@
+# {{name}}-specific
+# what a `nera build` of the starter in place writes (the tests build a scaffolded copy)
+/public/

@@ -1,0 +1,22 @@
+{
+    "exports": {
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "views",
+        "assets",
+        "config",
+        "CHANGELOG.md"
+    ],
+    "keywords": [
+        "nera",
+        "nera-theme",
+        "static-site-generator"
+    ],
+    "nera": {
+        "generator": ">=4.15.0"
+    },
+    "devDependencies": {
+        "@nera-static/nera": "^1.30.0"
+    }
+}

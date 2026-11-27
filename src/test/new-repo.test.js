@@ -3,8 +3,10 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { spawnSync } from 'child_process'
+import pug from 'pug'
 import { fileURLToPath } from 'url'
 import { formatPackage, mergePackage, newRepo, PACKAGE_KEYS, placeholders, TEMPLATES } from '../../scripts/new-repo.js'
+import { GITIGNORE_ADDITIONS, gitignoreLines } from '../../scripts/style-check/hygiene.js'
 
 const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/new-repo.js')
 
@@ -34,6 +36,40 @@ const PLUGIN = [
     'test/config.test.js',
     'test/index.test.js',
     'test/shipped-config.test.js',
+]
+
+// What the theme kind adds: the views, the one stylesheet, the config with the
+// tokens, the fixture site and the tests on the test-utils theme suites.
+const THEME = [
+    'README.md',
+    'assets/css/theme.css',
+    'config/theme.yaml',
+    'test/contract.test.js',
+    'test/global-setup.js',
+    'test/site/config/app.yaml',
+    'test/site/package.json',
+    'test/site/pages/index.md',
+    'test/tokens.test.js',
+    'test/variants.js',
+    'views/layouts/layout.pug',
+    'views/pages/default.pug',
+    'views/partials/footer-extra.pug',
+    'views/partials/head-extra.pug',
+    'views/partials/helpers.pug',
+    'views/partials/tokens.pug',
+]
+
+// What the starter kind adds: the folders `nera new` copies, the README with
+// `## First steps` and the scaffold test.
+const STARTER = [
+    'README.md',
+    'config/app.yaml',
+    'pages/imprint.md',
+    'pages/index.md',
+    'pages/privacy.md',
+    'test/scaffold.test.js',
+    'theme/views/layouts/layout.pug',
+    'theme/views/pages/default.pug',
 ]
 
 const PLACEHOLDER = /\{\{[a-z]+\}\}/
@@ -148,6 +184,107 @@ describe('new-repo.js plugin', () => {
         expect(plugin('src/config.js')).toContain('export const CONFIG_NAME = \'demo\'')
         expect(plugin('config/demo.yaml')).toContain('property: \'demo\'')
         expect(plugin('README.md')).toMatch(/^# @nera-static\/plugin-demo\n\n\[!\[Test\]/)
+    })
+})
+
+/** The lines a kind's `.gitignore` adds below the canonical one, as style-check reads them. */
+function kindGitignore(text) {
+    const common = fs.readFileSync(path.join(TEMPLATES, 'common', 'gitignore'), 'utf8')
+    expect(text.startsWith(common)).toBe(true)
+    return { block: text.slice(common.length), lines: gitignoreLines(text.slice(common.length)) }
+}
+
+describe('new-repo.js theme', () => {
+    const theme = (rel) => fs.readFileSync(path.join(parent, 'nera-theme-demo', rel), 'utf8')
+
+    it('writes the common set plus views, assets, config, the fixture and the suite tests', () => {
+        const result = run('theme', 'nera-theme-demo', '--dir', parent)
+        expect(result.status).toBe(0)
+        const written = filesBelow(path.join(parent, 'nera-theme-demo'))
+        expect(written).toEqual([...COMMON, ...THEME].sort())
+        for (const rel of written) expect(theme(rel), rel).not.toMatch(PLACEHOLDER)
+    })
+
+    it('declares the core floor, ships views, assets and config, and gets the nera CLI to build its fixture', () => {
+        run('theme', 'nera-theme-demo', '--dir', parent)
+        const text = theme('package.json')
+        const pkg = JSON.parse(text)
+        expect(pkg).toMatchObject({
+            name: '@nera-static/theme-demo',
+            files: ['views', 'assets', 'config', 'CHANGELOG.md'],
+            keywords: ['nera', 'nera-theme', 'static-site-generator'],
+            nera: { generator: '>=4.15.0' },
+        })
+        expect(pkg.devDependencies).toHaveProperty('@nera-static/nera')
+        expect(text).toBe(formatPackage(pkg))
+    })
+
+    it('emits the tokens through neraTheme and tests on the test-utils theme suites', () => {
+        run('theme', 'nera-theme-demo', '--dir', parent)
+        expect(theme('views/partials/tokens.pug')).toContain('style!= neraTheme.tokenRule()')
+        expect(theme('views/partials/helpers.pug')).toMatch(/^ {4}const neraTheme = /m)
+        expect(theme('test/contract.test.js')).toContain('contractSuite({')
+        expect(theme('test/tokens.test.js')).toContain('tokensSuite({')
+        expect(theme('test/site/config/app.yaml')).toMatch(/^theme: \.\.\/\.\.$/m)
+        expect(theme('vitest.config.js')).toContain('globalSetup: [\'test/global-setup.js\']')
+    })
+
+    it('emits only string and number tokens with safe names and values', () => {
+        const tokens = { color: { accent: '#006400', nested: { x: 1 }, list: ['a'], bad: 'red}' }, size: { gap: 2 }, 'a b': { c: 'd' } }
+        const views = path.join(TEMPLATES, 'theme', 'views', 'partials')
+        const html = pug.render('include helpers.pug\ninclude tokens.pug', { filename: path.join(views, 'x.pug'), app: { theme: { config: { tokens } } } })
+        expect(html).toBe('<style>:root { --theme-color-accent: #006400; --theme-size-gap: 2; }</style>')
+    })
+
+    it('appends a block of the theme additions to the canonical .gitignore', () => {
+        run('theme', 'nera-theme-demo', '--dir', parent)
+        const { block, lines } = kindGitignore(theme('.gitignore'))
+        expect(block).toMatch(/^\n# nera-theme-demo-specific\n/)
+        expect(lines).toEqual(['test/site/public'])
+        for (const line of lines) expect(GITIGNORE_ADDITIONS.theme).toContain(line)
+    })
+})
+
+describe('new-repo.js starter', () => {
+    const starter = (rel) => fs.readFileSync(path.join(parent, 'nera-starter-demo', rel), 'utf8')
+
+    it('writes the common set plus the copied folders, the README and the scaffold test', () => {
+        const result = run('starter', 'nera-starter-demo', '--dir', parent, '--description', 'A demo site.')
+        expect(result.status).toBe(0)
+        const written = filesBelow(path.join(parent, 'nera-starter-demo'))
+        expect(written).toEqual([...COMMON, ...STARTER].sort())
+        for (const rel of written) expect(starter(rel), rel).not.toMatch(PLACEHOLDER)
+    })
+
+    it('carries nera.starter and lists the folders nera new copies', () => {
+        run('starter', 'nera-starter-demo', '--dir', parent, '--description', 'A demo site.')
+        const text = starter('package.json')
+        const pkg = JSON.parse(text)
+        expect(pkg).toMatchObject({
+            name: '@nera-static/starter-demo',
+            files: ['config', 'pages', 'theme', 'CHANGELOG.md'],
+            keywords: ['nera', 'nera-starter', 'static-site-generator', 'starter'],
+            nera: { starter: { label: 'demo', description: 'A demo site.' } },
+        })
+        expect(pkg).not.toHaveProperty('dependencies')
+        expect(pkg.devDependencies).toHaveProperty('@nera-static/nera')
+        expect(text).toBe(formatPackage(pkg))
+    })
+
+    it('ends its README with ## First steps and tests on scaffoldStarter and expectCleanBuild', () => {
+        run('starter', 'nera-starter-demo', '--dir', parent)
+        const headings = starter('README.md').match(/^## .+$/gm)
+        expect(headings.at(-1)).toBe('## First steps')
+        expect(starter('README.md')).toContain('--starter demo')
+        expect(starter('test/scaffold.test.js')).toMatch(/scaffoldStarter\(ROOT, 'site'\)[\s\S]*expectCleanBuild\(site\)/)
+    })
+
+    it('appends a block of the starter additions to the canonical .gitignore', () => {
+        run('starter', 'nera-starter-demo', '--dir', parent)
+        const { block, lines } = kindGitignore(starter('.gitignore'))
+        expect(block).toMatch(/^\n# nera-starter-demo-specific\n/)
+        expect(lines).toEqual(['/public'])
+        for (const line of lines) expect(GITIGNORE_ADDITIONS.starter).toContain(line)
     })
 })
 

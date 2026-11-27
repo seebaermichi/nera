@@ -1,0 +1,32 @@
+//- The contract functions every view and a site's own layout may call, and
+//- neraTheme, the theme's internal helpers (not part of the contract).
+-
+    function pageLang(page) {
+        return (page && page.lang) || app.lang || 'en'
+    }
+
+    const neraTheme = (() => {
+        // A token name made of letters, digits, `_` and `-`; a value that is a
+        // string or number without a character that could end the rule or the
+        // <style> element.
+        const SAFE_NAME = /^[\w-]+$/
+        const UNSAFE_VALUE = /[<>{};]/
+        const safeValue = (value) => ['string', 'number'].includes(typeof value) && !UNSAFE_VALUE.test(String(value))
+
+        // config/theme.yaml's tokens as one `:root` rule of --theme-<group>-<name>
+        // properties (`_` written as `-`), or '' when there is none.
+        const tokenRule = () => {
+            const tokens = (app.theme && app.theme.config && app.theme.config.tokens) || {}
+            const declarations = []
+            for (const [group, values] of Object.entries(tokens)) {
+                if (!SAFE_NAME.test(group) || !values || typeof values !== 'object') continue
+                for (const [name, value] of Object.entries(values)) {
+                    if (!SAFE_NAME.test(name) || !safeValue(value)) continue
+                    declarations.push(`--theme-${group}-${name.replace(/_/g, '-')}: ${value};`)
+                }
+            }
+            return declarations.length ? `:root { ${declarations.join(' ')} }` : ''
+        }
+
+        return { tokenRule }
+    })()

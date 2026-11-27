@@ -1,0 +1,9 @@
+# {{package}}: every key the theme reads, with its default. A site overrides
+# any of them in its own config/theme.yaml; the rest keep these values.
+tokens:
+    color:
+        bg: '#ffffff'
+        text: '#1b1b1f'
+        accent: '#0b57d0'
+    font:
+        body: 'system-ui, sans-serif'

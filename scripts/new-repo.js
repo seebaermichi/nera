@@ -2,7 +2,8 @@
 // Writes the canonical file set of a new Nera repo from scripts/templates/ (roadmap
 // "One handwriting", issue "Repo templates replace copy a sibling"): the common layer,
 // then the layer of the kind, whose files replace common ones of the same path. The
-// one exception is package.json, which the kind's layer extends (see mergePackage).
+// exceptions are package.json, which the kind's layer extends (see mergePackage), and
+// .gitignore, to which it appends its `# <repo>-specific` block.
 // Placeholders are filled in file names too (config/{{short}}.yaml).
 // It writes files only: git init, snagio install, .env and the first commit stay with
 // the workspace skill /new-repo.
@@ -36,6 +37,10 @@ const PLACEHOLDER = /\{\{([a-z]+)\}\}/g
 const NAME = /^nera-[a-z0-9]+(-[a-z0-9]+)*$/
 
 const PACKAGE = 'package.json'
+
+// A kind's file at this path is appended to the common one instead of replacing it:
+// the canonical .gitignore stays verbatim, the kind adds its own block below it.
+const APPENDED = '.gitignore'
 
 // The top-level key order of package.json (2-plugin-anatomy §4.4); keys not listed
 // follow in the order the templates give them.
@@ -135,7 +140,8 @@ export function formatPackage(pkg) {
 /**
  * Render the file set of a kind in memory: common first, then the kind's layer, whose
  * files replace common ones at the same output path, except package.json, whose layers
- * are merged (mergePackage) and written in the canonical key order (formatPackage).
+ * are merged (mergePackage) and written in the canonical key order (formatPackage), and
+ * .gitignore, whose kind layer is appended to the common one after a blank line.
  * @returns {{ files: Map<string, { text: string, mode: number }>, errors: string[] }}
  */
 export function renderTemplates({ kind, values, templates = TEMPLATES }) {
@@ -154,6 +160,11 @@ export function renderTemplates({ kind, values, templates = TEMPLATES }) {
             }
             const out = outputPath(where.text)
             const mode = fs.statSync(source).mode & 0o777
+            if (out === APPENDED && files.has(out)) {
+                const common = files.get(out)
+                files.set(out, { text: `${common.text.replace(/\n*$/, '\n')}\n${text}`, mode: common.mode })
+                continue
+            }
             if (out !== PACKAGE) {
                 files.set(out, { text, mode })
                 continue

@@ -1,0 +1,23 @@
+{
+    "files": [
+        "config",
+        "pages",
+        "theme",
+        "CHANGELOG.md"
+    ],
+    "keywords": [
+        "nera",
+        "nera-starter",
+        "static-site-generator",
+        "starter"
+    ],
+    "nera": {
+        "starter": {
+            "label": "{{short}}",
+            "description": "{{description}}"
+        }
+    },
+    "devDependencies": {
+        "@nera-static/nera": "^1.30.0"
+    }
+}
