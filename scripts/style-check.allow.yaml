@@ -1,0 +1,17 @@
+# Findings of scripts/style-check.js that are deliberate (D5). Each entry names the
+# finding exactly and says why it stays; an entry without a reason is not applied.
+# Allowed findings are still listed in the report, with the reason.
+#
+# - check: gitignore            # the check id (license, husky, engines, changelog-files,
+#                               # plugin-config, gitignore)
+#   repo: nera-website          # the repo as the report names it
+#   item: public                # the finding's item, as in the report (without backticks)
+#   reason: the site's build output, never committed
+- check: gitignore
+  repo: nera-highlightjs-pug
+  item: dist
+  reason: dist/ is the committed esbuild output; test.yml fails when it is stale
+- check: gitignore
+  repo: nera-website
+  item: public
+  reason: the site's build output, never committed
