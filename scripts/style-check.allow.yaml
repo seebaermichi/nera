@@ -24,3 +24,7 @@
   repo: nera-theme-example
   item: test/helpers/html.js
   reason: the example theme has no test suite; its CI compiles the Pug templates instead
+- check: husky
+  repo: nera-theme-example
+  item: husky
+  reason: the example theme has no lint and no tests (its CI compiles the Pug templates), so a pre-commit or pre-push hook would have nothing to run
