@@ -349,4 +349,16 @@ describe('style-check.js', () => {
         expect(result.stdout.trim().split('\n').at(-1)).toBe('style-check: 2 findings, 1 allowed, 2 could not check, across 2 repos (report only, exit 0)')
         expect(fs.readFileSync(summary, 'utf8')).toBe(result.stdout)
     })
+
+    it('does not call an allow-list entry stale when its check could not run', () => {
+        cleanRepo('nera-plugin-a')
+        fs.rmSync(path.join(workspace, CANONICAL_GITIGNORE), { force: true })
+        write({ 'allow.yaml': '- { check: gitignore, repo: nera-plugin-a, item: public, reason: build output }\n' })
+
+        const result = run('--workspace', workspace, '--allow', path.join(workspace, 'allow.yaml'))
+
+        expect(result.status).toBe(0)
+        expect(result.stdout).toContain(`canonical ${CANONICAL_GITIGNORE} not found`)
+        expect(result.stdout).not.toContain('matches no finding')
+    })
 })

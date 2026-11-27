@@ -6,6 +6,11 @@ name: Fleet check
 # the failure. Secret scanning and Dependabot alert status need an admin token
 # and are skipped here;
 # run scripts/fleet-check.sh locally (logged in to gh) for the full check.
+#
+# A second job step runs scripts/style-check.js over a fresh clone of the public
+# fleet and writes its report (handwriting drift across repos, roadmap "One
+# handwriting") to the run summary. It is report only: it never fails the run,
+# and it runs whether or not the fleet check found a gap.
 
 on:
     schedule:
@@ -27,3 +32,40 @@ jobs:
               run: bash scripts/fleet-check.sh
               env:
                   GH_TOKEN: ${{ github.token }}
+
+            # Everything below is report only: `if: always()` runs it after a failed
+            # fleet check too, and `continue-on-error` keeps any failure of its own
+            # (setup, listing, clone, the script) from failing the run or hiding the
+            # fleet check's result, which alone decides the job's outcome.
+            - name: Use Node.js 22
+              if: always()
+              continue-on-error: true
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 22
+                  cache: 'npm'
+
+            - name: Report handwriting drift (style-check)
+              if: always()
+              continue-on-error: true
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  npm ci
+                  ws=$(mktemp -d)
+                  # The same listing filter as fleet-check.sh, minus .github (no package).
+                  if ! repos=$(gh api 'users/seebaermichi/repos?per_page=100&type=owner' --jq '.[] | select(.archived | not) | select(.fork | not) | select(.private | not) | .name | select(test("^nera"))'); then
+                      echo 'style-check: could not list the repos of seebaermichi, no report this week' | tee -a "$GITHUB_STEP_SUMMARY"
+                      exit 0
+                  fi
+                  failed=()
+                  for r in $repos; do
+                      # github.com/seebaermichi/nera is the generator/ folder of the workspace.
+                      dir=$r; [ "$r" = nera ] && dir=generator
+                      # Blobless, tags included: the copies check reads views at the installed plugin's tag.
+                      git clone --quiet --filter=blob:none "https://github.com/seebaermichi/$r.git" "$ws/$dir" || failed+=("$r")
+                  done
+                  if [ ${#failed[@]} -gt 0 ]; then
+                      printf 'style-check: could not clone %s; the report below leaves them out\n\n' "${failed[*]}" | tee -a "$GITHUB_STEP_SUMMARY"
+                  fi
+                  node scripts/style-check.js --workspace "$ws" || echo "style-check: exited $? (report only, the run is not failed)" | tee -a "$GITHUB_STEP_SUMMARY"

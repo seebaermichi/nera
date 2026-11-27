@@ -15,6 +15,9 @@
 # raw.githubusercontent.com, and checks that need an admin token are skipped then.
 #
 # Runs weekly in .github/workflows/fleet-check.yml; a gap fails the run.
+# Its sibling scripts/style-check.js (same workflow, report only) reads the repos'
+# contents instead: helpers duplicated across repos, copied plugin views/scripts,
+# files that must be identical, and per-repo hygiene gaps.
 #
 # Usage: scripts/fleet-check.sh [--fix] [repo ...]
 #   --fix   create the ruleset and enable secret scanning/push protection and

@@ -49,13 +49,19 @@ export function styleCheck({ workspace, allow }) {
     }
     const allowList = loadAllowList(allow)
     const used = new Set()
+    // `check/repo` pairs a check could not look at ('(all)' = every repo): an allow-list
+    // entry there matched nothing because nothing was compared, so it is not stale
+    // (a CI clone of the fleet has no canonical .gitignore, for one).
+    const unchecked = new Set()
     const sections = [...DUPLICATION_CHECKS, ...HYGIENE_CHECKS].map((check) => {
         const { findings, notes, tables } = check.run(repos, { workspace })
         const { open, allowed, used: matched } = applyAllowList(findings, allowList.entries)
         for (const entry of matched) used.add(entry)
+        for (const note of notes) unchecked.add(`${check.id}/${note.repo}`)
         return { title: check.title, open, allowed, notes, tables, columns: check.columns }
     })
-    const unused = allowList.entries.filter((entry) => !used.has(entry))
+    const isUnchecked = (entry) => unchecked.has(`${entry.check}/(all)`) || unchecked.has(`${entry.check}/${entry.repo}`)
+    const unused = allowList.entries.filter((entry) => !used.has(entry) && !isUnchecked(entry))
     const { markdown } = renderReport({ workspace, repos, skipped, sections, allow: { invalid: allowList.invalid, unused } })
     return { code: 0, markdown }
 }
