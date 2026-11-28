@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
+import path from 'node:path'
+import fs from 'node:fs/promises'
 import { tempDir, writeFiles } from '@nera-static/test-utils'
 import { resolveSiteModel } from '../src/site-model.js'
 

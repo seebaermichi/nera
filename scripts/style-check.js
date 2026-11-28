@@ -10,9 +10,9 @@
 // Exit 0 always, findings or not (report only); 2 when the workspace is missing or
 // holds no Nera repo, because checking nothing is not "all fine". In GitHub Actions
 // the report is also appended to $GITHUB_STEP_SUMMARY.
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath, pathToFileURL } from 'url'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { findRepos } from './style-check/repos.js'
 import { HYGIENE_CHECKS } from './style-check/hygiene.js'
 import { checkHelpers, HELPER_COLUMNS } from './style-check/helpers.js'
@@ -63,9 +63,12 @@ export function styleCheck({ workspace, allow }) {
         for (const note of notes) unchecked.add(`${check.id}/${note.repo}`)
         return { title: check.title, open, allowed, notes, tables, columns: check.columns }
     })
-    const isUnchecked = (entry) => unchecked.has(`${entry.check}/(all)`) || unchecked.has(`${entry.check}/${entry.repo}`)
+    const isUnchecked = (entry) =>
+        unchecked.has(`${entry.check}/(all)`) || unchecked.has(`${entry.check}/${entry.repo}`)
     const unused = allowList.entries.filter((entry) => !used.has(entry) && !isUnchecked(entry))
-    const { markdown } = renderReport({ workspace, repos, skipped, sections, allow: { invalid: allowList.invalid, unused } })
+    const { markdown } = renderReport({
+        workspace, repos, skipped, sections, allow: { invalid: allowList.invalid, unused },
+    })
     return { code: 0, markdown }
 }
 
@@ -74,7 +77,9 @@ function parseArgs(argv) {
     for (let i = 0; i < argv.length; i++) {
         const key = argv[i].replace(/^--/, '')
         if (!(key in DEFAULTS) || argv[i + 1] === undefined) {
-            throw new Error(`style-check: unknown or incomplete option ${argv[i]} (use --workspace <dir>, --allow <file>)`)
+            throw new Error(
+                `style-check: unknown or incomplete option ${argv[i]} (use --workspace <dir>, --allow <file>)`,
+            )
         }
         options[key] = path.resolve(argv[++i])
     }

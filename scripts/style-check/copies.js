@@ -5,9 +5,9 @@
 // The plugin file is read from the consumer's node_modules when it holds exactly that
 // version, else from the tag `v<version>` in the sibling plugin repo, never from the
 // sibling's working tree (which may be ahead of what the consumer installs).
-import fs from 'fs'
-import path from 'path'
-import { execFileSync } from 'child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { contentHash } from './identical.js'
 
 // The repo kinds that copy plugin files into themselves.
@@ -61,7 +61,9 @@ export function findCopies(dir) {
     }
     for (const scripts of SCRIPT_DIRS) {
         for (const [name, plugin] of Object.entries(COPIED_SCRIPTS)) {
-            if (fs.existsSync(path.join(dir, scripts, name))) copies.push({ file: `${scripts}/${name}`, plugin, source: `views/${name}` })
+            if (fs.existsSync(path.join(dir, scripts, name))) {
+                copies.push({ file: `${scripts}/${name}`, plugin, source: `views/${name}` })
+            }
         }
     }
     return copies
@@ -178,7 +180,10 @@ export function checkCopies(repos, { workspace }) {
                     out.findings.push({ check: 'copies', repo: repo.name, item: copy.file, detail: `differs from ${at}` })
                 }
             }
-            out.tables[0].rows.push([repo.name, `${plugin}@${version}`, source.label, String(files.length), String(counts.same), String(counts.differs), String(counts.missing)])
+            out.tables[0].rows.push([
+                repo.name, `${plugin}@${version}`, source.label, String(files.length),
+                String(counts.same), String(counts.differs), String(counts.missing),
+            ])
         }
     }
     return out

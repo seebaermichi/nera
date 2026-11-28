@@ -3,8 +3,8 @@
 // majority of the repos the group compares, so a template cannot rot while the fleet
 // moves on. A template that is ahead of the fleet on purpose (D5 of the issue "Repo
 // templates replace copy a sibling") is an allow-list entry with its reason.
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import { KINDS, TEMPLATES, placeholders, renderTemplates } from '../new-repo.js'
 import { IDENTICAL_GROUPS, contentHash, fileVariants, groupMembers, groupScope } from './identical.js'
 
@@ -29,7 +29,8 @@ export function checkTemplates(repos, ctx, { templates = TEMPLATES, groups = IDE
     const add = (repo, item, detail) => out.findings.push({ check: 'templates', repo, item, detail })
     const seen = new Set()
     for (const kind of KINDS) {
-        const { files, errors } = renderTemplates({ kind, values: placeholders({ kind, name: sampleName(kind) }), templates })
+        const values = placeholders({ kind, name: sampleName(kind) })
+        const { files, errors } = renderTemplates({ kind, values, templates })
         for (const error of errors) {
             const [where, ...detail] = error.split(': ')
             add(`templates/${kind}`, where, `does not render: ${detail.join(': ')}`)
@@ -49,7 +50,9 @@ export function checkTemplates(repos, ctx, { templates = TEMPLATES, groups = IDE
             const name = `templates/${layer}`
             const row = (verdict) => out.tables[0].rows.push([name, `\`${group.file}\``, scope, verdict])
             if (!majority) {
-                row(present < 2 ? `nothing to compare (${present} of ${set.length} ${scope} have it)` : `no majority among ${present} ${scope}`)
+                row(present < 2
+                    ? `nothing to compare (${present} of ${set.length} ${scope} have it)`
+                    : `no majority among ${present} ${scope}`)
                 continue
             }
             const agree = sorted[0][1].length

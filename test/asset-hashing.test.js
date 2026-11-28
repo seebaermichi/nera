@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
-import { createHash } from 'crypto'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { tempDir, writeFiles } from '@nera-static/test-utils'
 import { hashAssetUrls, hashHtmlUrls } from '../src/render.js'
 import run from '../src/index.js'
@@ -51,7 +51,7 @@ describe('hashAssetUrls', () => {
         expect(html).toContain(`src="/js/app.js?v=${hashOf('console.log(1)')}"`)
         expect(html).toContain(`src='img/logo.png?v=${hashOf('PNG')}'`)
         expect(html).toContain(
-            `srcset="/img/logo.png?v=${hashOf('PNG')} 1x, /img/logo@2x.png?v=${hashOf('PNG2')} 2x"`
+            `srcset="/img/logo.png?v=${hashOf('PNG')} 1x, /img/logo@2x.png?v=${hashOf('PNG2')} 2x"`,
         )
     })
 
@@ -68,7 +68,7 @@ describe('hashAssetUrls', () => {
         // The stylesheet's version is the hash of its final, rewritten content,
         // so a changed font busts the CSS too.
         expect(await read('index.html')).toContain(
-            `href="/css/main.css?v=${hashOf(css)}"`
+            `href="/css/main.css?v=${hashOf(css)}"`,
         )
     })
 
@@ -101,7 +101,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '', true)
 
         expect(await read('index.html')).toContain(
-            `href="/icons.svg?v=${hashOf('<svg/>')}#star"`
+            `href="/icons.svg?v=${hashOf('<svg/>')}#star"`,
         )
     })
 
@@ -111,7 +111,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '/repo', true)
 
         expect(await read('index.html')).toContain(
-            `src="/repo/js/app.js?v=${hashOf('console.log(1)')}"`
+            `src="/repo/js/app.js?v=${hashOf('console.log(1)')}"`,
         )
     })
 
@@ -123,7 +123,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '/repo', true)
 
         expect(await read('index.html')).toBe(
-            '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>'
+            '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>',
         )
     })
 
@@ -136,7 +136,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '', true)
 
         expect(await read('index.html')).toBe(
-            '<script src="data:x.js"></script><a href="tel:123">t</a>'
+            '<script src="data:x.js"></script><a href="tel:123">t</a>',
         )
     })
 
@@ -150,7 +150,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '', true)
 
         expect(await read('index.html')).toContain(
-            `src="/..cache/a.js?v=${hashOf('A')}"`
+            `src="/..cache/a.js?v=${hashOf('A')}"`,
         )
     })
 
@@ -163,7 +163,7 @@ describe('hashAssetUrls', () => {
         await hashAssetUrls(pub, '', true)
 
         expect(await read('search/index.html')).toContain(
-            `data-search-index="/search-index.json?v=${hashOf('[]')}"`
+            `data-search-index="/search-index.json?v=${hashOf('[]')}"`,
         )
     })
 })
@@ -189,7 +189,7 @@ describe('hashHtmlUrls (start tags only)', () => {
         expect(hash(html)).toBe(
             '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
                 '<span class="x">a(href="/b.html")</span>' +
-                '<a href="/c.html?v=h">c</a></code></pre>'
+                '<a href="/c.html?v=h">c</a></code></pre>',
         )
     })
 
@@ -200,7 +200,7 @@ describe('hashHtmlUrls (start tags only)', () => {
         expect(hash(html)).toBe(
             '<a title="a > b" href="/a.html?v=h">a</a>' +
                 '<img alt=\'x > y\' src="/i.png?v=h" ' +
-                'srcset="/i.png?v=h 1x, /j.png?v=h 2x">'
+                'srcset="/i.png?v=h 1x, /j.png?v=h 2x">',
         )
     })
 
@@ -210,7 +210,7 @@ describe('hashHtmlUrls (start tags only)', () => {
             '<script src="/app.js"></script>'
         expect(hash(html)).toBe(
             '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
-                '<script src="/app.js?v=h"></script>'
+                '<script src="/app.js?v=h"></script>',
         )
     })
 
@@ -224,13 +224,13 @@ describe('hashHtmlUrls (start tags only)', () => {
 
     it('leaves text after a stray "<a x" alone, hashes the next tag', () => {
         expect(hash('<p>if a <a x(href="/z")</p><link href="/m.css">')).toBe(
-            '<p>if a <a x(href="/z")</p><link href="/m.css?v=h">'
+            '<p>if a <a x(href="/z")</p><link href="/m.css?v=h">',
         )
     })
 
     it('hashes a tag whose quoted value holds a "<"', () => {
         expect(hash('<a title="a < b" href="/a.html">a</a>')).toBe(
-            '<a title="a < b" href="/a.html?v=h">a</a>'
+            '<a title="a < b" href="/a.html?v=h">a</a>',
         )
     })
 })
@@ -276,10 +276,10 @@ describe('run() with asset_hashing', () => {
 
     it('composes with base_path', async () => {
         const html = await build(
-            'name: Site\nlang: en\nbase_path: /repo\nasset_hashing: true'
+            'name: Site\nlang: en\nbase_path: /repo\nasset_hashing: true',
         )
         expect(html).toContain(
-            `href="/repo/css/main.css?v=${hashOf('body{}')}"`
+            `href="/repo/css/main.css?v=${hashOf('body{}')}"`,
         )
     })
 
@@ -296,10 +296,10 @@ describe('run() with asset_hashing', () => {
 
         it('versions the link but leaves the text', async () => {
             const html = await build(
-                'name: Site\nlang: en\nasset_hashing: true'
+                'name: Site\nlang: en\nasset_hashing: true',
             )
             expect(html).toContain(
-                `href="/css/main.css?v=${hashOf('body{}')}"`
+                `href="/css/main.css?v=${hashOf('body{}')}"`,
             )
             expect(html).toContain(`<code>${codeText}</code>`)
         })

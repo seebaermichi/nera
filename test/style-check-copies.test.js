@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
-import { execFileSync, spawnSync } from 'child_process'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { tempDir, writeFiles } from '@nera-static/test-utils'
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { findRepos } from '../scripts/style-check/repos.js'
 import { findCopies, lockedVersion, pluginSource, checkCopies } from '../scripts/style-check/copies.js'
 
@@ -11,22 +11,22 @@ const script = path.resolve(import.meta.dirname, '../scripts/style-check.js')
 let workspace
 
 // Writes files into the fake workspace: { 'repo/path': content }; objects become JSON.
-function write(files) {
-    for (const [rel, content] of Object.entries(files)) {
-        const file = path.join(workspace, rel)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, typeof content === 'string' ? content : JSON.stringify(content))
-    }
-}
+const write = (files) => writeFiles(workspace, Object.fromEntries(
+    Object.entries(files).map(([rel, content]) => [rel, typeof content === 'string' ? content : JSON.stringify(content)]),
+))
 
 const lock = (versions) => ({
     lockfileVersion: 3,
-    packages: Object.fromEntries(Object.entries(versions).map(([plugin, version]) => [`node_modules/@nera-static/${plugin}`, { version }])),
+    packages: Object.fromEntries(
+        Object.entries(versions).map(([plugin, version]) => [`node_modules/@nera-static/${plugin}`, { version }]),
+    ),
 })
 
 const installed = (repo, plugin, version, files = {}) => ({
     [`${repo}/node_modules/@nera-static/${plugin}/package.json`]: { name: `@nera-static/${plugin}`, version },
-    ...Object.fromEntries(Object.entries(files).map(([rel, text]) => [`${repo}/node_modules/@nera-static/${plugin}/${rel}`, text])),
+    ...Object.fromEntries(
+        Object.entries(files).map(([rel, text]) => [`${repo}/node_modules/@nera-static/${plugin}/${rel}`, text]),
+    ),
 })
 
 const gitIn = (dir, ...args) =>
@@ -42,7 +42,10 @@ function siblingRepo(plugin, versions, workingTree = {}) {
     fs.mkdirSync(dir, { recursive: true })
     gitIn(dir, 'init', '-q', '-b', 'main')
     for (const [version, files] of Object.entries(versions)) {
-        write({ [`nera-${plugin}/package.json`]: { name: `@nera-static/${plugin}`, version }, ...prefix(`nera-${plugin}`, files) })
+        write({
+            [`nera-${plugin}/package.json`]: { name: `@nera-static/${plugin}`, version },
+            ...prefix(`nera-${plugin}`, files),
+        })
         gitIn(dir, 'add', '-A')
         gitIn(dir, 'commit', '-q', '-m', version)
         gitIn(dir, 'tag', `v${version}`)
@@ -57,11 +60,7 @@ const finding = (result, item) => result.findings.find((f) => f.item === item)
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', env: { ...process.env, GITHUB_STEP_SUMMARY: '' } })
 
 beforeEach(() => {
-    workspace = fs.mkdtempSync(path.join(os.tmpdir(), '.nera-style-check-copies-'))
-})
-
-afterEach(() => {
-    fs.rmSync(workspace, { recursive: true, force: true })
+    workspace = tempDir('.nera-style-check-copies-')
 })
 
 describe('findCopies', () => {

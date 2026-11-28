@@ -1,10 +1,10 @@
-import fssync from 'fs'
-import path from 'path'
+import fssync from 'node:fs'
+import path from 'node:path'
 import { isInside } from '@nera-static/plugin-utils/urls'
 
 // Layered view resolution — the single source of truth for how Nera locates a
 // layout and its `include`/`extends` targets across a site's own presentation
-// and an optional theme package (ROADMAP-themes.md §1b).
+// and an optional theme package: the site's file wins, the theme fills the gaps.
 //
 // Extracted from render.js so the exact same logic can be reused outside the
 // render loop — chiefly `@nera-static/validate`, which must decide "does this
@@ -26,7 +26,7 @@ export const defaultResolvePath = (filename, source, options) => {
 // site's own presentation first (`<site>/theme/views`, or the deprecated root
 // `<site>/views`), the resolved theme package second — so a site file overrides
 // the theme's copy of the same path while everything else falls through to the
-// theme (ROADMAP-themes.md §1b).
+// theme.
 //
 // The trick that makes it root-agnostic: resolve as pug normally would, then
 // re-root that path relative to whichever chain root it fell under, and retry

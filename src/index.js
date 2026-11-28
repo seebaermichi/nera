@@ -13,7 +13,7 @@ import { resolveTheme, checkThemeCompatibility } from './theme.js'
 const run = async (settings = defaultSettings) => {
     let data = loadAppData(settings)
 
-    // Discover the configured theme (ROADMAP-themes.md §1). Null when no
+    // Discover the configured theme (`theme:` in app.yaml). Null when no
     // `theme:` key is set, in which case render behaves exactly as before.
     const theme = resolveTheme({ app: data.app })
     if (theme && process.env.NERA_THEME) {

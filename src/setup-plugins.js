@@ -1,6 +1,6 @@
-import fs from 'fs/promises'
-import path from 'path'
-import { pathToFileURL } from 'url'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import YAML from 'yaml'
 import {
     isPluginPackage,
@@ -55,7 +55,7 @@ function orderPlugins(loadedPlugins, startOrder, endOrder) {
 
     const middle = loadedPlugins
         .filter(
-            (p) => !startOrder.includes(p.name) && !endOrder.includes(p.name)
+            (p) => !startOrder.includes(p.name) && !endOrder.includes(p.name),
         )
         .sort((a, b) => byString(a.name, b.name))
 
@@ -75,7 +75,7 @@ function orderPlugins(loadedPlugins, startOrder, endOrder) {
  */
 export async function getPluginsData(
     initialData,
-    localPluginsDir = 'src/plugins'
+    localPluginsDir = 'src/plugins',
 ) {
     const startTime = performance.now()
     const loadingPromises = []
@@ -100,7 +100,7 @@ export async function getPluginsData(
                 .catch((err) => {
                     console.warn(
                         `  ⚠️ Failed to load local plugin ${dir}:`,
-                        err.message
+                        err.message,
                     )
                     return null
                 })
@@ -131,7 +131,7 @@ export async function getPluginsData(
         // load npm plugin nera" on every build — plus `installer`, `validate`,
         // and theme packages (`@nera-static/theme-*`, no JS entry point).
         const deps = Object.keys(pkgJson.dependencies || {}).filter(
-            isPluginPackage
+            isPluginPackage,
         )
 
         for (const fullName of deps) {
@@ -145,7 +145,7 @@ export async function getPluginsData(
                 .catch((err) => {
                     console.warn(
                         `  ❌ Failed to load npm plugin ${shortName}:`,
-                        err.message
+                        err.message,
                     )
                     return null
                 })
@@ -155,7 +155,7 @@ export async function getPluginsData(
     } catch (err) {
         console.warn(
             '⚠️ Could not load package.json for npm plugins:',
-            err.message
+            err.message,
         )
     }
 
@@ -178,7 +178,7 @@ export async function getPluginsData(
 
     const loadTime = Math.round(performance.now() - startTime)
     console.log(
-        `🎯 Plugin loading complete: ${successCount} loaded, ${errorCount} failed (${loadTime}ms)`
+        `🎯 Plugin loading complete: ${successCount} loaded, ${errorCount} failed (${loadTime}ms)`,
     )
 
     //
@@ -204,7 +204,7 @@ export async function getPluginsData(
                 appData = result
             } else {
                 console.warn(
-                    `⚠️ Plugin "${plugin.name}" getAppData returned invalid format, skipping replace.`
+                    `⚠️ Plugin "${plugin.name}" getAppData returned invalid format, skipping replace.`,
                 )
             }
         }
@@ -215,7 +215,7 @@ export async function getPluginsData(
                 pagesData = result
             } else {
                 console.warn(
-                    `⚠️ Plugin "${plugin.name}" getMetaData returned invalid format, skipping append.`
+                    `⚠️ Plugin "${plugin.name}" getMetaData returned invalid format, skipping append.`,
                 )
             }
         }
@@ -237,7 +237,7 @@ export async function getPluginsData(
         const result = await mod.getAssets({ app: appData, pagesData })
         if (!Array.isArray(result)) {
             console.warn(
-                `⚠️ Plugin "${plugin.name}" getAssets returned invalid format, skipping.`
+                `⚠️ Plugin "${plugin.name}" getAssets returned invalid format, skipping.`,
             )
             continue
         }
@@ -246,7 +246,7 @@ export async function getPluginsData(
             const asset = validateAsset(entry)
             if (typeof asset === 'string') {
                 console.warn(
-                    `⚠️ Plugin "${plugin.name}" getAssets entry skipped: ${asset}`
+                    `⚠️ Plugin "${plugin.name}" getAssets entry skipped: ${asset}`,
                 )
                 continue
             }

@@ -1,7 +1,7 @@
-import fs from 'fs/promises'
-import fssync from 'fs'
-import path from 'path'
-import { createHash } from 'crypto'
+import fs from 'node:fs/promises'
+import fssync from 'node:fs'
+import path from 'node:path'
+import { createHash } from 'node:crypto'
 import beautify from 'js-beautify'
 import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
@@ -71,7 +71,7 @@ export const rewriteHtmlUrls = (html, basePath) => {
             .replace(
                 /\b(href|src|poster|data-search-index)=("|')(\/[^"']*)\2/gi,
                 (m, attr, quote, val) =>
-                    `${attr}=${quote}${withBasePath(val, basePath)}${quote}`
+                    `${attr}=${quote}${withBasePath(val, basePath)}${quote}`,
             )
             .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
                 const rewritten = list
@@ -81,12 +81,12 @@ export const rewriteHtmlUrls = (html, basePath) => {
                         if (!seg) return part
                         const [url, ...descriptor] = seg.split(/\s+/)
                         return [withBasePath(url, basePath), ...descriptor].join(
-                            ' '
+                            ' ',
                         )
                     })
                     .join(', ')
                 return `srcset=${quote}${rewritten}${quote}`
-            })
+            }),
     )
 }
 
@@ -95,7 +95,7 @@ const rewriteCssUrls = (css, basePath) =>
     css.replace(
         /url\(\s*(['"]?)(\/[^)'"]*)\1\s*\)/gi,
         (m, quote, val) =>
-            `url(${quote}${withBasePath(val, basePath)}${quote})`
+            `url(${quote}${withBasePath(val, basePath)}${quote})`,
     )
 
 // Rewrite root-absolute URLs held under `href`/`url` keys in a JSON asset —
@@ -107,7 +107,7 @@ const rewriteCssUrls = (css, basePath) =>
 const rewriteJsonUrls = (json, basePath) =>
     json.replace(
         /("(?:href|url)"\s*:\s*")(\/[^"]*)(")/gi,
-        (m, pre, val, post) => `${pre}${withBasePath(val, basePath)}${post}`
+        (m, pre, val, post) => `${pre}${withBasePath(val, basePath)}${post}`,
     )
 
 // Rewrite a web app manifest's root-absolute URL fields. Parsed as JSON so we
@@ -276,7 +276,7 @@ export const hashHtmlUrls = (html, htmlFile, hashUrl) =>
             .replace(
                 /\b(href|src|poster|data-search-index)=("|')([^"']*)\2/gi,
                 (m, attr, quote, val) =>
-                    `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`
+                    `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`,
             )
             .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
                 const rewritten = list
@@ -286,12 +286,12 @@ export const hashHtmlUrls = (html, htmlFile, hashUrl) =>
                         if (!seg) return part
                         const [url, ...descriptor] = seg.split(/\s+/)
                         return [hashUrl(url, htmlFile), ...descriptor].join(
-                            ' '
+                            ' ',
                         )
                     })
                     .join(', ')
                 return `srcset=${quote}${rewritten}${quote}`
-            })
+            }),
     )
 
 // Version the `url()` references of one CSS file (root-absolute or relative).
@@ -299,7 +299,7 @@ export const hashCssUrls = (css, cssFile, hashUrl) =>
     css.replace(
         /url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi,
         (m, quote, val) =>
-            `url(${quote}${hashUrl(val.trim(), cssFile)}${quote})`
+            `url(${quote}${hashUrl(val.trim(), cssFile)}${quote})`,
     )
 
 // The pass itself. No-op unless `enabled`; run it after every asset copy and
@@ -361,8 +361,11 @@ export function ignoreFiles(ignoreList, filePath, sourceRoot) {
 // basename. The list cpy (via the `junk` package) skipped by default, plus the
 // `.gitkeep`/`.keep` markers that keep an empty folder in git (`nera new`
 // ships `theme/assets/.gitkeep`); a marker is never content to serve.
-const JUNK =
-    /^\.gitkeep$|^\.keep$|^npm-debug\.log$|^\..*\.swp$|^\.DS_Store$|^\.AppleDouble$|^\.LSOverride$|^Icon\r$|^\._.*|^\.Spotlight-V100(?:$|\/)|\.Trashes|^__MACOSX$|~$|^Thumbs\.db$|^ehthumbs\.db$|^[Dd]esktop\.ini$|@eaDir$/
+const JUNK = new RegExp([
+    /^\.gitkeep$/, /^\.keep$/, /^npm-debug\.log$/, /^\..*\.swp$/, /^\.DS_Store$/, /^\.AppleDouble$/,
+    /^\.LSOverride$/, /^Icon\r$/, /^\._.*/, /^\.Spotlight-V100(?:$|\/)/, /\.Trashes/, /^__MACOSX$/, /~$/,
+    /^Thumbs\.db$/, /^ehthumbs\.db$/, /^[Dd]esktop\.ini$/, /@eaDir$/,
+].map((re) => re.source).join('|'))
 
 // Every file under `dir`, dotfiles included, junk excluded. Symlinks are
 // followed like cpy's glob did (a linked directory is walked, a dangling link
@@ -413,7 +416,7 @@ export const copyFolder = async (
     sourceFolder,
     targetFolder,
     ignoreBase,
-    label = 'Assets'
+    label = 'Assets',
 ) => {
     if (fssync.existsSync(sourceFolder)) {
         const base =
@@ -425,12 +428,12 @@ export const copyFolder = async (
                 if (isIgnoredAsset(ignore, file, sourceFolder)) continue
                 await copyPreserving(
                     file,
-                    path.join(targetFolder, path.relative(sourceFolder, file))
+                    path.join(targetFolder, path.relative(sourceFolder, file)),
                 )
             }
             console.log(
                 SUCCESS_COLOR,
-                `${label.charAt(0).toUpperCase()}${label.slice(1)} copied`
+                `${label.charAt(0).toUpperCase()}${label.slice(1)} copied`,
             )
         } catch (err) {
             console.error('Copy failed:', err)
@@ -454,7 +457,7 @@ export const copyPluginAssets = async (assets = [], targetFolder) => {
             stat = await fs.stat(from)
         } catch {
             console.warn(
-                `⚠️ Plugin "${plugin}" asset not found, skipped: ${from}`
+                `⚠️ Plugin "${plugin}" asset not found, skipped: ${from}`,
             )
             continue
         }
@@ -463,7 +466,7 @@ export const copyPluginAssets = async (assets = [], targetFolder) => {
             await copyFolder(from, target, null, `plugin "${plugin}" assets`)
         } else if (to === '') {
             console.warn(
-                `⚠️ Plugin "${plugin}" asset ${from} is a file and needs a file path as "to", skipped`
+                `⚠️ Plugin "${plugin}" asset ${from} is a file and needs a file path as "to", skipped`,
             )
         } else {
             await fs.mkdir(path.dirname(target), { recursive: true })
@@ -482,7 +485,7 @@ export const createHtmlFiles = async (
     data,
     viewsFolder,
     publicFolder,
-    theme = null
+    theme = null,
 ) => {
     // With a theme the site's own views folder is optional: the theme supplies
     // every layout, and the resolver falls through a missing site root.
@@ -493,8 +496,8 @@ export const createHtmlFiles = async (
         const roots = theme ? [viewsFolder, theme.viewsRoot] : [viewsFolder]
 
         // Compile each distinct layout once per build, then reuse the template
-        // function for every page that uses it (ROADMAP-themes.md §6). This loop
-        // previously re-ran pug.compileFile per page, recompiling the same tree
+        // function for every page that uses it. This loop previously re-ran
+        // pug.compileFile per page, recompiling the same tree
         // dozens of times — the dominant build cost (measured ~70× on 69 pages,
         // ~500× on 500, since a site's pages share a handful of layouts). Keyed
         // on the resolved entry path, so different layouts stay separate and,
@@ -517,8 +520,6 @@ export const createHtmlFiles = async (
                 data.t = (key) =>
                     data.app.translations?.[lang]?.[key] || key
 
-                let html = pageData.content
-
                 const entry = theme
                     ? resolveEntry(pageData.meta.layout, roots)
                     : `${viewsFolder}/${pageData.meta.layout}`
@@ -528,7 +529,7 @@ export const createHtmlFiles = async (
                     fn = compileLayout(entry, { roots })
                     compiled.set(entry, fn)
                 }
-                html = fn({ ...data, ...pageData })
+                let html = fn({ ...data, ...pageData })
 
                 // Prefix root-absolute URLs in the rendered page for a
                 // subdirectory deploy (no-op when basePath is '').
@@ -537,7 +538,7 @@ export const createHtmlFiles = async (
                 const htmlPath = path.join(
                     publicFolder,
                     pageData.meta.dirname.replace(/^\/+/, ''),
-                    `${pageData.meta.filename}`
+                    `${pageData.meta.filename}`,
                 )
 
                 await fs.mkdir(path.dirname(htmlPath), { recursive: true })

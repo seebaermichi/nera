@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { spawnSync } from 'child_process'
-import { pathToFileURL } from 'url'
-import path from 'path'
-import fs from 'fs/promises'
-import fssync from 'fs'
+import { spawnSync } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import fssync from 'node:fs'
 import { listFiles, tempDir } from '@nera-static/test-utils'
 import {
     copyFolder,
@@ -58,7 +58,7 @@ describe('copyFolder', () => {
         await fs.mkdir(path.join(srcDir, '.well-known'), { recursive: true })
         await fs.writeFile(
             path.join(srcDir, '.well-known', 'security.txt'),
-            'Contact: mailto:x@example.com'
+            'Contact: mailto:x@example.com',
         )
 
         await copyFolder(srcDir, publicDir)
@@ -73,7 +73,7 @@ describe('copyFolder', () => {
         await fs.writeFile(path.join(srcDir, '.DS_Store'), '')
         await fs.writeFile(
             path.join(tmpRoot, 'src', '.neraignore'),
-            'ignore.txt\n.DS_Store\n'
+            'ignore.txt\n.DS_Store\n',
         )
 
         await copyFolder(srcDir, publicDir)
@@ -132,7 +132,7 @@ describe('copyFolder', () => {
         expect(files).toContain('linked-file.txt')
         expect(files).not.toContain('dangling.txt')
         expect(
-            await fs.readFile(path.join(publicDir, 'linked-file.txt'), 'utf8')
+            await fs.readFile(path.join(publicDir, 'linked-file.txt'), 'utf8'),
         ).toBe('via link')
     })
 
@@ -186,7 +186,7 @@ describe('copyFolder', () => {
                 path.join(tmpRoot, 'missing'),
                 publicDir,
                 null,
-                'site assets'
+                'site assets',
             )
 
             expect(logged()).toEqual([
@@ -224,7 +224,7 @@ describe('copyPluginAssets', () => {
                     plugin: 'code-blocks',
                 },
             ],
-            path.join(tmpRoot, 'public')
+            path.join(tmpRoot, 'public'),
         )
 
         expect(log.mock.calls.map((args) => args.at(-1))).toEqual([
@@ -246,7 +246,7 @@ describe('createHtmlFiles', () => {
         const layoutPath = path.join(viewsDir, 'index.pug')
         await fs.writeFile(
             layoutPath,
-            'html\n  head\n    title #{meta.title}\n  body\n    h1= t("headline")'
+            'html\n  head\n    title #{meta.title}\n  body\n    h1= t("headline")',
         )
     })
 
@@ -259,7 +259,7 @@ describe('createHtmlFiles', () => {
         await fs.writeFile(path.join(vendorDir, 'y.pug'), 'p Vendor partial')
         await fs.writeFile(
             path.join(viewsDir, 'with-include.pug'),
-            'html\n  body\n    include /vendor/x/y.pug'
+            'html\n  body\n    include /vendor/x/y.pug',
         )
 
         const data = {
@@ -270,17 +270,17 @@ describe('createHtmlFiles', () => {
                         layout: 'with-include.pug',
                         dirname: '/',
                         filename: 'index.html',
-                        fullPath: '/index.html'
-                    }
-                }
-            ]
+                        fullPath: '/index.html',
+                    },
+                },
+            ],
         }
 
         await createHtmlFiles(data, viewsDir, publicDir)
 
         const content = await fs.readFile(
             path.join(publicDir, 'index.html'),
-            'utf8'
+            'utf8',
         )
         expect(content).toContain('<p>Vendor partial</p>')
     })
@@ -296,10 +296,10 @@ describe('createHtmlFiles', () => {
                         lang: 'en',
                         dirname: '/',
                         filename: 'index.html',
-                        fullPath: '/index.html'
-                    }
-                }
-            ]
+                        fullPath: '/index.html',
+                    },
+                },
+            ],
         }
 
         await createHtmlFiles(data, viewsDir, publicDir)
@@ -314,24 +314,24 @@ describe('createHtmlFiles', () => {
     })
 
     describe('t()', () => {
-        const page = (meta) => ({
+        const pageData = (meta) => ({
             meta: {
                 layout: 'index.pug',
                 dirname: '/',
                 filename: 'index.html',
                 fullPath: '/index.html',
-                ...meta
-            }
+                ...meta,
+            },
         })
         const translations = {
             de: { headline: 'Willkommen!' },
-            en: { headline: 'Welcome!' }
+            en: { headline: 'Welcome!' },
         }
         const render = async (app, meta) => {
             await createHtmlFiles(
-                { app, pagesData: [page(meta)] },
+                { app, pagesData: [pageData(meta)] },
                 viewsDir,
-                publicDir
+                publicDir,
             )
             return fs.readFile(path.join(publicDir, 'index.html'), 'utf8')
         }
@@ -358,21 +358,21 @@ describe('createHtmlFiles', () => {
     })
 
     it('logs each page as the path written under public/, without base_path', async () => {
-        const page = (dirname, filename) => ({
+        const pageData = (dirname, filename) => ({
             meta: {
                 layout: 'index.pug',
                 dirname,
                 filename,
-                fullPath: path.posix.join(dirname, filename)
-            }
+                fullPath: path.posix.join(dirname, filename),
+            },
         })
         const data = {
             app: { basePath: '/repo' },
             pagesData: [
-                page('/', 'index.html'),
-                page('/', 'about.html'),
-                page('/de', 'index.html')
-            ]
+                pageData('/', 'index.html'),
+                pageData('/', 'about.html'),
+                pageData('/de', 'index.html'),
+            ],
         }
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
 
@@ -385,7 +385,7 @@ describe('createHtmlFiles', () => {
             expect(lines).toEqual([
                 'HTML created: /index.html',
                 'HTML created: /about.html',
-                'HTML created: /de/index.html'
+                'HTML created: /de/index.html',
             ])
             expect(fssync.existsSync(path.join(publicDir, 'de/index.html'))).toBe(true)
         } finally {
@@ -435,7 +435,7 @@ describe('rewriteHtmlUrls (base_path)', () => {
             '<link href="/nera-website/css/main.css">' +
                 '<a href="/nera-website/de/index.html">de</a>' +
                 '<script src="/nera-website/js/search.js"></script>' +
-                '<input data-search-index="/nera-website/search-index.json">'
+                '<input data-search-index="/nera-website/search-index.json">',
         )
     })
 
@@ -456,7 +456,7 @@ describe('rewriteHtmlUrls (base_path)', () => {
     it('prefixes each URL in a srcset list, preserving descriptors', () => {
         const html = '<img srcset="/a.png 1x, /b.png 2x">'
         expect(rewriteHtmlUrls(html, BP)).toBe(
-            '<img srcset="/nera-website/a.png 1x, /nera-website/b.png 2x">'
+            '<img srcset="/nera-website/a.png 1x, /nera-website/b.png 2x">',
         )
     })
 
@@ -487,7 +487,7 @@ describe('rewriteHtmlUrls (base_path)', () => {
         expect(rewriteHtmlUrls(html, BP)).toBe(
             '<pre><code class="hljs">img(src="/a.png" srcset="/a.png 1x")\n' +
                 '<span class="x">a(href="/b.html")</span>' +
-                '<a href="/nera-website/c.html">c</a></code></pre>'
+                '<a href="/nera-website/c.html">c</a></code></pre>',
         )
     })
 
@@ -498,7 +498,7 @@ describe('rewriteHtmlUrls (base_path)', () => {
         expect(rewriteHtmlUrls(html, BP)).toBe(
             '<a title="a > b" href="/nera-website/a.html">a</a>' +
                 '<img alt=\'x > y\' src="/nera-website/i.png" ' +
-                'srcset="/nera-website/i.png 1x, /nera-website/j.png 2x">'
+                'srcset="/nera-website/i.png 1x, /nera-website/j.png 2x">',
         )
     })
 
@@ -508,7 +508,7 @@ describe('rewriteHtmlUrls (base_path)', () => {
             '<script src="/app.js"></script>'
         expect(rewriteHtmlUrls(html, BP)).toBe(
             '<!doctype html><!-- keep --><p>a < b, src="/x.js"</p>' +
-                '<script src="/nera-website/app.js"></script>'
+                '<script src="/nera-website/app.js"></script>',
         )
     })
 
@@ -522,13 +522,13 @@ describe('rewriteHtmlUrls (base_path)', () => {
 
     it('leaves text after a stray "<a x" alone, prefixes the next tag', () => {
         expect(
-            rewriteHtmlUrls('<p>if a <a x(href="/z")</p><link href="/m.css">', BP)
+            rewriteHtmlUrls('<p>if a <a x(href="/z")</p><link href="/m.css">', BP),
         ).toBe('<p>if a <a x(href="/z")</p><link href="/nera-website/m.css">')
     })
 
     it('prefixes a tag whose quoted value holds a "<"', () => {
         expect(
-            rewriteHtmlUrls('<a title="a < b" href="/a.html">a</a>', BP)
+            rewriteHtmlUrls('<a title="a < b" href="/a.html">a</a>', BP),
         ).toBe('<a title="a < b" href="/nera-website/a.html">a</a>')
     })
 })
@@ -554,7 +554,7 @@ describe('rewriteAssetUrls (base_path)', () => {
         expect(await fs.readFile(file, 'utf-8')).toBe(
             '@font-face{src:url("/nera-website/fonts/x.woff2")}' +
                 '.a{background:url(/nera-website/img/a.png)}' +
-                '.b{background:url(https://cdn/x.png)}'
+                '.b{background:url(https://cdn/x.png)}',
         )
     })
 
@@ -565,7 +565,7 @@ describe('rewriteAssetUrls (base_path)', () => {
             JSON.stringify({
                 start_url: '/',
                 icons: [{ src: '/icon-192.png' }, { src: 'https://cdn/i.png' }],
-            })
+            }),
         )
 
         await rewriteAssetUrls(dir, BP)
@@ -599,7 +599,7 @@ describe('rewriteAssetUrls (base_path)', () => {
         await fs.writeFile(file, '.a{background:url(/img/a.png)}')
         await rewriteAssetUrls(dir, '')
         expect(await fs.readFile(file, 'utf-8')).toBe(
-            '.a{background:url(/img/a.png)}'
+            '.a{background:url(/img/a.png)}',
         )
     })
 })
@@ -617,7 +617,7 @@ describe('dotenv loading', () => {
         // A child process, because render.js calls dotenv.config() once at
         // import time — this worker imported it long ago, from another cwd.
         const renderUrl = pathToFileURL(
-            path.resolve(import.meta.dirname, '../src/render.js')
+            path.resolve(import.meta.dirname, '../src/render.js'),
         ).href
         const env = { ...process.env }
         delete env.NERA_DOTENV_PROBE
@@ -626,9 +626,9 @@ describe('dotenv loading', () => {
             [
                 '--input-type=module',
                 '-e',
-                `await import(${JSON.stringify(renderUrl)}); console.log(process.env.NERA_DOTENV_PROBE)`
+                `await import(${JSON.stringify(renderUrl)}); console.log(process.env.NERA_DOTENV_PROBE)`,
             ],
-            { cwd: tmpRoot, env, encoding: 'utf8' }
+            { cwd: tmpRoot, env, encoding: 'utf8' },
         )
 
         expect(result.status).toBe(0)

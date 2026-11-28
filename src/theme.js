@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import yaml from 'yaml'
 import { satisfies, validRange } from 'semver'
 import {
@@ -9,7 +9,7 @@ import {
 } from '@nera-static/plugin-utils/packages'
 import { isPlainObject } from '@nera-static/plugin-utils/values'
 
-// Theme discovery (ROADMAP-themes.md §1).
+// Theme discovery: turn `app.theme` into the root of an installed theme.
 //
 // `app.theme` accepts three forms, and every one resolves to a THEME ROOT whose
 // payload — `views/`, `assets/`, `config/` — sits directly at that root, with no
@@ -56,7 +56,7 @@ export function resolveTheme({
             `theme: "${spec}" resolved to ${siteRelative(cwd, root)}, but it ` +
                 'has no views/ folder — point `theme:` in config/app.yaml (or ' +
                 'NERA_THEME) at a theme folder with views/, or remove it to ' +
-                'build without a theme'
+                'build without a theme',
         )
     }
 
@@ -157,7 +157,7 @@ function packageName(spec) {
     if (pkg) return pkg
     throw new Error(
         `theme: "${spec}" is blank — set \`theme:\` in config/app.yaml (or ` +
-            'NERA_THEME) to a theme name, or remove it to build without a theme'
+            'NERA_THEME) to a theme name, or remove it to build without a theme',
     )
 }
 
@@ -175,7 +175,7 @@ function resolvePackageRoot(spec, cwd) {
     } catch {
         throw new Error(
             `theme: "${spec}" — package ${pkg} is not installed; ` +
-                `run \`npm install ${pkg}\``
+                `run \`npm install ${pkg}\``,
         )
     }
 }
@@ -199,7 +199,7 @@ function resolvePackageRoot(spec, cwd) {
 // themeless site, which never calls this) is entirely unaffected.
 export function checkThemeCompatibility(
     theme,
-    { cwd = process.cwd(), generatorVersion = readGeneratorVersion() } = {}
+    { cwd = process.cwd(), generatorVersion = readGeneratorVersion() } = {},
 ) {
     if (!theme) return
 
@@ -248,7 +248,7 @@ function checkGeneratorCompatibility(theme, themePkg, generatorVersion) {
         // rather than fail so it cannot brick every site that installs the theme.
         console.warn(
             `⚠️ Nera: theme "${theme.name}" declares an invalid ` +
-                `nera.generator range "${range}" — ignoring it.`
+                `nera.generator range "${range}" — ignoring it.`,
         )
         return
     }
@@ -262,7 +262,7 @@ function checkGeneratorCompatibility(theme, themePkg, generatorVersion) {
             `theme "${theme.name}" requires Nera generator ${range}, but this ` +
                 `generator is ${generatorVersion} — update the generator ` +
                 '(`nera update`) or install a theme version compatible with ' +
-                generatorVersion
+                generatorVersion,
         )
     }
 }
@@ -285,7 +285,7 @@ function checkPluginCompatibility(theme, themePkg, cwd) {
                 `⚠️ Nera: theme "${theme.name}" targets ${name}@"${range}" ` +
                     `for its styling, but ${name}@${installed} is installed — ` +
                     `some ${name} output may be unstyled. Check the theme's ` +
-                    'changelog for a compatible version.'
+                    'changelog for a compatible version.',
             )
         }
     }

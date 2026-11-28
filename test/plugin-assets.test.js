@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
-import fssync from 'fs'
-import { createHash } from 'crypto'
-import { captureConsole, listFiles, useSiteCwd, writeFiles } from '@nera-static/test-utils'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import fssync from 'node:fs'
+import { createHash } from 'node:crypto'
+import { captureConsole, folders, listFiles, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import { getPluginsData, validateAsset } from '../src/setup-plugins.js'
 import run from '../src/index.js'
 
@@ -17,7 +17,7 @@ const hashOf = (content) =>
 // Every file under `dir` as { relPath: content }, for byte-for-byte comparison.
 const snapshotTree = (dir) =>
     Object.fromEntries(
-        listFiles(dir).map((rel) => [rel, fssync.readFileSync(path.join(dir, rel), 'utf8')])
+        listFiles(dir).map((rel) => [rel, fssync.readFileSync(path.join(dir, rel), 'utf8')]),
     )
 
 describe('validateAsset', () => {
@@ -65,16 +65,7 @@ describe('validateAsset', () => {
 describe('getAssets hook', () => {
     let tmpRoot, warnings
 
-    const folders = () => ({
-        config: path.join(tmpRoot, 'config'),
-        pages: path.join(tmpRoot, 'pages'),
-        views: path.join(tmpRoot, 'views'),
-        assets: path.join(tmpRoot, 'assets'),
-        dist: path.join(tmpRoot, 'public'),
-        plugins: path.join(tmpRoot, 'plugins'),
-    })
-
-    const build = () => run({ folders: folders() })
+    const build = () => run({ folders: folders(tmpRoot) })
     const read = (rel) => fs.readFile(path.join(tmpRoot, 'public', rel), 'utf8')
     const exists = (rel) => fssync.existsSync(path.join(tmpRoot, 'public', rel))
 
@@ -85,7 +76,7 @@ describe('getAssets hook', () => {
     const assetsPlugin = (name, entries) =>
         writePlugin(
             name,
-            `export function getAssets() { return ${JSON.stringify(entries)} }`
+            `export function getAssets() { return ${JSON.stringify(entries)} }`,
         )
 
     beforeEach(() => {
@@ -111,7 +102,7 @@ describe('getAssets hook', () => {
 
         writePlugin(
             'plain',
-            'export function getMetaData({ pagesData }) { return pagesData }'
+            'export function getMetaData({ pagesData }) { return pagesData }',
         )
         await build()
         const after = snapshotTree(path.join(tmpRoot, 'public'))
@@ -122,7 +113,7 @@ describe('getAssets hook', () => {
     it('returns assets: [] from getPluginsData when no plugin has the hook', async () => {
         const data = await getPluginsData(
             { app: {}, pagesData: [] },
-            path.join(tmpRoot, 'plugins')
+            path.join(tmpRoot, 'plugins'),
         )
         expect(data.assets).toEqual([])
     })
@@ -133,18 +124,18 @@ describe('getAssets hook', () => {
             `export function getAppData({ app }) { return { ...app, produced: 'yes' } }
             export function getAssets({ app, pagesData }) {
                 return [{ from: ${JSON.stringify(path.join(tmpRoot, 'cache', 'files'))}, to: app.produced + '/' + pagesData.length }]
-            }`
+            }`,
         )
         // Runs after "producer" alphabetically; its getMetaData must already
         // be reflected in what producer's getAssets sees.
         writePlugin(
             'zz-pages',
-            'export function getMetaData({ pagesData }) { return [...pagesData, {}, {}] }'
+            'export function getMetaData({ pagesData }) { return [...pagesData, {}, {}] }',
         )
 
         const data = await getPluginsData(
             { app: {}, pagesData: [{}] },
-            path.join(tmpRoot, 'plugins')
+            path.join(tmpRoot, 'plugins'),
         )
 
         expect(data.assets).toEqual([
@@ -252,7 +243,7 @@ describe('getAssets hook', () => {
         const html = await read('index.html')
         expect(html).toContain(`src="/sub/_img/pic.png?v=${hashOf('PNG1')}"`)
         expect(html).toContain(
-            `srcset="/sub/_img/pic.png?v=${hashOf('PNG1')} 480w, /sub/_img/pic-2x.png?v=${hashOf('PNG2')} 960w"`
+            `srcset="/sub/_img/pic.png?v=${hashOf('PNG1')} 480w, /sub/_img/pic-2x.png?v=${hashOf('PNG2')} 960w"`,
         )
     })
 })

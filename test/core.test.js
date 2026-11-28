@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
+import path from 'node:path'
+import fs from 'node:fs/promises'
 import { tempDir, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import {
     loadAppData,
@@ -171,7 +171,7 @@ describe('loadAppData', () => {
             expect(folders.views).toBe('./views')
             expect(folders.assets).toBe('./assets')
             expect(warn).toHaveBeenCalledWith(
-                expect.stringContaining('deprecated')
+                expect.stringContaining('deprecated'),
             )
 
             warn.mockRestore()
@@ -180,7 +180,7 @@ describe('loadAppData', () => {
         it('points views/assets at theme/ for a theme-only site, without the warning', async () => {
             await fs.writeFile(
                 path.join(probeRoot, 'config', 'app.yaml'),
-                'name: Probe\ntheme: business\n'
+                'name: Probe\ntheme: business\n',
             )
             const warn = vi
                 .spyOn(console, 'warn')
@@ -191,7 +191,7 @@ describe('loadAppData', () => {
             expect(folders.views).toBe('./theme/views')
             expect(folders.assets).toBe('./theme/assets')
             expect(warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('deprecated')
+                expect.stringContaining('deprecated'),
             )
 
             warn.mockRestore()
@@ -201,7 +201,7 @@ describe('loadAppData', () => {
             await fs.mkdir(path.join(probeRoot, 'views'))
             await fs.writeFile(
                 path.join(probeRoot, 'config', 'app.yaml'),
-                'name: Probe\ntheme: business\n'
+                'name: Probe\ntheme: business\n',
             )
             const warn = vi
                 .spyOn(console, 'warn')
@@ -220,7 +220,7 @@ describe('loadAppData', () => {
             })
             await fs.writeFile(
                 path.join(probeRoot, 'config', 'app.yaml'),
-                'name: Probe\nfolders:\n  views: ./custom-views\n'
+                'name: Probe\nfolders:\n  views: ./custom-views\n',
             )
 
             const { folders } = loadAppData().app
@@ -385,7 +385,7 @@ describe('getPagesData', () => {
         const DERIVED = ['createdAt', 'href', 'fullPath', 'dirname', 'filename']
         const ownMeta = ({ meta }) =>
             Object.fromEntries(
-                Object.entries(meta).filter(([key]) => !DERIVED.includes(key))
+                Object.entries(meta).filter(([key]) => !DERIVED.includes(key)),
             )
 
         beforeAll(() => {

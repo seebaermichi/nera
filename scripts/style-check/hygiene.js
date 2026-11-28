@@ -4,9 +4,9 @@
 //   findings  { check, repo, item, detail } — a gap; the allow-list matches check+repo+item
 //   notes     { check, repo, detail }       — could not check (missing input)
 //   tables    { caption, header, rows }     — context printed with the section
-import fs from 'fs'
-import path from 'path'
-import { execFileSync } from 'child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 // The canonical .gitignore every new repo starts from (scripts/new-repo.js), relative
 // to the workspace root: the common template of the generator repo, so a CI clone of

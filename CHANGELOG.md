@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.20.0] - 2026-11-28
+
+### Added
+
+-   `@nera-static/plugin-utils` (^1.8.0) is a dependency: core reads `base_path`, frontmatter, `.neraignore`, package names, the page language and plain-object checks through its shared helpers instead of local copies, so core, validate, the CLI and the plugins agree on each rule.
+
+### Changed
+
+-   Frontmatter is split with plugin-utils' `splitFrontmatter` and parsed with its `FRONTMATTER_OPTIONS`; only the body is rendered as Markdown. The output of every page is unchanged.
+-   A plugin hook result is accepted as `app` only when it is a plain object: a class instance or `Map` returned from `getAppData` is now dropped with the existing warning (it never worked as `app`).
+-   A blank `theme:` spec (`theme: "  "`) now fails with its own message, naming `config/app.yaml`, instead of a generic package-not-found error.
+-   Plugins not listed in `config/plugin-order.yaml` are sorted by code unit (plugin-utils' `byString`) instead of `localeCompare`, so the order no longer depends on the machine's locale.
+-   The exported `deepMerge` treats non-plain objects (class instances, `Map`, `Date`) as leaves and replaces them whole instead of merging their keys.
+-   `normalizeBasePath` stays exported from `@nera-static/core` and `@nera-static/core/core`, now as a re-export of plugin-utils.
+-   The deprecation warning for the legacy root `views/`/`assets/` no longer points to a local-only spec file.
+
+### Deprecated
+
+-   `ignoreFiles` (`@nera-static/core/render`): use `isIgnoredAsset` from `@nera-static/plugin-utils/glob`. It stays as a thin wrapper and is removed in 5.0.0.
+
+### Fixed
+
+-   `t()` reads the page language through plugin-utils' `pageLang`: `lang: 'de '` (with a trailing space) now finds the `de` translations, and a site with neither `meta.lang` nor `app.lang` reads `translations.en` instead of returning every key untranslated.
+
 ## [4.19.1] - 2026-11-26
 
 ### Fixed
@@ -519,26 +543,24 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 ## [4.2.1] - 2025-07-25
 
 ### Changed
-  - loadAppData() now loads appConfig.folders into the app data
+
+-   `loadAppData()` now loads `appConfig.folders` into the app data
 
 
 ## [4.2.0] - 2025-07-23
 
 ### Added
 
-- Plugin execution order control via `config/plugin-order.yaml`
-- Support for `start` and `end` plugin groups with flexible ordering logic
-- Alphabetical fallback sorting for unspecified plugins
+-   Plugin execution order control via `config/plugin-order.yaml`
+-   Support for `start` and `end` plugin groups with flexible ordering logic
+-   Alphabetical fallback sorting for unspecified plugins
 
 ### Changed
 
-- Internal plugin orchestration updated to allow manual ordering
-- `setup-plugins.js` fully rewritten for clarity and flexibility
-
-### Technical
-
-- Improved test coverage for plugin ordering edge cases
-- Updated test suite to isolate and verify execution sequences
+-   Internal plugin orchestration updated to allow manual ordering
+-   `setup-plugins.js` fully rewritten for clarity and flexibility
+-   Improved test coverage for plugin ordering edge cases
+-   Updated test suite to isolate and verify execution sequences
 
 
 ## [4.1.0] - 2025-07-19
@@ -558,6 +580,9 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 -   `getPagesData()` now skips corrupted files instead of including them with empty content
 -   `loadAppData()` provides better fallback handling for missing configuration files
 -   Plugin data merging now uses full object replacement for consistency with meta data handling
+-   Added comprehensive test coverage for new error handling scenarios
+-   Improved test isolation and safety measures
+-   Enhanced plugin architecture consistency across all plugins
 
 ### Fixed
 
@@ -565,12 +590,6 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 -   `popular-content` plugin now returns complete app data object instead of partial data
 -   File stat errors no longer crash the build process
 -   Missing directories are handled gracefully without terminating the build
-
-### Technical
-
--   Added comprehensive test coverage for new error handling scenarios
--   Improved test isolation and safety measures
--   Enhanced plugin architecture consistency across all plugins
 
 
 ## [4.0.1] - 2025-07-19
@@ -592,10 +611,10 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 
 ## [4.0.0] - 2025-07-15
 
-### Breaking Changes
+### Changed
 
--   Major dependency updates with potential breaking changes
--   Updated minimum Node.js version requirements
+-   **BREAKING**: Major dependency updates with potential breaking changes
+-   **BREAKING**: Updated minimum Node.js version requirements
 
 ### Added
 
@@ -633,11 +652,6 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 
 ## [2.0.0] - 2019-11-15
 
-### Breaking Changes
-
--   **Complete Refactor**: Moved to functional programming paradigm
--   Restructured core architecture
-
 ### Added
 
 -   Modular plugin system (`setup-plugins.js`)
@@ -646,21 +660,12 @@ has not overridden keeps updating via `npm update`. All additive — a site with
 
 ### Changed
 
+-   **BREAKING**: **Complete Refactor**: Moved to functional programming paradigm
+-   **BREAKING**: Restructured core architecture
 -   Plugin API redesigned for better extensibility
 -   Core functionality split into focused modules
 
 
-## [1.x] - 2019 and earlier
-
-### Initial Development
-
--   Basic static site generation
--   Markdown to HTML conversion
--   Pug template support
--   Plugin system foundation
--   Main navigation features
--   Asset copying and management
--   Basic SEO features (meta descriptions, keywords)
--   Sub-navigation support
+Versions before 2.0.0 (2019 and earlier) predate this changelog. They brought basic static site generation, Markdown to HTML conversion, Pug template support, the plugin system foundation, main navigation and sub-navigation, asset copying and management, and basic SEO features (meta descriptions, keywords).
 
 [4.2.1]: https://github.com/seebaermichi/nera/compare/v4.2.0...v4.2.1

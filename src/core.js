@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import fsReaddirRecursive from 'fs-readdir-recursive'
 import MarkdownIt from 'markdown-it'
 import yaml from 'yaml'
@@ -43,7 +43,7 @@ export const defaultSettings = {
 }
 
 // Resolve a site's presentation folders — the `folders` block from app.yaml
-// merged over the defaults, then the `theme/` probe (ROADMAP-themes.md §1b):
+// merged over the defaults, then the `theme/` probe:
 // when `<cwd>/theme/` exists and views/assets are still the untouched defaults,
 // point them at `./theme/views`/`./theme/assets`. `config` can only come from
 // `settings` (app.yaml is found through it), so it is never overridden here.
@@ -55,7 +55,7 @@ export const defaultSettings = {
 // read-only caller does not.
 export const computeFolders = (
     appConfig = {},
-    { settings = defaultSettings, cwd = process.cwd(), warn = false } = {}
+    { settings = defaultSettings, cwd = process.cwd(), warn = false } = {},
 ) => {
     const baseFolders = settings?.folders || defaultSettings.folders
     const folders = {
@@ -81,7 +81,7 @@ export const computeFolders = (
         console.warn(
             '⚠️ Nera: rendering from the legacy root `views/`/`assets/` is ' +
                 'deprecated — move your presentation to `theme/views/` and ' +
-                '`theme/assets/` (see ROADMAP-themes.md §1b).'
+                '`theme/assets/`.',
         )
     }
 
@@ -131,7 +131,7 @@ export const loadAppData = (settings = defaultSettings) => {
             console.log(`✅ Found ${pages.length} page(s) to process`)
         } else {
             console.warn(
-                `⚠️ Pages directory not found: ${appConfig.folders.pages}`
+                `⚠️ Pages directory not found: ${appConfig.folders.pages}`,
             )
         }
     } catch (err) {
@@ -151,7 +151,7 @@ export const loadAppData = (settings = defaultSettings) => {
 
 export const getPagesData = (
     pages,
-    baseDir = defaultSettings.folders.pages
+    baseDir = defaultSettings.folders.pages,
 ) => {
     const results = []
     let successCount = 0
@@ -180,7 +180,6 @@ export const getPagesData = (
             // (pagination, tag overviews, page lists, printed dates). Only when
             // frontmatter carries neither key do we fall back to `birthtime`,
             // which keeps a purely-local build byte-identical to before.
-            // See nera-platform R1 (plans/01) and ROADMAP notes.
             let createdAt = pageMeta.createdAt || pageMeta.date
             if (!createdAt) {
                 try {
@@ -188,7 +187,7 @@ export const getPagesData = (
                 } catch (statErr) {
                     console.warn(
                         `⚠️ Could not get file stats for ${fullPath}:`,
-                        statErr.message
+                        statErr.message,
                     )
                     createdAt = new Date() // Fallback to current date
                 }
@@ -234,7 +233,7 @@ export const getPagesData = (
     // Summary logging
     if (pages.length > 0) {
         console.log(
-            `📄 Page processing complete: ${successCount} success, ${errorCount} errors`
+            `📄 Page processing complete: ${successCount} success, ${errorCount} errors`,
         )
         if (errorCount > 0) {
             console.warn(`⚠️ ${errorCount} page(s) were skipped due to errors`)

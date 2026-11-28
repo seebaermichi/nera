@@ -1,7 +1,7 @@
 import chokidar from 'chokidar'
-import fs from 'fs'
+import fs from 'node:fs'
 import { copyFolder } from './render.js'
-import path from 'path'
+import path from 'node:path'
 import dotenv from 'dotenv'
 
 dotenv.config({ quiet: true })

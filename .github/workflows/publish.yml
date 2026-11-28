@@ -1,15 +1,13 @@
 name: 📦 Publish to npm
 
-# Publishes @nera-static/core when a version tag is pushed:
+# Publishes when a version tag is pushed:
 #   npm version <patch|minor|major> && git push --follow-tags
 #
 # Authentication is npm trusted publishing (OIDC). There is no token
 # stored anywhere — GitHub mints a short-lived, workflow-scoped
 # credential per run. This requires a matching Trusted Publisher entry
 # in the package settings on npmjs.com, pointing at this repository and
-# at this filename (publish.yml). The FIRST publish must be a manual
-# bootstrap by a maintainer (npm has no package to attach the publisher
-# to yet); every release after that goes through this workflow.
+# at this filename (publish.yml).
 
 on:
     push:
@@ -50,8 +48,8 @@ jobs:
             - name: Lint
               run: npm run lint
 
-            # Guards against tagging v4.10.0 while package.json still says
-            # 4.9.0 — npm would happily publish the wrong version.
+            # Guards against tagging v1.3.0 while package.json still says
+            # 1.2.0 — npm would happily publish the wrong version.
             - name: Verify tag matches package.json version
               run: |
                   TAG="${GITHUB_REF_NAME#v}"

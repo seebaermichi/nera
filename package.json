@@ -1,8 +1,9 @@
 {
     "name": "@nera-static/core",
-    "version": "4.19.1",
+    "version": "4.20.0",
     "description": "The Nera static site generator engine — the build pipeline and the layered theme/view resolver, importable by the Nera CLI, @nera-static/validate and tooling",
     "main": "./src/index.js",
+    "type": "module",
     "exports": {
         ".": "./src/index.js",
         "./core": "./src/core.js",
@@ -13,6 +14,18 @@
         "./site-model": "./src/site-model.js",
         "./package.json": "./package.json"
     },
+    "scripts": {
+        "start": "nodemon",
+        "serve": "vite",
+        "lint": "nera-stan",
+        "render": "node index.js",
+        "preserve": "npm run render",
+        "watch:assets": "node src/watch-assets.js",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\"",
+        "prepare": "husky"
+    },
     "files": [
         "src/core.js",
         "src/engine.js",
@@ -22,24 +35,9 @@
         "src/setup-plugins.js",
         "src/site-model.js",
         "src/theme.js",
-        "index.js"
+        "index.js",
+        "CHANGELOG.md"
     ],
-    "publishConfig": {
-        "access": "public"
-    },
-    "scripts": {
-        "start": "nodemon",
-        "serve": "vite",
-        "lint": "eslint .",
-        "render": "node index.js",
-        "preserve": "npm run render",
-        "watch:assets": "node src/watch-assets.js",
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\"",
-        "prepare": "husky"
-    },
-    "type": "module",
     "keywords": [
         "static-site-generator",
         "markdown",
@@ -52,9 +50,6 @@
     ],
     "author": "Michael Becker <micha.becker79@gmail.com> (https://github.com/seebaermichi)",
     "license": "MIT",
-    "engines": {
-        "node": ">=22.12.0"
-    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/seebaermichi/nera.git"
@@ -63,6 +58,12 @@
         "url": "https://github.com/seebaermichi/nera/issues"
     },
     "homepage": "https://github.com/seebaermichi/nera#readme",
+    "publishConfig": {
+        "access": "public"
+    },
+    "engines": {
+        "node": ">=22.12.0"
+    },
     "dependencies": {
         "@nera-static/plugin-utils": "^1.8.0",
         "dotenv": "^18.0.4",
@@ -75,10 +76,10 @@
         "yaml": "^2.4.1"
     },
     "devDependencies": {
+        "@nera-static/stan": "^1.1.0",
         "@nera-static/test-utils": "^1.0.1",
         "chokidar": "^6.0.0",
         "concurrently": "^10.0.3",
-        "eslint": "^10.7.0",
         "husky": "^9.1.7",
         "nodemon": "^3.0.3",
         "npm-run-all": "^4.1.5",
@@ -87,5 +88,10 @@
     },
     "overrides": {
         "shell-quote": "^1.9.0"
+    },
+    "nera-stan": {
+        "ignores": [
+            "scripts/templates/"
+        ]
     }
 }

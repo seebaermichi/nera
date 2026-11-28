@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
-import { execFileSync, spawnSync } from 'child_process'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { tempDir, writeFiles } from '@nera-static/test-utils'
+import fs from 'node:fs'
+import path from 'node:path'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { findRepos, repoKind } from '../scripts/style-check/repos.js'
 import {
     CANONICAL_GITIGNORE,
@@ -22,13 +22,9 @@ const MIT = 'MIT License\n\nCopyright (c) 2026 Michael Becker\n\nPermission is h
 let workspace
 
 // Writes files into the fake workspace: { 'repo/path': content }; objects become JSON.
-function write(files) {
-    for (const [rel, content] of Object.entries(files)) {
-        const file = path.join(workspace, rel)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, typeof content === 'string' ? content : JSON.stringify(content))
-    }
-}
+const write = (files) => writeFiles(workspace, Object.fromEntries(
+    Object.entries(files).map(([rel, content]) => [rel, typeof content === 'string' ? content : JSON.stringify(content)]),
+))
 
 // A repo that passes every hygiene check of its kind.
 function cleanRepo(name, pkg = {}) {
@@ -52,11 +48,7 @@ const repos = () => findRepos(workspace).repos
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', env: { ...process.env, GITHUB_STEP_SUMMARY: '' } })
 
 beforeEach(() => {
-    workspace = fs.mkdtempSync(path.join(os.tmpdir(), '.nera-style-check-'))
-})
-
-afterEach(() => {
-    fs.rmSync(workspace, { recursive: true, force: true })
+    workspace = tempDir('.nera-style-check-')
 })
 
 describe('repo discovery', () => {

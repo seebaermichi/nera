@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { tempDir, writeFiles } from '@nera-static/test-utils'
+import fs from 'node:fs'
+import path from 'node:path'
 import { findRepos } from '../scripts/style-check/repos.js'
 import { CANONICAL_GITIGNORE } from '../scripts/style-check/hygiene.js'
 import { checkTemplates } from '../scripts/style-check/templates.js'
@@ -21,18 +21,9 @@ const FLEET_FUNDING = 'github: [seebaermichi]\n'
 let workspace
 let templates
 
-// Writes files below a root: { 'path': content }.
-function write(root, files) {
-    for (const [rel, content] of Object.entries(files)) {
-        const file = path.join(root, rel)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, content)
-    }
-}
-
 // A fleet repo holding the two compared files.
 function fleetRepo(name, { eslint = FLEET_ESLINT, funding = FLEET_FUNDING } = {}) {
-    write(workspace, {
+    writeFiles(workspace, {
         [`${name}/package.json`]: JSON.stringify({ name }),
         [`${name}/eslint.config.js`]: eslint,
         [`${name}/.github/FUNDING.yml`]: funding,
@@ -43,9 +34,9 @@ const run = (groups = GROUPS) => checkTemplates(findRepos(workspace).repos, { wo
 const findings = (out) => out.findings.map((f) => [f.repo, f.item, f.detail])
 
 beforeEach(() => {
-    workspace = fs.mkdtempSync(path.join(os.tmpdir(), '.nera-style-check-'))
-    templates = fs.mkdtempSync(path.join(os.tmpdir(), '.nera-templates-'))
-    write(templates, {
+    workspace = tempDir('.nera-style-check-')
+    templates = tempDir('.nera-templates-')
+    writeFiles(templates, {
         'common/eslint.config.js': FLEET_ESLINT,
         'common/.github/FUNDING.yml': FLEET_FUNDING,
     })
@@ -53,11 +44,6 @@ beforeEach(() => {
     fleetRepo('nera-plugin-b')
     fleetRepo('nera-theme-a')
     fleetRepo('nera-theme-b')
-})
-
-afterEach(() => {
-    fs.rmSync(workspace, { recursive: true, force: true })
-    fs.rmSync(templates, { recursive: true, force: true })
 })
 
 describe('templates', () => {
@@ -75,7 +61,7 @@ describe('templates', () => {
     })
 
     it('reports a changed common file once, though every kind inherits it', () => {
-        write(templates, { 'common/.github/FUNDING.yml': 'github: [someone-else]\n' })
+        writeFiles(templates, { 'common/.github/FUNDING.yml': 'github: [someone-else]\n' })
         fleetRepo('nera-plugin-c', { funding: 'ko_fi: other\n' })
 
         expect(findings(run())).toEqual([
@@ -84,7 +70,7 @@ describe('templates', () => {
     })
 
     it('compares a file per kind with the repos of that kind, a tool with the libraries', () => {
-        write(templates, { 'common/eslint.config.js': 'export default [1]\n' })
+        writeFiles(templates, { 'common/eslint.config.js': 'export default [1]\n' })
         fleetRepo('nera-mcp', { eslint: 'export default [1]\n' })
         fleetRepo('nera-validate', { eslint: 'export default [1]\n' })
 
@@ -95,7 +81,7 @@ describe('templates', () => {
     })
 
     it('names the kind layer when a kind replaces the common file', () => {
-        write(templates, { 'theme/eslint.config.js': 'export default [2]\n' })
+        writeFiles(templates, { 'theme/eslint.config.js': 'export default [2]\n' })
 
         expect(findings(run())).toEqual([
             ['templates/theme', 'eslint.config.js', 'differs from the 2 of 2 theme repos that agree'],
@@ -112,7 +98,7 @@ describe('templates', () => {
     })
 
     it('reports a template that does not render', () => {
-        write(templates, { 'plugin/README.md': '# {{nope}}\n' })
+        writeFiles(templates, { 'plugin/README.md': '# {{nope}}\n' })
 
         expect(findings(run())).toEqual([
             ['templates/plugin', 'plugin/README.md', 'does not render: unresolved placeholder {{nope}}'],

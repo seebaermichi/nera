@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
-import path from 'path'
+import path from 'node:path'
 import { tempDir, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import { getPluginsData } from '../src/setup-plugins.js'
 
@@ -25,7 +25,7 @@ beforeAll(() => {
             const order = Array.isArray(data.app.__order) ? data.app.__order : []
             order.push('a-app')
             return { ...data.app, pluginA: true, __order: order }
-        }`
+        }`,
     )
 
     // plugin-b: adds page, logs order via getMetaData
@@ -37,7 +37,7 @@ beforeAll(() => {
                 app.__order.push('b-meta')
             }
             return [...data.pagesData, { title: 'from plugin B' }]
-        }`
+        }`,
     )
 
     // plugin-empty: no exports
@@ -57,7 +57,7 @@ beforeAll(() => {
                 app.__order.push('order-meta')
             }
             return data.pagesData
-        }`
+        }`,
     )
 
     // plugin-async: both hooks are async, as a real-world plugin may write them
@@ -69,7 +69,7 @@ beforeAll(() => {
         export async function getMetaData(data) {
             return [...data.pagesData, { title: 'from async plugin' }]
         }`,
-        ASYNC_PLUGINS_DIR
+        ASYNC_PLUGINS_DIR,
     )
 
     // plugin-class-app: getAppData returns a class instance, which is no `app`
@@ -79,7 +79,7 @@ beforeAll(() => {
         export function getAppData(data) {
             return new App({ ...data.app, fromClass: true })
         }`,
-        CLASS_PLUGINS_DIR
+        CLASS_PLUGINS_DIR,
     )
 
     // Unlisted plugins run in code-unit order: Zeta before alpha before beta
@@ -89,7 +89,7 @@ beforeAll(() => {
             `export function getAppData(data) {
                 return { ...data.app, ran: [...(data.app.ran || []), '${name}'] }
             }`,
-            SORT_PLUGINS_DIR
+            SORT_PLUGINS_DIR,
         )
     }
 })
@@ -160,7 +160,7 @@ describe('getPluginsData', () => {
 
             expect(result.app).toEqual({ siteName: 'Original' })
             expect(warn).toHaveBeenCalledWith(
-                '⚠️ Plugin "plugin-class-app" getAppData returned invalid format, skipping replace.'
+                '⚠️ Plugin "plugin-class-app" getAppData returned invalid format, skipping replace.',
             )
         } finally {
             warn.mockRestore()
@@ -215,8 +215,8 @@ describe('getPluginsData', () => {
                 args.some(
                     (a) =>
                         typeof a === 'string' &&
-                        a.includes('plugin-not-installed')
-                )
+                        a.includes('plugin-not-installed'),
+                ),
             )
             expect(attempted).toBe(true)
 
@@ -256,8 +256,8 @@ describe('getPluginsData', () => {
                         (a) =>
                             typeof a === 'string' &&
                             a.includes('npm plugin') &&
-                            a.includes(needle)
-                    )
+                            a.includes(needle),
+                    ),
                 )
 
             // The real plugin is attempted (it just can't resolve).

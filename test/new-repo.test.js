@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
-import { spawnSync } from 'child_process'
+import { describe, it, expect, beforeEach } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import pug from 'pug'
+import { tempDir } from '@nera-static/test-utils'
 import { formatPackage, mergePackage, newRepo, PACKAGE_KEYS, placeholders, TEMPLATES } from '../scripts/new-repo.js'
 import { GITIGNORE_ADDITIONS, gitignoreLines } from '../scripts/style-check/hygiene.js'
 
@@ -96,11 +96,7 @@ const run = (...args) => spawnSync(process.execPath, [script, ...args], { encodi
 const read = (rel) => fs.readFileSync(path.join(parent, 'nera-demo', rel), 'utf8')
 
 beforeEach(() => {
-    parent = fs.mkdtempSync(path.join(os.tmpdir(), '.nera-new-repo-'))
-})
-
-afterEach(() => {
-    fs.rmSync(parent, { recursive: true, force: true })
+    parent = tempDir('.nera-new-repo-')
 })
 
 describe('placeholders', () => {

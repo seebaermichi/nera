@@ -1,5 +1,5 @@
 // Allow-list and Markdown report for scripts/style-check.js (D5, D6).
-import fs from 'fs'
+import fs from 'node:fs'
 import YAML from 'yaml'
 
 const ALLOW_KEYS = ['check', 'repo', 'item', 'reason']
@@ -31,7 +31,8 @@ export function loadAllowList(file) {
     return { entries, invalid }
 }
 
-const matches = (entry, finding) => entry.check === finding.check && entry.repo === finding.repo && entry.item === finding.item
+const matches = (entry, finding) =>
+    entry.check === finding.check && entry.repo === finding.repo && entry.item === finding.item
 
 /**
  * Split findings into open and allowed ones. Allowed findings keep the entry's reason;
@@ -134,6 +135,9 @@ export function renderReport({ workspace, repos, skipped, sections, allow }) {
         ]
         parts.push(`## Allow-list (${rows.length})`, table(['entry', 'problem'], rows))
     }
-    parts.push(`style-check: ${totals.open} findings, ${totals.allowed} allowed, ${totals.notes} could not check, across ${repos.length} repos (report only, exit 0)`)
+    parts.push(
+        `style-check: ${totals.open} findings, ${totals.allowed} allowed, ${totals.notes} could not check, ` +
+            `across ${repos.length} repos (report only, exit 0)`,
+    )
     return { markdown: parts.join('\n\n') + '\n', totals }
 }

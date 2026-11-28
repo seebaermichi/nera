@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
-import os from 'os'
+import path from 'node:path'
+import fs from 'node:fs/promises'
 import pug from 'pug'
+import { tempDir } from '@nera-static/test-utils'
 import { compileLayout, templateExtension } from '../src/engine.js'
 
 // The engine seam (PUG-STRATEGY.md B0): compileLayout must compile exactly as
@@ -12,16 +12,15 @@ import { compileLayout, templateExtension } from '../src/engine.js'
 let root, siteViews, themeViews
 
 beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), 'nera-engine-'))
+    root = tempDir('nera-engine-')
     siteViews = path.join(root, 'site', 'views')
     themeViews = path.join(root, 'theme-pkg', 'views')
     await fs.mkdir(path.join(siteViews, 'partials'), { recursive: true })
     await fs.mkdir(path.join(themeViews, 'partials'), { recursive: true })
 })
 
-afterEach(async () => {
+afterEach(() => {
     vi.restoreAllMocks()
-    await fs.rm(root, { recursive: true, force: true })
 })
 
 const write = (p, source) => fs.writeFile(p, source)
@@ -74,7 +73,7 @@ describe('compileLayout', () => {
         const entry = path.join(themeViews, 'layout.pug')
         await write(
             entry,
-            'include partials/head.pug\ninclude /partials/foot.pug\n'
+            'include partials/head.pug\ninclude /partials/foot.pug\n',
         )
 
         const fn = compileLayout(entry, { roots: [siteViews, themeViews] })
@@ -106,7 +105,7 @@ describe('compileLayout', () => {
         await write(entry, 'include /partials/missing.pug\n')
 
         expect(() => compileLayout(entry, { roots: [siteViews] })).toThrow(
-            path.join(siteViews, 'partials', 'missing.pug')
+            path.join(siteViews, 'partials', 'missing.pug'),
         )
     })
 })

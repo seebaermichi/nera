@@ -2,8 +2,8 @@
 // two or more repos, either copies of a `@nera-static/plugin-utils` export or candidates
 // for one. Regex over column-0 declarations, not an AST: good enough to see the drift,
 // and a false positive costs one allow-list line.
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 export const PLUGIN_UTILS_REPO = 'nera-plugin-utils'
 

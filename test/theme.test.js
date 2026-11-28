@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
-import fssync from 'fs'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import fssync from 'node:fs'
 import { tempDir, useSiteCwd } from '@nera-static/test-utils'
 import {
     resolveTheme,
     deepMerge,
     checkThemeCompatibility,
-    readGeneratorVersion
+    readGeneratorVersion,
 } from '../src/theme.js'
 import { createHtmlFiles } from '../src/render.js'
 import run from '../src/index.js'
@@ -19,7 +19,7 @@ const noViews = (spec, rel) =>
     new Error(
         `theme: "${spec}" resolved to ${rel}, but it has no views/ folder — ` +
             'point `theme:` in config/app.yaml (or NERA_THEME) at a theme ' +
-            'folder with views/, or remove it to build without a theme'
+            'folder with views/, or remove it to build without a theme',
     )
 
 // The exact text checkGeneratorCompatibility throws (D1): the fix after ' — ',
@@ -28,7 +28,7 @@ const tooOld = (name, range, version) =>
     new Error(
         `theme "${name}" requires Nera generator ${range}, but this generator ` +
             `is ${version} — update the generator (\`nera update\`) or install ` +
-            `a theme version compatible with ${version}`
+            `a theme version compatible with ${version}`,
     )
 
 describe('resolveTheme', () => {
@@ -48,12 +48,12 @@ describe('resolveTheme', () => {
         // `theme/` wrapper (§1b, revised). Here the root is a subfolder, so
         // `./my-theme`.
         await fs.mkdir(path.join(tmpRoot, 'my-theme', 'views'), {
-            recursive: true
+            recursive: true,
         })
 
         const theme = resolveTheme({
             app: { theme: './my-theme' },
-            cwd: tmpRoot
+            cwd: tmpRoot,
         })
 
         expect(theme.name).toBe('./my-theme')
@@ -79,23 +79,23 @@ describe('resolveTheme', () => {
             tmpRoot,
             'node_modules',
             '@nera-static',
-            'theme-docs'
+            'theme-docs',
         )
         await fs.mkdir(path.join(pkgRoot, 'views'), {
-            recursive: true
+            recursive: true,
         })
         await fs.writeFile(
             path.join(pkgRoot, 'package.json'),
             JSON.stringify({
                 name: '@nera-static/theme-docs',
                 version: '1.0.0',
-                exports: { './package.json': './package.json' }
-            })
+                exports: { './package.json': './package.json' },
+            }),
         )
         // The site itself needs a package.json for createRequire's base.
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'site' })
+            JSON.stringify({ name: 'site' }),
         )
 
         const theme = resolveTheme({ app: { theme: 'docs' }, cwd: tmpRoot })
@@ -111,30 +111,30 @@ describe('resolveTheme', () => {
     it('fails loudly when a bare-name theme is not installed', async () => {
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'site' })
+            JSON.stringify({ name: 'site' }),
         )
         expect(() =>
-            resolveTheme({ app: { theme: 'nope' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: 'nope' }, cwd: tmpRoot }),
         ).toThrow(
             new Error(
                 'theme: "nope" — package @nera-static/theme-nope is not ' +
-                    'installed; run `npm install @nera-static/theme-nope`'
-            )
+                    'installed; run `npm install @nera-static/theme-nope`',
+            ),
         )
     })
 
     it('uses a scoped third-party spec verbatim as the package name', async () => {
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'site' })
+            JSON.stringify({ name: 'site' }),
         )
         expect(() =>
-            resolveTheme({ app: { theme: '@acme/my-theme' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: '@acme/my-theme' }, cwd: tmpRoot }),
         ).toThrow(
             new Error(
                 'theme: "@acme/my-theme" — package @acme/my-theme is not ' +
-                    'installed; run `npm install @acme/my-theme`'
-            )
+                    'installed; run `npm install @acme/my-theme`',
+            ),
         )
     })
 
@@ -142,24 +142,24 @@ describe('resolveTheme', () => {
         // `theme: "  "` names no package (themePackage → null); it must not
         // turn into a lookup of a package called "null".
         expect(() =>
-            resolveTheme({ app: { theme: '  ' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: '  ' }, cwd: tmpRoot }),
         ).toThrow(
             new Error(
                 'theme: "  " is blank — set `theme:` in config/app.yaml (or ' +
-                    'NERA_THEME) to a theme name, or remove it to build without a theme'
-            )
+                    'NERA_THEME) to a theme name, or remove it to build without a theme',
+            ),
         )
     })
 
     it('fails loudly when a local theme is missing', () => {
         expect(() =>
-            resolveTheme({ app: { theme: './nope' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: './nope' }, cwd: tmpRoot }),
         ).toThrow(noViews('./nope', 'nope'))
     })
 
     it('names the site itself as `.` when `theme: .` has no views/', () => {
         expect(() =>
-            resolveTheme({ app: { theme: '.' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: '.' }, cwd: tmpRoot }),
         ).toThrow(noViews('.', '.'))
     })
 
@@ -171,22 +171,22 @@ describe('resolveTheme', () => {
             tmpRoot,
             'node_modules',
             '@nera-static',
-            'theme-bare'
+            'theme-bare',
         )
         await fs.mkdir(pkgRoot, { recursive: true })
         await fs.writeFile(
             path.join(pkgRoot, 'package.json'),
-            JSON.stringify({ name: '@nera-static/theme-bare', version: '1.0.0' })
+            JSON.stringify({ name: '@nera-static/theme-bare', version: '1.0.0' }),
         )
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'site' })
+            JSON.stringify({ name: 'site' }),
         )
 
         expect(() =>
-            resolveTheme({ app: { theme: 'bare' }, cwd: tmpRoot })
+            resolveTheme({ app: { theme: 'bare' }, cwd: tmpRoot }),
         ).toThrow(
-            noViews('bare', path.join('node_modules', '@nera-static', 'theme-bare'))
+            noViews('bare', path.join('node_modules', '@nera-static', 'theme-bare')),
         )
     })
 
@@ -194,7 +194,7 @@ describe('resolveTheme', () => {
         beforeEach(async () => {
             for (const name of ['a', 'b']) {
                 await fs.mkdir(path.join(tmpRoot, 'themes', name, 'views'), {
-                    recursive: true
+                    recursive: true,
                 })
             }
         })
@@ -203,7 +203,7 @@ describe('resolveTheme', () => {
             const theme = resolveTheme({
                 app: { theme: './themes/a' },
                 cwd: tmpRoot,
-                env: { NERA_THEME: './themes/b' }
+                env: { NERA_THEME: './themes/b' },
             })
 
             expect(theme.name).toBe('./themes/b')
@@ -214,7 +214,7 @@ describe('resolveTheme', () => {
             const theme = resolveTheme({
                 app: {},
                 cwd: tmpRoot,
-                env: { NERA_THEME: './themes/a' }
+                env: { NERA_THEME: './themes/a' },
             })
 
             expect(theme.name).toBe('./themes/a')
@@ -224,7 +224,7 @@ describe('resolveTheme', () => {
             const theme = resolveTheme({
                 app: { theme: './themes/a' },
                 cwd: tmpRoot,
-                env: { NERA_THEME: '' }
+                env: { NERA_THEME: '' },
             })
 
             expect(theme.name).toBe('./themes/a')
@@ -235,8 +235,8 @@ describe('resolveTheme', () => {
                 resolveTheme({
                     app: { theme: './themes/a' },
                     cwd: tmpRoot,
-                    env: { NERA_THEME: './themes/nope' }
-                })
+                    env: { NERA_THEME: './themes/nope' },
+                }),
             ).toThrow(noViews('./themes/nope', path.join('themes', 'nope')))
         })
     })
@@ -248,7 +248,7 @@ describe('deepMerge (§1c merge semantics)', () => {
         const over = { colors: { primary: '#0b5' } }
         expect(deepMerge(base, over)).toEqual({
             colors: { primary: '#0b5', accent: '#f00' },
-            label: 'A'
+            label: 'A',
         })
     })
 
@@ -289,20 +289,20 @@ describe('resolveTheme config merge (§1c)', () => {
         tmpRoot = tempDir('nera-theme-')
         await fs.mkdir(path.join(tmpRoot, 'base', 'views'), { recursive: true })
         await fs.mkdir(path.join(tmpRoot, 'base', 'config'), {
-            recursive: true
+            recursive: true,
         })
         await fs.mkdir(path.join(tmpRoot, 'config'), { recursive: true })
 
         await writeYaml(
             path.join(tmpRoot, 'base', 'config', 'theme.yaml'),
-            'label: Base\ncolors:\n    primary: "#000"\n    accent: "#f00"\n'
+            'label: Base\ncolors:\n    primary: "#000"\n    accent: "#f00"\n',
         )
     })
 
     it('deep-merges the site config over the theme defaults', async () => {
         await writeYaml(
             path.join(tmpRoot, 'config', 'theme.yaml'),
-            'colors:\n    primary: "#0b5"\n'
+            'colors:\n    primary: "#0b5"\n',
         )
 
         const theme = resolveTheme({ app: { theme: './base' }, cwd: tmpRoot })
@@ -310,7 +310,7 @@ describe('resolveTheme config merge (§1c)', () => {
         // primary overridden, accent + label inherited from the theme defaults
         expect(theme.config).toEqual({
             label: 'Base',
-            colors: { primary: '#0b5', accent: '#f00' }
+            colors: { primary: '#0b5', accent: '#f00' },
         })
     })
 
@@ -320,7 +320,7 @@ describe('resolveTheme config merge (§1c)', () => {
 
         expect(theme.config).toEqual({
             label: 'Base',
-            colors: { primary: '#000', accent: '#f00' }
+            colors: { primary: '#000', accent: '#f00' },
         })
     })
 
@@ -328,12 +328,12 @@ describe('resolveTheme config merge (§1c)', () => {
         await fs.mkdir(path.join(tmpRoot, 'settings'), { recursive: true })
         await writeYaml(
             path.join(tmpRoot, 'settings', 'theme.yaml'),
-            'label: Site\n'
+            'label: Site\n',
         )
 
         const theme = resolveTheme({
             app: { theme: './base', folders: { config: './settings' } },
-            cwd: tmpRoot
+            cwd: tmpRoot,
         })
 
         expect(theme.config.label).toBe('Site')
@@ -346,7 +346,7 @@ describe('resolveTheme config merge (§1c)', () => {
         await fs.mkdir(path.join(tmpRoot, 'bare', 'views'), { recursive: true })
         await writeYaml(
             path.join(tmpRoot, 'config', 'theme.yaml'),
-            'colors:\n    primary: "#0b5"\n'
+            'colors:\n    primary: "#0b5"\n',
         )
 
         const theme = resolveTheme({ app: { theme: './bare' }, cwd: tmpRoot })
@@ -374,20 +374,20 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
 
         await fs.writeFile(
             path.join(themeViews, 'layouts', 'layout.pug'),
-            'html\n  body\n    include ../partials/header.pug\n    include ../partials/footer.pug'
+            'html\n  body\n    include ../partials/header.pug\n    include ../partials/footer.pug',
         )
         await fs.writeFile(
             path.join(themeViews, 'partials', 'header.pug'),
-            'h1 THEME header'
+            'h1 THEME header',
         )
         await fs.writeFile(
             path.join(themeViews, 'partials', 'footer.pug'),
-            'footer THEME footer'
+            'footer THEME footer',
         )
         // Site overrides only the header.
         await fs.writeFile(
             path.join(siteViews, 'partials', 'header.pug'),
-            'h1 SITE header'
+            'h1 SITE header',
         )
     })
 
@@ -399,10 +399,10 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
                 meta: {
                     layout: 'layouts/layout.pug',
                     dirname: '/',
-                    filename: 'index.html'
-                }
-            }
-        ]
+                    filename: 'index.html',
+                },
+            },
+        ],
     }
 
     it('resolves the layout from the theme and overrides one file from the site', async () => {
@@ -412,12 +412,12 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
             { ...pageData },
             siteViews,
             publicDir,
-            theme
+            theme,
         )
 
         const html = await fs.readFile(
             path.join(publicDir, 'index.html'),
-            'utf8'
+            'utf8',
         )
 
         // Layout came from the theme; header overridden by the site; footer
@@ -433,7 +433,7 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
         // then falls through to the theme.
         await fs.writeFile(
             path.join(themeViews, 'layouts', 'layout.pug'),
-            'html\n  body\n    include /partials/header.pug\n    include ../partials/footer.pug'
+            'html\n  body\n    include /partials/header.pug\n    include ../partials/footer.pug',
         )
         const error = vi.spyOn(console, 'error').mockImplementation(() => {})
 
@@ -441,12 +441,12 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
             { ...pageData },
             siteViews,
             publicDir,
-            { viewsRoot: themeViews }
+            { viewsRoot: themeViews },
         )
 
         const html = await fs.readFile(
             path.join(publicDir, 'index.html'),
-            'utf8'
+            'utf8',
         )
 
         expect(html).toContain('THEME header')
@@ -477,19 +477,19 @@ describe('createHtmlFiles resolves extends across the chain', () => {
 
         await fs.writeFile(
             path.join(themeViews, 'layouts', 'base.pug'),
-            'html\n  body\n    include ../partials/header.pug\n    main\n      block content'
+            'html\n  body\n    include ../partials/header.pug\n    main\n      block content',
         )
         await fs.writeFile(
             path.join(themeViews, 'pages', 'home.pug'),
-            'extends ../layouts/base.pug\n\nblock content\n  p PAGE home'
+            'extends ../layouts/base.pug\n\nblock content\n  p PAGE home',
         )
         await fs.writeFile(
             path.join(themeViews, 'partials', 'header.pug'),
-            'h1 THEME header'
+            'h1 THEME header',
         )
         await fs.writeFile(
             path.join(siteViews, 'partials', 'header.pug'),
-            'h1 SITE header'
+            'h1 SITE header',
         )
     })
 
@@ -503,19 +503,19 @@ describe('createHtmlFiles resolves extends across the chain', () => {
                         meta: {
                             layout: 'pages/home.pug',
                             dirname: '/',
-                            filename: 'index.html'
-                        }
-                    }
-                ]
+                            filename: 'index.html',
+                        },
+                    },
+                ],
             },
             siteViews,
             publicDir,
-            { viewsRoot: themeViews }
+            { viewsRoot: themeViews },
         )
 
         const html = await fs.readFile(
             path.join(publicDir, 'index.html'),
-            'utf8'
+            'utf8',
         )
 
         expect(html).toContain('PAGE home') // block filled → extends resolved
@@ -550,54 +550,54 @@ describe('run() with a theme (assets layering)', () => {
 
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'demo', private: true })
+            JSON.stringify({ name: 'demo', private: true }),
         )
         await fs.writeFile(
             path.join(tmpRoot, 'config', 'app.yaml'),
-            'name: Demo\nlang: en\ntheme: ./base'
+            'name: Demo\nlang: en\ntheme: ./base',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'pages', 'index.md'),
-            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n'
+            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n',
         )
         // The layout is provided only by the base theme; the site does not
         // override it, so it must resolve through the chain from base/views.
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'views', 'layouts', 'layout.pug'),
-            'doctype html\nhtml\n  body\n    != content'
+            'doctype html\nhtml\n  body\n    != content',
         )
         // base(theme)-only, site-only, and a colliding asset the site must win.
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'assets', 'css', 'main.css'),
-            'THEME main'
+            'THEME main',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'assets', 'css', 'shared.css'),
-            'THEME shared'
+            'THEME shared',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'theme', 'assets', 'css', 'custom.css'),
-            'SITE custom'
+            'SITE custom',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'theme', 'assets', 'css', 'shared.css'),
-            'SITE shared'
+            'SITE shared',
         )
 
         // §2d wiring: a site-root .neraignore excludes a site asset; the base
         // theme ships its own .neraignore that must NOT filter its payload.
         await fs.writeFile(
             path.join(tmpRoot, 'theme', 'assets', 'css', 'skip.css'),
-            'SITE skip'
+            'SITE skip',
         )
         await fs.writeFile(path.join(tmpRoot, '.neraignore'), 'css/skip.css\n')
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'assets', 'css', 'keep.css'),
-            'THEME keep'
+            'THEME keep',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'base', '.neraignore'),
-            'css/keep.css\n'
+            'css/keep.css\n',
         )
     })
 
@@ -612,8 +612,8 @@ describe('run() with a theme (assets layering)', () => {
                 views: path.join(tmpRoot, 'theme', 'views'),
                 assets: path.join(tmpRoot, 'theme', 'assets'),
                 dist: path.join(tmpRoot, 'public'),
-                plugins: path.join(tmpRoot, 'src/plugins')
-            }
+                plugins: path.join(tmpRoot, 'src/plugins'),
+            },
         })
 
         const read = (f) =>
@@ -632,8 +632,8 @@ describe('run() with a theme (assets layering)', () => {
                 views: path.join(tmpRoot, 'theme', 'views'),
                 assets: path.join(tmpRoot, 'theme', 'assets'),
                 dist: path.join(tmpRoot, 'public'),
-                plugins: path.join(tmpRoot, 'src/plugins')
-            }
+                plugins: path.join(tmpRoot, 'src/plugins'),
+            },
         })
 
         const cssDir = path.join(tmpRoot, 'public', 'css')
@@ -642,7 +642,7 @@ describe('run() with a theme (assets layering)', () => {
         expect(fssync.existsSync(path.join(cssDir, 'skip.css'))).toBe(false)
         // theme payload copied whole — the theme's .neraignore does not filter it
         expect(await fs.readFile(path.join(cssDir, 'keep.css'), 'utf8')).toBe(
-            'THEME keep'
+            'THEME keep',
         )
     })
 })
@@ -656,7 +656,7 @@ describe('checkThemeCompatibility (§5)', () => {
     const writeThemePkg = (obj) =>
         fs.writeFile(
             path.join(themeRoot, 'package.json'),
-            JSON.stringify(obj)
+            JSON.stringify(obj),
         )
 
     const themeObj = () => ({ name: '@nera-static/theme-x', root: themeRoot })
@@ -668,7 +668,7 @@ describe('checkThemeCompatibility (§5)', () => {
         // The site needs a package.json for createRequire's base (peer lookups).
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'site' })
+            JSON.stringify({ name: 'site' }),
         )
     })
 
@@ -680,7 +680,7 @@ describe('checkThemeCompatibility (§5)', () => {
         await fs.mkdir(pkgDir, { recursive: true })
         await fs.writeFile(
             path.join(pkgDir, 'package.json'),
-            JSON.stringify({ name, version, ...extra })
+            JSON.stringify({ name, version, ...extra }),
         )
     }
 
@@ -690,8 +690,8 @@ describe('checkThemeCompatibility (§5)', () => {
             expect(() =>
                 checkThemeCompatibility(themeObj(), {
                     cwd: tmpRoot,
-                    generatorVersion: '4.6.0'
-                })
+                    generatorVersion: '4.6.0',
+                }),
             ).not.toThrow()
         })
 
@@ -700,8 +700,8 @@ describe('checkThemeCompatibility (§5)', () => {
             expect(() =>
                 checkThemeCompatibility(themeObj(), {
                     cwd: tmpRoot,
-                    generatorVersion: '4.6.0'
-                })
+                    generatorVersion: '4.6.0',
+                }),
             ).toThrow(tooOld('@nera-static/theme-x', '>=5.0.0', '4.6.0'))
         })
 
@@ -710,8 +710,8 @@ describe('checkThemeCompatibility (§5)', () => {
             expect(() =>
                 checkThemeCompatibility(themeObj(), {
                     cwd: tmpRoot,
-                    generatorVersion: '4.6.0'
-                })
+                    generatorVersion: '4.6.0',
+                }),
             ).not.toThrow()
         })
 
@@ -721,11 +721,11 @@ describe('checkThemeCompatibility (§5)', () => {
             expect(() =>
                 checkThemeCompatibility(themeObj(), {
                     cwd: tmpRoot,
-                    generatorVersion: '4.6.0'
-                })
+                    generatorVersion: '4.6.0',
+                }),
             ).not.toThrow()
             expect(warn).toHaveBeenCalledWith(
-                expect.stringMatching(/invalid nera\.generator range/)
+                expect.stringMatching(/invalid nera\.generator range/),
             )
         })
 
@@ -734,8 +734,8 @@ describe('checkThemeCompatibility (§5)', () => {
             expect(() =>
                 checkThemeCompatibility(themeObj(), {
                     cwd: tmpRoot,
-                    generatorVersion: '4.6.0'
-                })
+                    generatorVersion: '4.6.0',
+                }),
             ).not.toThrow()
         })
     })
@@ -744,19 +744,19 @@ describe('checkThemeCompatibility (§5)', () => {
         it('warns when an installed plugin is outside the declared range', async () => {
             const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
             await writeThemePkg({
-                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' },
             })
             await installPlugin('@nera-static/plugin-tags', '4.1.0')
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,
-                generatorVersion: '4.6.0'
+                generatorVersion: '4.6.0',
             })
 
             expect(warn).toHaveBeenCalledWith(
                 expect.stringMatching(
-                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s
-                )
+                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s,
+                ),
             )
         })
 
@@ -766,34 +766,34 @@ describe('checkThemeCompatibility (§5)', () => {
             // ERR_PACKAGE_PATH_NOT_EXPORTED.
             const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
             await writeThemePkg({
-                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' },
             })
             await installPlugin('@nera-static/plugin-tags', '4.1.0', {
-                exports: { '.': './index.js' }
+                exports: { '.': './index.js' },
             })
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,
-                generatorVersion: '4.6.0'
+                generatorVersion: '4.6.0',
             })
 
             expect(warn).toHaveBeenCalledWith(
                 expect.stringMatching(
-                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s
-                )
+                    /@nera-static\/plugin-tags@"\^3\.0\.0".*4\.1\.0/s,
+                ),
             )
         })
 
         it('is silent when the installed plugin satisfies the range', async () => {
             const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
             await writeThemePkg({
-                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' },
             })
             await installPlugin('@nera-static/plugin-tags', '3.2.0')
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,
-                generatorVersion: '4.6.0'
+                generatorVersion: '4.6.0',
             })
 
             expect(warn).not.toHaveBeenCalled()
@@ -802,13 +802,13 @@ describe('checkThemeCompatibility (§5)', () => {
         it('is silent when the plugin is not installed at all', async () => {
             const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
             await writeThemePkg({
-                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' }
+                peerDependencies: { '@nera-static/plugin-tags': '^3.0.0' },
             })
             // plugin-tags deliberately not installed
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,
-                generatorVersion: '4.6.0'
+                generatorVersion: '4.6.0',
             })
 
             expect(warn).not.toHaveBeenCalled()
@@ -820,7 +820,7 @@ describe('checkThemeCompatibility (§5)', () => {
 
             checkThemeCompatibility(themeObj(), {
                 cwd: tmpRoot,
-                generatorVersion: '4.6.0'
+                generatorVersion: '4.6.0',
             })
 
             expect(warn).not.toHaveBeenCalled()
@@ -863,27 +863,27 @@ describe('run() with an incompatible theme (§5, generator check fails the build
 
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'demo', private: true })
+            JSON.stringify({ name: 'demo', private: true }),
         )
         // The base theme demands a generator far beyond anything real.
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'package.json'),
             JSON.stringify({
                 name: 'base',
-                nera: { generator: '>=999.0.0' }
-            })
+                nera: { generator: '>=999.0.0' },
+            }),
         )
         await fs.writeFile(
             path.join(tmpRoot, 'config', 'app.yaml'),
-            'name: Demo\nlang: en\ntheme: ./base'
+            'name: Demo\nlang: en\ntheme: ./base',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'pages', 'index.md'),
-            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n'
+            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'views', 'layouts', 'layout.pug'),
-            'doctype html\nhtml\n  body\n    != content'
+            'doctype html\nhtml\n  body\n    != content',
         )
     })
 
@@ -896,11 +896,11 @@ describe('run() with an incompatible theme (§5, generator check fails the build
                     views: path.join(tmpRoot, 'theme', 'views'),
                     assets: path.join(tmpRoot, 'theme', 'assets'),
                     dist: path.join(tmpRoot, 'public'),
-                    plugins: path.join(tmpRoot, 'src/plugins')
-                }
-            })
+                    plugins: path.join(tmpRoot, 'src/plugins'),
+                },
+            }),
         ).rejects.toThrow(
-            tooOld('./base', '>=999.0.0', readGeneratorVersion())
+            tooOld('./base', '>=999.0.0', readGeneratorVersion()),
         )
     })
 })
@@ -925,25 +925,25 @@ describe('run() exposes app.theme.config to templates (§1c)', () => {
 
         await fs.writeFile(
             path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'demo', private: true })
+            JSON.stringify({ name: 'demo', private: true }),
         )
         await fs.writeFile(
             path.join(tmpRoot, 'config', 'app.yaml'),
-            'name: Demo\nlang: en\ntheme: ./base'
+            'name: Demo\nlang: en\ntheme: ./base',
         )
         // Site overrides only the primary colour; label + accent inherited.
         await fs.writeFile(
             path.join(tmpRoot, 'config', 'theme.yaml'),
-            'colors:\n    primary: "#0b5"\n'
+            'colors:\n    primary: "#0b5"\n',
         )
         // Theme defaults.
         await fs.writeFile(
             path.join(tmpRoot, 'base', 'config', 'theme.yaml'),
-            'label: Base\ncolors:\n    primary: "#000"\n    accent: "#f00"\n'
+            'label: Base\ncolors:\n    primary: "#000"\n    accent: "#f00"\n',
         )
         await fs.writeFile(
             path.join(tmpRoot, 'pages', 'index.md'),
-            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n'
+            '---\ntitle: Home\nlayout: layouts/layout.pug\n---\n# Hi\n',
         )
         // The layout reads the merged config off app.theme.
         await fs.writeFile(
@@ -956,8 +956,8 @@ describe('run() exposes app.theme.config to templates (§1c)', () => {
                 '    p(id="package")= String(app.theme.package)',
                 '    p(id="primary")= app.theme.config.colors.primary',
                 '    p(id="accent")= app.theme.config.colors.accent',
-                '    p(id="label")= app.theme.config.label'
-            ].join('\n')
+                '    p(id="label")= app.theme.config.label',
+            ].join('\n'),
         )
     })
 
@@ -969,13 +969,13 @@ describe('run() exposes app.theme.config to templates (§1c)', () => {
                 views: path.join(tmpRoot, 'theme', 'views'),
                 assets: path.join(tmpRoot, 'theme', 'assets'),
                 dist: path.join(tmpRoot, 'public'),
-                plugins: path.join(tmpRoot, 'src/plugins')
-            }
+                plugins: path.join(tmpRoot, 'src/plugins'),
+            },
         })
 
         const html = await fs.readFile(
             path.join(tmpRoot, 'public', 'index.html'),
-            'utf8'
+            'utf8',
         )
 
         expect(html).toContain('id="name">./base<')

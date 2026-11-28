@@ -1,7 +1,7 @@
 // Repo discovery for scripts/style-check.js: which workspace folders are Nera repos,
 // what kind each one is, and which checks apply to it.
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // Folders that look like Nera repos but are not checked, with the reason the report
 // prints for them.

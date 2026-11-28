@@ -17,9 +17,10 @@
 // Exit 0 when the repo is written; 1 when a template is broken (an unresolved
 // placeholder), and then nothing is written; 2 on a usage error: an unknown kind, a
 // name that does not fit the kind, or a target that already exists.
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath, pathToFileURL } from 'url'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { isPlainObject } from '@nera-static/plugin-utils/values'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -118,8 +119,6 @@ function fill(text, values, json) {
     return { text: out, unresolved }
 }
 
-const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
-
 /**
  * The kind's package.json over the common one: objects (scripts, dependencies, …) are
  * merged key by key, everything else, arrays included, is replaced, so a kind lists
@@ -210,7 +209,11 @@ export function newRepo({ kind, name, dir, description, year, templates = TEMPLA
     }
     const prefix = kindPrefix(kind)
     if (typeof name !== 'string' || !NAME.test(name) || !name.startsWith(prefix)) {
-        return { code: 2, error: `new-repo: name "${name}" does not fit a ${kind}: use ${prefix}<name>, lower case, digits and dashes` }
+        return {
+            code: 2,
+            error: `new-repo: name "${name}" does not fit a ${kind}: ` +
+                `use ${prefix}<name>, lower case, digits and dashes`,
+        }
     }
     const target = path.join(dir, name)
     if (fs.existsSync(target)) {

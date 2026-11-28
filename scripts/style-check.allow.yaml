@@ -57,3 +57,7 @@
   repo: templates/common
   item: eslint.config.js
   reason: the templates lint with the @nera-static/stan editor export (D5), which the fleet adopts when nera-stan 1.0.0 is released
+- check: identical
+  repo: generator
+  item: eslint.config.js
+  reason: core lints with the @nera-static/stan editor export (D5), like templates/common; the fleet majority still has the pre-stan config until each repo moves to nera-stan

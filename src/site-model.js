@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 import yaml from 'yaml'
 import { defaultSettings, computeFolders } from './core.js'
 import { resolveTheme } from './theme.js'

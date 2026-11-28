@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import path from 'path'
-import fs from 'fs/promises'
-import os from 'os'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { tempDir } from '@nera-static/test-utils'
+import path from 'node:path'
+import fs from 'node:fs/promises'
 import {
     defaultResolvePath,
     makeLayeredResolver,
@@ -16,17 +16,13 @@ import {
 let root, siteViews, themeViews
 
 beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), 'nera-resolve-'))
+    root = tempDir('nera-resolve-')
     siteViews = path.join(root, 'site', 'theme', 'views')
     themeViews = path.join(root, 'theme-pkg', 'views')
     await fs.mkdir(path.join(siteViews, 'pages'), { recursive: true })
     await fs.mkdir(path.join(siteViews, 'partials'), { recursive: true })
     await fs.mkdir(path.join(themeViews, 'pages'), { recursive: true })
     await fs.mkdir(path.join(themeViews, 'partials'), { recursive: true })
-})
-
-afterEach(async () => {
-    await fs.rm(root, { recursive: true, force: true })
 })
 
 const write = (p) => fs.writeFile(p, '| x\n')
@@ -36,7 +32,7 @@ describe('defaultResolvePath', () => {
         const out = defaultResolvePath(
             'partials/head.pug',
             path.join(siteViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         expect(out).toBe(path.join(siteViews, 'pages', 'partials', 'head.pug'))
     })
@@ -58,7 +54,7 @@ describe('makeLayeredResolver', () => {
         const out = resolve(
             '../partials/head.pug',
             path.join(themeViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         expect(out).toBe(path.join(siteViews, 'partials', 'head.pug'))
     })
@@ -70,7 +66,7 @@ describe('makeLayeredResolver', () => {
         const out = resolve(
             '../partials/footer.pug',
             path.join(themeViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         expect(out).toBe(path.join(themeViews, 'partials', 'footer.pug'))
     })
@@ -80,7 +76,7 @@ describe('makeLayeredResolver', () => {
         const out = resolve(
             '../partials/missing.pug',
             path.join(themeViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         // The fallback path, so pug's own missing-file error surfaces next.
         expect(out).toBe(path.join(themeViews, 'partials', 'missing.pug'))
@@ -94,7 +90,7 @@ describe('makeLayeredResolver', () => {
         const out = resolve(
             '/..foo/bar.pug',
             path.join(siteViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         // Pug's default would be the missing site path; the chain finds the
         // theme's copy, as for any other root child.
@@ -108,7 +104,7 @@ describe('makeLayeredResolver', () => {
         const out = resolve(
             '../partials/head.pug',
             path.join(siteViews, 'pages', 'layout.pug'),
-            { basedir: siteViews }
+            { basedir: siteViews },
         )
         expect(out).toBe(path.join(siteViews, 'partials', 'head.pug'))
     })

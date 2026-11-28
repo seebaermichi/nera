@@ -2,9 +2,9 @@
 // The majority's content is the reference: a repo whose file differs is a deviant, a
 // repo without the file is missing it. No canonical copy is assumed, so the check works
 // on a CI clone of the public fleet as well as on the local workspace.
-import fs from 'fs'
-import path from 'path'
-import crypto from 'crypto'
+import fs from 'node:fs'
+import path from 'node:path'
+import crypto from 'node:crypto'
 
 /**
  * The groups, in report order:
@@ -83,9 +83,11 @@ function compare(group, scope, repos, out) {
     const tie = !majority
     const add = (repo, detail) => out.findings.push({ check: 'identical', repo, item: group.file, detail })
     if (tie) {
-        for (const names of sorted) for (const repo of names) add(repo, `no majority: ${sorted.length} variants among ${present} ${scope}`)
+        const note = `no majority: ${sorted.length} variants among ${present} ${scope}`
+        for (const names of sorted) for (const repo of names) add(repo, note)
     } else {
-        for (const names of sorted.slice(1)) for (const repo of names) add(repo, `differs from the ${sorted[0].length} of ${present} ${scope} that agree`)
+        const note = `differs from the ${sorted[0].length} of ${present} ${scope} that agree`
+        for (const names of sorted.slice(1)) for (const repo of names) add(repo, note)
     }
     if (group.missing !== false) {
         for (const repo of missing) add(repo, `missing (${present} of ${repos.length} ${scope} have it)`)
