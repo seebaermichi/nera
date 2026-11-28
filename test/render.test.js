@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
-import os from 'os'
+import { listFiles, tempDir } from '@nera-static/test-utils'
 import {
     copyFolder,
     copyPluginAssets,
@@ -14,36 +14,12 @@ import {
     rewriteHtmlUrls,
     rewriteAssetUrls,
 } from '../src/render.js'
-import dotenv from 'dotenv'
-
-dotenv.config()
-
-const createTempPath = (sub = '') =>
-    path.join(
-        os.tmpdir(),
-        `.nera-test-${Date.now()}-${Math.random().toString(36).slice(2)}${sub}`
-    )
-
-async function getAllRelativeFiles (dir, base) {
-    const entries = await fs.readdir(dir, { withFileTypes: true })
-    const files = await Promise.all(
-        entries.map(async (entry) => {
-            const res = path.resolve(dir, entry.name)
-            if (entry.isDirectory()) {
-                return getAllRelativeFiles(res, base)
-            } else {
-                return path.relative(base, res)
-            }
-        })
-    )
-    return files.flat()
-}
 
 describe('copyFolder', () => {
     let srcDir, publicDir, tmpRoot
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-render-')
         srcDir = path.join(tmpRoot, 'src', 'assets')
         publicDir = path.join(tmpRoot, 'public')
 
@@ -60,11 +36,6 @@ describe('copyFolder', () => {
         await fs.mkdir(path.dirname(ignoreFile), { recursive: true })
         await fs.writeFile(ignoreFile, 'ignore.txt\ncss/ignore.css\n')
 
-        process.env.TEST_TEMP_DIR = tmpRoot
-    })
-
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('copies files excluding ignored ones', async () => {
@@ -73,9 +44,7 @@ describe('copyFolder', () => {
         const exists = fssync.existsSync(publicDir)
         expect(exists).toBe(true)
 
-        const files = exists
-            ? await getAllRelativeFiles(publicDir, publicDir)
-            : []
+        const files = exists ? listFiles(publicDir) : []
 
         expect(files).toContain('include.txt')
         expect(files).not.toContain('ignore.txt')
@@ -94,7 +63,7 @@ describe('copyFolder', () => {
 
         await copyFolder(srcDir, publicDir)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         expect(files).toContain('.htaccess')
         expect(files).toContain(path.join('.well-known', 'security.txt'))
@@ -109,7 +78,7 @@ describe('copyFolder', () => {
 
         await copyFolder(srcDir, publicDir)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         expect(files).not.toContain('.DS_Store')
     })
@@ -122,7 +91,7 @@ describe('copyFolder', () => {
 
         await copyFolder(srcDir, publicDir)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         expect(files).toEqual(['include.txt'])
     })
@@ -157,7 +126,7 @@ describe('copyFolder', () => {
 
         await copyFolder(srcDir, publicDir)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         expect(files).toContain(path.join('linked-dir', 'linked.txt'))
         expect(files).toContain('linked-file.txt')
@@ -172,7 +141,7 @@ describe('copyFolder', () => {
     it('skips the ignore list entirely when ignoreBase is null', async () => {
         await copyFolder(srcDir, publicDir, null)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         expect(files).toContain('include.txt')
         expect(files).toContain('ignore.txt') // not filtered
@@ -189,7 +158,7 @@ describe('copyFolder', () => {
 
         await copyFolder(srcDir, publicDir, base)
 
-        const files = await getAllRelativeFiles(publicDir, publicDir)
+        const files = listFiles(publicDir)
 
         // the explicit base's list wins; the parent's src/.neraignore is not read
         expect(files).not.toContain('include.txt')
@@ -239,16 +208,12 @@ describe('copyPluginAssets', () => {
     let tmpRoot, log
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-render-')
         await fs.mkdir(path.join(tmpRoot, 'payload'), { recursive: true })
         await fs.writeFile(path.join(tmpRoot, 'payload', 'a.css'), 'a {}')
         log = vi.spyOn(console, 'log').mockImplementation(() => {})
     })
 
-    afterEach(async () => {
-        log.mockRestore()
-        await fs.rm(tmpRoot, { recursive: true, force: true })
-    })
 
     it('names the plugin in the log line of a directory entry', async () => {
         await copyPluginAssets(
@@ -272,7 +237,7 @@ describe('createHtmlFiles', () => {
     let viewsDir, publicDir, tmpRoot
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-render-')
         viewsDir = path.join(tmpRoot, 'src', 'views')
         publicDir = path.join(tmpRoot, 'public')
 
@@ -285,9 +250,6 @@ describe('createHtmlFiles', () => {
         )
     })
 
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
-    })
 
     it('resolves absolute includes against the views folder', async () => {
         // Plugin READMEs document `include /vendor/<plugin>/<template>`, which
@@ -447,15 +409,9 @@ describe('deleteFolder', () => {
     let publicDir
 
     beforeEach(async () => {
-        publicDir = createTempPath('/public')
-        await fs.mkdir(publicDir, { recursive: true })
+        publicDir = path.join(tempDir('nera-render-'), 'public')
+        await fs.mkdir(publicDir)
         await fs.writeFile(path.join(publicDir, 'temp.txt'), 'test')
-    })
-
-    afterEach(async () => {
-        await fs
-            .rm(publicDir, { recursive: true, force: true })
-            .catch(() => {})
     })
 
     it('removes the public folder if it exists', async () => {
@@ -581,13 +537,8 @@ describe('rewriteAssetUrls (base_path)', () => {
     const BP = '/nera-website'
     let dir
 
-    beforeEach(async () => {
-        dir = createTempPath()
-        await fs.mkdir(dir, { recursive: true })
-    })
-
-    afterEach(async () => {
-        await fs.rm(dir, { recursive: true, force: true })
+    beforeEach(() => {
+        dir = tempDir('nera-render-')
     })
 
     it('rewrites url(/…) in CSS but not external or relative urls', async () => {
@@ -657,14 +608,10 @@ describe('dotenv loading', () => {
     let tmpRoot
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
-        await fs.mkdir(tmpRoot, { recursive: true })
+        tmpRoot = tempDir('nera-render-')
         await fs.writeFile(path.join(tmpRoot, '.env'), 'NERA_DOTENV_PROBE=loaded\n')
     })
 
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
-    })
 
     it('loads .env from the site root without printing the injected-env banner', () => {
         // A child process, because render.js calls dotenv.config() once at

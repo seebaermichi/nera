@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
-import os from 'os'
+import { tempDir, writeFiles } from '@nera-static/test-utils'
 import { resolveSiteModel } from '../src/site-model.js'
 
 // resolveSiteModel is cwd-parameterised on purpose — no chdir here. It must
@@ -11,19 +11,15 @@ import { resolveSiteModel } from '../src/site-model.js'
 let cwd
 
 beforeEach(async () => {
-    cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'nera-sitemodel-'))
-    await fs.mkdir(path.join(cwd, 'config'), { recursive: true })
+    cwd = tempDir('nera-sitemodel-')
+    await fs.mkdir(path.join(cwd, 'config'))
 })
 
-afterEach(async () => {
-    await fs.rm(cwd, { recursive: true, force: true })
-})
-
-const writeApp = (yaml) => fs.writeFile(path.join(cwd, 'config', 'app.yaml'), yaml)
+const writeApp = (yaml) => writeFiles(cwd, { 'config/app.yaml': yaml })
 
 describe('resolveSiteModel', () => {
     it('points views at theme/ and yields a single root when no theme package is set', async () => {
-        await writeApp('name: Probe\nlang: en\n')
+        writeApp('name: Probe\nlang: en\n')
         await fs.mkdir(path.join(cwd, 'theme', 'views'), { recursive: true })
 
         const model = resolveSiteModel({ cwd })
@@ -38,7 +34,7 @@ describe('resolveSiteModel', () => {
     })
 
     it('falls back to the legacy root views/ without warning', async () => {
-        await writeApp('name: Probe\n')
+        writeApp('name: Probe\n')
 
         const model = resolveSiteModel({ cwd })
 
@@ -47,7 +43,7 @@ describe('resolveSiteModel', () => {
     })
 
     it('honours an explicit folders block in app.yaml', async () => {
-        await writeApp('name: Probe\nfolders:\n  views: ./custom-views\n')
+        writeApp('name: Probe\nfolders:\n  views: ./custom-views\n')
 
         const model = resolveSiteModel({ cwd })
 
@@ -56,7 +52,7 @@ describe('resolveSiteModel', () => {
     })
 
     it('resolves a local theme and layers its views after the site', async () => {
-        await writeApp('name: Probe\ntheme: ./my-theme\n')
+        writeApp('name: Probe\ntheme: ./my-theme\n')
         await fs.mkdir(path.join(cwd, 'theme', 'views'), { recursive: true })
         await fs.mkdir(path.join(cwd, 'my-theme', 'views'), { recursive: true })
 
@@ -71,7 +67,7 @@ describe('resolveSiteModel', () => {
     })
 
     it('captures an unresolvable theme as themeError instead of throwing', async () => {
-        await writeApp('name: Probe\ntheme: ./missing-theme\n')
+        writeApp('name: Probe\ntheme: ./missing-theme\n')
 
         const model = resolveSiteModel({ cwd })
 
@@ -82,7 +78,7 @@ describe('resolveSiteModel', () => {
     })
 
     it('captures a malformed app.yaml as appConfigError instead of throwing', async () => {
-        await writeApp('name: [unterminated\n')
+        writeApp('name: [unterminated\n')
 
         const model = resolveSiteModel({ cwd })
 
@@ -95,7 +91,7 @@ describe('resolveSiteModel', () => {
     it('reports the parser\'s line for a malformed app.yaml as appConfigErrorLine', async () => {
         // The duplicate key sits on line 3 of 4, so neither an off-by-one nor
         // the end-of-file line would match.
-        await writeApp('name: Probe\nlang: en\nname: Duplicate\nfooter: x\n')
+        writeApp('name: Probe\nlang: en\nname: Duplicate\nfooter: x\n')
 
         const model = resolveSiteModel({ cwd })
 

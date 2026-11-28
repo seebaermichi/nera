@@ -92,8 +92,10 @@ export const loadAppData = (settings = defaultSettings) => {
     let appConfig = {}
     let pages = []
 
-    // Load app.yaml with better error handling
-    const appConfigPath = path.join(settings.folders.config, 'app.yaml')
+    // Load app.yaml with better error handling. The folders may be relative
+    // (the defaults are), so they are resolved against `process.cwd()` here,
+    // as computeFolders does, instead of handing fs a relative path.
+    const appConfigPath = path.resolve(settings.folders.config, 'app.yaml')
     try {
         if (fs.existsSync(appConfigPath)) {
             const configContent = fs.readFileSync(appConfigPath, 'utf-8')
@@ -123,8 +125,9 @@ export const loadAppData = (settings = defaultSettings) => {
 
     // Load pages directory with error handling
     try {
-        if (fs.existsSync(appConfig.folders.pages)) {
-            pages = fsReaddirRecursive(appConfig.folders.pages)
+        const pagesFolder = path.resolve(appConfig.folders.pages)
+        if (fs.existsSync(pagesFolder)) {
+            pages = fsReaddirRecursive(pagesFolder)
             console.log(`✅ Found ${pages.length} page(s) to process`)
         } else {
             console.warn(

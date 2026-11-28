@@ -64,8 +64,9 @@ const run = async (settings = defaultSettings) => {
     // is fine — copyFolder no-ops on a missing source. The theme pass passes
     // `null` so it is unfiltered — a theme package's payload is author-controlled
     // and must not be dropped by anyone's .neraignore (§2d). The site pass reads
-    // the site's own .neraignore from the site root ('.'), so it keeps filtering
-    // the site's assets even though they now live under `theme/assets`.
+    // the site's own .neraignore from the site root (`process.cwd()`, not '.',
+    // so fs is never handed a relative path), so it keeps filtering the site's
+    // assets even though they now live under `theme/assets`.
     if (theme) {
         await copyFolder(theme.assetsRoot, dist, null, 'theme assets')
     }
@@ -73,7 +74,7 @@ const run = async (settings = defaultSettings) => {
     // theme and the site overrides them. Unfiltered like the theme pass — the
     // payload is plugin-controlled.
     await copyPluginAssets(data.assets, dist)
-    await copyFolder(assets, dist, '.', 'site assets')
+    await copyFolder(assets, dist, process.cwd(), 'site assets')
 
     // Subdirectory deploys: prefix root-absolute URLs inside copied assets that
     // the HTML rewrite can't reach (CSS `url(/…)`, the web app manifest). Runs

@@ -1,52 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
-import os from 'os'
 import { createHash } from 'crypto'
+import { tempDir, writeFiles } from '@nera-static/test-utils'
 import { hashAssetUrls, hashHtmlUrls } from '../src/render.js'
 import run from '../src/index.js'
 
-const createTempPath = () =>
-    path.join(
-        os.tmpdir(),
-        `.nera-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    )
-
 const hashOf = (content) =>
     createHash('sha256').update(content).digest('hex').slice(0, 10)
-
-const write = async (file, content) => {
-    await fs.mkdir(path.dirname(file), { recursive: true })
-    await fs.writeFile(file, content)
-}
 
 describe('hashAssetUrls', () => {
     let pub
 
     const read = (rel) => fs.readFile(path.join(pub, rel), 'utf-8')
 
-    beforeEach(async () => {
-        pub = createTempPath()
-        await write(path.join(pub, 'js/app.js'), 'console.log(1)')
-        await write(path.join(pub, 'img/logo.png'), 'PNG')
-        await write(path.join(pub, 'img/logo@2x.png'), 'PNG2')
-        await write(path.join(pub, 'icons.svg'), '<svg/>')
-        await write(path.join(pub, 'fonts/a.woff2'), 'FONT')
-        await write(
-            path.join(pub, 'css/main.css'),
-            '@font-face { src: url("../fonts/a.woff2") format("woff2"); }\n' +
+    beforeEach(() => {
+        pub = writeFiles(tempDir('nera-hash-'), {
+            'js/app.js': 'console.log(1)',
+            'img/logo.png': 'PNG',
+            'img/logo@2x.png': 'PNG2',
+            'icons.svg': '<svg/>',
+            'fonts/a.woff2': 'FONT',
+            'css/main.css':
+                '@font-face { src: url("../fonts/a.woff2") format("woff2"); }\n' +
                 '.x { background: url(/img/logo.png); }\n' +
-                '.y { background: url(data:image/png;base64,AAAA); }'
-        )
-    })
-
-    afterEach(async () => {
-        await fs.rm(pub, { recursive: true, force: true })
+                '.y { background: url(data:image/png;base64,AAAA); }',
+        })
     })
 
     it('is a no-op when disabled', async () => {
         const html = '<link rel="stylesheet" href="/css/main.css">'
-        await write(path.join(pub, 'index.html'), html)
+        writeFiles(pub, { 'index.html': html })
 
         await hashAssetUrls(pub, '', false)
 
@@ -55,11 +39,11 @@ describe('hashAssetUrls', () => {
     })
 
     it('versions local asset URLs with a hash of their content', async () => {
-        await write(
-            path.join(pub, 'index.html'),
-            '<script src="/js/app.js" defer></script>\n' +
-                '<img src=\'img/logo.png\' srcset="/img/logo.png 1x, /img/logo@2x.png 2x">'
-        )
+        writeFiles(pub, {
+            'index.html':
+                '<script src="/js/app.js" defer></script>\n' +
+                '<img src=\'img/logo.png\' srcset="/img/logo.png 1x, /img/logo@2x.png 2x">',
+        })
 
         await hashAssetUrls(pub, '', true)
 
@@ -72,10 +56,7 @@ describe('hashAssetUrls', () => {
     })
 
     it('rewrites CSS url() refs and hashes the stylesheet after that', async () => {
-        await write(
-            path.join(pub, 'index.html'),
-            '<link rel="stylesheet" href="/css/main.css">'
-        )
+        writeFiles(pub, { 'index.html': '<link rel="stylesheet" href="/css/main.css">' })
 
         await hashAssetUrls(pub, '', true)
 
@@ -103,9 +84,11 @@ describe('hashAssetUrls', () => {
             '<img src="/img/missing.png">',
             '<img src="/../outside.png">',
         ].join('\n')
-        await write(path.join(pub, 'about.html'), 'about')
-        await write(path.join(pub, 'blog/index.html'), 'blog')
-        await write(path.join(pub, 'index.html'), html)
+        writeFiles(pub, {
+            'about.html': 'about',
+            'blog/index.html': 'blog',
+            'index.html': html,
+        })
 
         await hashAssetUrls(pub, '', true)
 
@@ -113,10 +96,7 @@ describe('hashAssetUrls', () => {
     })
 
     it('keeps a fragment after the version query', async () => {
-        await write(
-            path.join(pub, 'index.html'),
-            '<use href="/icons.svg#star"></use>'
-        )
+        writeFiles(pub, { 'index.html': '<use href="/icons.svg#star"></use>' })
 
         await hashAssetUrls(pub, '', true)
 
@@ -126,10 +106,7 @@ describe('hashAssetUrls', () => {
     })
 
     it('resolves base_path-prefixed URLs', async () => {
-        await write(
-            path.join(pub, 'index.html'),
-            '<script src="/repo/js/app.js"></script>'
-        )
+        writeFiles(pub, { 'index.html': '<script src="/repo/js/app.js"></script>' })
 
         await hashAssetUrls(pub, '/repo', true)
 
@@ -139,10 +116,9 @@ describe('hashAssetUrls', () => {
     })
 
     it('leaves the base path itself and the site root unversioned', async () => {
-        await write(
-            path.join(pub, 'index.html'),
-            '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>'
-        )
+        writeFiles(pub, {
+            'index.html': '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>',
+        })
 
         await hashAssetUrls(pub, '/repo', true)
 
@@ -152,11 +128,10 @@ describe('hashAssetUrls', () => {
     })
 
     it('leaves URLs with a scheme alone, also when a same-named file exists', async () => {
-        await write(path.join(pub, 'data/x.js'), 'x')
-        await write(
-            path.join(pub, 'index.html'),
-            '<script src="data:x.js"></script><a href="tel:123">t</a>'
-        )
+        writeFiles(pub, {
+            'data/x.js': 'x',
+            'index.html': '<script src="data:x.js"></script><a href="tel:123">t</a>',
+        })
 
         await hashAssetUrls(pub, '', true)
 
@@ -166,11 +141,11 @@ describe('hashAssetUrls', () => {
     })
 
     it('versions a file in a public/ child folder whose name starts with ".."', async () => {
-        await write(path.join(pub, '..cache/a.js'), 'A')
-        await write(
-            path.join(pub, 'index.html'),
-            '<script src="/..cache/a.js"></script>'
-        )
+        // Written by hand: test-utils 1.0.1's writeFiles takes a first segment
+        // starting with ".." for an escape and refuses it.
+        await fs.mkdir(path.join(pub, '..cache'))
+        await fs.writeFile(path.join(pub, '..cache', 'a.js'), 'A')
+        writeFiles(pub, { 'index.html': '<script src="/..cache/a.js"></script>' })
 
         await hashAssetUrls(pub, '', true)
 
@@ -180,11 +155,10 @@ describe('hashAssetUrls', () => {
     })
 
     it('versions the search index referenced by data-search-index', async () => {
-        await write(path.join(pub, 'search-index.json'), '[]')
-        await write(
-            path.join(pub, 'search/index.html'),
-            '<input data-search-index="/search-index.json">'
-        )
+        writeFiles(pub, {
+            'search-index.json': '[]',
+            'search/index.html': '<input data-search-index="/search-index.json">',
+        })
 
         await hashAssetUrls(pub, '', true)
 
@@ -265,13 +239,13 @@ describe('run() with asset_hashing', () => {
     let TMP_DIR, settings
 
     const build = async (appYaml) => {
-        await write(path.join(TMP_DIR, 'config/app.yaml'), appYaml)
+        writeFiles(TMP_DIR, { 'config/app.yaml': appYaml })
         await run(settings)
         return fs.readFile(path.join(TMP_DIR, 'public/index.html'), 'utf-8')
     }
 
-    beforeEach(async () => {
-        TMP_DIR = createTempPath()
+    beforeEach(() => {
+        TMP_DIR = tempDir('nera-hash-run-')
         settings = {
             folders: {
                 config: path.join(TMP_DIR, 'config'),
@@ -282,19 +256,12 @@ describe('run() with asset_hashing', () => {
                 plugins: path.join(TMP_DIR, 'src/plugins'),
             },
         }
-        await write(
-            path.join(TMP_DIR, 'pages/index.md'),
-            '---\ntitle: Site\nlayout: layout.pug\n---\n\n# Hello\n'
-        )
-        await write(
-            path.join(TMP_DIR, 'views/layout.pug'),
-            'doctype html\nhtml\n  head\n    link(rel="stylesheet", href="/css/main.css")\n  body !{content}\n'
-        )
-        await write(path.join(TMP_DIR, 'assets/css/main.css'), 'body{}')
-    })
-
-    afterEach(async () => {
-        await fs.rm(TMP_DIR, { recursive: true, force: true })
+        writeFiles(TMP_DIR, {
+            'pages/index.md': '---\ntitle: Site\nlayout: layout.pug\n---\n\n# Hello\n',
+            'views/layout.pug':
+                'doctype html\nhtml\n  head\n    link(rel="stylesheet", href="/css/main.css")\n  body !{content}\n',
+            'assets/css/main.css': 'body{}',
+        })
     })
 
     it('leaves the output untouched without the config key', async () => {
@@ -319,12 +286,12 @@ describe('run() with asset_hashing', () => {
     describe('with a quoted attribute in page text', () => {
         const codeText = 'script(src="/css/main.css")'
 
-        beforeEach(async () => {
-            await write(
-                path.join(TMP_DIR, 'views/layout.pug'),
-                'doctype html\nhtml\n  head\n    link(rel="stylesheet", href="/css/main.css")\n' +
-                    `  body\n    p\n      code ${codeText}\n`
-            )
+        beforeEach(() => {
+            writeFiles(TMP_DIR, {
+                'views/layout.pug':
+                    'doctype html\nhtml\n  head\n    link(rel="stylesheet", href="/css/main.css")\n' +
+                    `  body\n    p\n      code ${codeText}\n`,
+            })
         })
 
         it('versions the link but leaves the text', async () => {

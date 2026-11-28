@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
-import os from 'os'
+import { tempDir, useSiteCwd } from '@nera-static/test-utils'
 import {
     resolveTheme,
     deepMerge,
@@ -11,14 +11,6 @@ import {
 } from '../src/theme.js'
 import { createHtmlFiles } from '../src/render.js'
 import run from '../src/index.js'
-
-const createTempPath = (sub = '') =>
-    path.join(
-        os.tmpdir(),
-        `.nera-theme-test-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2)}${sub}`
-    )
 
 // The exact text resolveTheme throws for a theme root without views/ (D1/D2):
 // the root site-relative, the fix after ' — '. An Error instance makes toThrow
@@ -42,13 +34,8 @@ const tooOld = (name, range, version) =>
 describe('resolveTheme', () => {
     let tmpRoot
 
-    beforeEach(async () => {
-        tmpRoot = createTempPath()
-        await fs.mkdir(tmpRoot, { recursive: true })
-    })
-
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
+    beforeEach(() => {
+        tmpRoot = tempDir('nera-theme-')
     })
 
     it('returns null when no theme is configured', () => {
@@ -299,7 +286,7 @@ describe('resolveTheme config merge (§1c)', () => {
         fs.writeFile(file, body, 'utf-8')
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-theme-')
         await fs.mkdir(path.join(tmpRoot, 'base', 'views'), { recursive: true })
         await fs.mkdir(path.join(tmpRoot, 'base', 'config'), {
             recursive: true
@@ -310,10 +297,6 @@ describe('resolveTheme config merge (§1c)', () => {
             path.join(tmpRoot, 'base', 'config', 'theme.yaml'),
             'label: Base\ncolors:\n    primary: "#000"\n    accent: "#f00"\n'
         )
-    })
-
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('deep-merges the site config over the theme defaults', async () => {
@@ -379,7 +362,7 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
     // only the header. This is the fixture that proved the mechanism in the
     // ROADMAP, now driven through the real createHtmlFiles.
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-theme-')
         siteViews = path.join(tmpRoot, 'views')
         themeViews = path.join(tmpRoot, 'theme', 'views')
 
@@ -406,10 +389,6 @@ describe('createHtmlFiles with a theme (layered resolution)', () => {
             path.join(siteViews, 'partials', 'header.pug'),
             'h1 SITE header'
         )
-    })
-
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     const pageData = {
@@ -486,7 +465,7 @@ describe('createHtmlFiles resolves extends across the chain', () => {
     // `include` — through the layered resolver, plus a cross-chain override
     // reached via extends.
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-theme-')
         siteViews = path.join(tmpRoot, 'views')
         themeViews = path.join(tmpRoot, 'theme', 'views')
         publicDir = path.join(tmpRoot, 'public')
@@ -512,10 +491,6 @@ describe('createHtmlFiles resolves extends across the chain', () => {
             path.join(siteViews, 'partials', 'header.pug'),
             'h1 SITE header'
         )
-    })
-
-    afterEach(async () => {
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('extends a theme base and honours a site partial override', async () => {
@@ -550,19 +525,18 @@ describe('createHtmlFiles resolves extends across the chain', () => {
 })
 
 describe('run() with a theme (assets layering)', () => {
-    let tmpRoot, prevCwd
+    let tmpRoot
 
     // Revised §1b layout: the site's own presentation lives under `<site>/theme/`
     // (the core.js probe points views/assets there), and `theme: ./base` names an
     // installed base theme whose views/assets sit directly at its own root. The
     // chain is therefore [<site>/theme, <base>]. run() resolves everything from
-    // process.cwd(), so this chdir's into a throwaway project and restores cwd
-    // afterwards, then asserts the two-pass asset copy (§2): base-theme assets
+    // process.cwd(), so useSiteCwd points it at a throwaway project (the real
+    // cwd stays the repo), then asserts the two-pass asset copy (§2): base-theme assets
     // reach public/, a site-only asset is added, and a colliding asset is won by
     // the site's own `theme/` layer.
     beforeEach(async () => {
-        prevCwd = process.cwd()
-        tmpRoot = createTempPath()
+        tmpRoot = useSiteCwd()
 
         const mk = (...p) => fs.mkdir(path.join(tmpRoot, ...p), { recursive: true })
         await mk('config')
@@ -625,13 +599,6 @@ describe('run() with a theme (assets layering)', () => {
             path.join(tmpRoot, 'base', '.neraignore'),
             'css/keep.css\n'
         )
-
-        process.chdir(tmpRoot)
-    })
-
-    afterEach(async () => {
-        process.chdir(prevCwd)
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('copies theme assets then site assets, with the site winning collisions', async () => {
@@ -695,7 +662,7 @@ describe('checkThemeCompatibility (§5)', () => {
     const themeObj = () => ({ name: '@nera-static/theme-x', root: themeRoot })
 
     beforeEach(async () => {
-        tmpRoot = createTempPath()
+        tmpRoot = tempDir('nera-theme-')
         themeRoot = path.join(tmpRoot, 'theme-pkg')
         await fs.mkdir(themeRoot, { recursive: true })
         // The site needs a package.json for createRequire's base (peer lookups).
@@ -703,11 +670,6 @@ describe('checkThemeCompatibility (§5)', () => {
             path.join(tmpRoot, 'package.json'),
             JSON.stringify({ name: 'site' })
         )
-    })
-
-    afterEach(async () => {
-        vi.restoreAllMocks()
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     // Install a fake plugin into the site's node_modules at a given version, so
@@ -883,15 +845,14 @@ describe('readGeneratorVersion (§5)', () => {
 })
 
 describe('run() with an incompatible theme (§5, generator check fails the build)', () => {
-    let tmpRoot, prevCwd
+    let tmpRoot
 
     // A local base theme whose nera.generator range excludes any real generator
     // must abort run() — proving the check fires through the real pipeline with
     // the generator's own version, and produces a rejected promise (→ non-zero
     // exit via index.js's uncaught rejection, the same path as a missing theme).
     beforeEach(async () => {
-        prevCwd = process.cwd()
-        tmpRoot = createTempPath()
+        tmpRoot = useSiteCwd()
 
         const mk = (...p) =>
             fs.mkdir(path.join(tmpRoot, ...p), { recursive: true })
@@ -924,13 +885,6 @@ describe('run() with an incompatible theme (§5, generator check fails the build
             path.join(tmpRoot, 'base', 'views', 'layouts', 'layout.pug'),
             'doctype html\nhtml\n  body\n    != content'
         )
-
-        process.chdir(tmpRoot)
-    })
-
-    afterEach(async () => {
-        process.chdir(prevCwd)
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('aborts the build with an actionable message', async () => {
@@ -952,15 +906,14 @@ describe('run() with an incompatible theme (§5, generator check fails the build
 })
 
 describe('run() exposes app.theme.config to templates (§1c)', () => {
-    let tmpRoot, prevCwd
+    let tmpRoot
 
     // End-to-end through run(): a base theme ships config/theme.yaml defaults and
     // a layout that renders app.theme.{name,package,config}; the site overrides
     // one token via its own config/theme.yaml. Proves the merge is exposed on the
     // app object the templates render with.
     beforeEach(async () => {
-        prevCwd = process.cwd()
-        tmpRoot = createTempPath()
+        tmpRoot = useSiteCwd()
 
         const mk = (...p) =>
             fs.mkdir(path.join(tmpRoot, ...p), { recursive: true })
@@ -1006,13 +959,6 @@ describe('run() exposes app.theme.config to templates (§1c)', () => {
                 '    p(id="label")= app.theme.config.label'
             ].join('\n')
         )
-
-        process.chdir(tmpRoot)
-    })
-
-    afterEach(async () => {
-        process.chdir(prevCwd)
-        await fs.rm(tmpRoot, { recursive: true, force: true })
     })
 
     it('renders the merged theme config, site overriding one token', async () => {

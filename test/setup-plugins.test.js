@@ -1,43 +1,25 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import path from 'path'
-import fs from 'fs/promises'
-import fssync from 'fs'
+import { tempDir, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import { getPluginsData } from '../src/setup-plugins.js'
-import dotenv from 'dotenv'
 
-dotenv.config()
-
-const TMP_DIR = path.resolve(
-    process.env.TEST_TEMP_DIR || path.join(import.meta.dirname, '.test-temp')
-)
+// The plugin folders, written once for the whole file (an import() is cached
+// per file URL anyway). Each test gets its own site as `process.cwd()`, where
+// setup-plugins reads config/plugin-order.yaml and package.json.
+const TMP_DIR = tempDir('nera-setup-plugins-')
 const PLUGINS_DIR = path.join(TMP_DIR, 'src/plugins')
 const ASYNC_PLUGINS_DIR = path.join(TMP_DIR, 'src/async-plugins')
-const CONFIG_DIR = path.join(TMP_DIR, 'config')
 const CLASS_PLUGINS_DIR = path.join(TMP_DIR, 'src/class-plugins')
 const SORT_PLUGINS_DIR = path.join(TMP_DIR, 'src/sort-plugins')
 
-let originalCwd
+let site
 
-async function writePlugin(dir, code, base = PLUGINS_DIR) {
-    const pluginDir = path.join(base, dir)
-    await fs.mkdir(pluginDir, { recursive: true })
-    await fs.writeFile(path.join(pluginDir, 'index.js'), code, 'utf-8')
-}
+const writePlugin = (dir, code, base = PLUGINS_DIR) =>
+    writeFiles(base, { [`${dir}/index.js`]: code })
 
-beforeAll(async () => {
-    originalCwd = process.cwd()
-
-    // clean tmp
-    if (fssync.existsSync(TMP_DIR)) {
-        await fs.rm(TMP_DIR, { recursive: true, force: true })
-    }
-
-    // re-create dirs
-    await fs.mkdir(PLUGINS_DIR, { recursive: true })
-    await fs.mkdir(CONFIG_DIR, { recursive: true })
-
+beforeAll(() => {
     // plugin-a: adds to app, logs order
-    await writePlugin(
+    writePlugin(
         'plugin-a',
         `export function getAppData(data) {
             const order = Array.isArray(data.app.__order) ? data.app.__order : []
@@ -47,7 +29,7 @@ beforeAll(async () => {
     )
 
     // plugin-b: adds page, logs order via getMetaData
-    await writePlugin(
+    writePlugin(
         'plugin-b',
         `export function getMetaData(data) {
             const app = data.app
@@ -59,10 +41,10 @@ beforeAll(async () => {
     )
 
     // plugin-empty: no exports
-    await writePlugin('plugin-empty', '// intentionally empty')
+    writePlugin('plugin-empty', '// intentionally empty')
 
     // plugin-order-mark: both hooks to see relative ordering
-    await writePlugin(
+    writePlugin(
         'plugin-order-mark',
         `export function getAppData(data) {
             const order = Array.isArray(data.app.__order) ? data.app.__order : []
@@ -79,8 +61,7 @@ beforeAll(async () => {
     )
 
     // plugin-async: both hooks are async, as a real-world plugin may write them
-    await fs.mkdir(ASYNC_PLUGINS_DIR, { recursive: true })
-    await writePlugin(
+    writePlugin(
         'plugin-async',
         `export async function getAppData(data) {
             return { ...data.app, asyncApp: true }
@@ -92,8 +73,7 @@ beforeAll(async () => {
     )
 
     // plugin-class-app: getAppData returns a class instance, which is no `app`
-    await fs.mkdir(CLASS_PLUGINS_DIR, { recursive: true })
-    await writePlugin(
+    writePlugin(
         'plugin-class-app',
         `class App { constructor(app) { Object.assign(this, app) } }
         export function getAppData(data) {
@@ -103,9 +83,8 @@ beforeAll(async () => {
     )
 
     // Unlisted plugins run in code-unit order: Zeta before alpha before beta
-    await fs.mkdir(SORT_PLUGINS_DIR, { recursive: true })
     for (const name of ['beta', 'Zeta', 'alpha']) {
-        await writePlugin(
+        writePlugin(
             name,
             `export function getAppData(data) {
                 return { ...data.app, ran: [...(data.app.ran || []), '${name}'] }
@@ -113,22 +92,11 @@ beforeAll(async () => {
             SORT_PLUGINS_DIR
         )
     }
-
-    // No plugin-order.yaml by default; individual tests will create one if needed
 })
 
-afterAll(async () => {
-    process.chdir(originalCwd)
-    await fs.rm(TMP_DIR, { recursive: true, force: true })
-})
-
-beforeEach(async () => {
-    // ensure we are in tmp project root so setup-plugins reads config/plugin-order.yaml
-    process.chdir(TMP_DIR)
-    // remove any existing plugin-order.yaml between tests
-    await fs
-        .rm(path.join(CONFIG_DIR, 'plugin-order.yaml'), { force: true })
-        .catch(() => {})
+beforeEach(() => {
+    // No plugin-order.yaml or package.json by default; a test writes one if it needs it.
+    site = useSiteCwd()
 })
 
 describe('getPluginsData', () => {
@@ -213,7 +181,7 @@ describe('getPluginsData', () => {
   - end:
       - plugin-b
 `
-        await fs.writeFile(path.join(CONFIG_DIR, 'plugin-order.yaml'), yaml)
+        writeFiles(site, { 'config/plugin-order.yaml': yaml })
 
         const data = { app: { __order: [] }, pagesData: [] }
         const result = await getPluginsData(data, PLUGINS_DIR)
@@ -230,13 +198,12 @@ describe('getPluginsData', () => {
         // discovery bug here is invisible unless the fixture project declares
         // one. Naming a package that cannot resolve is enough: the loader has
         // to have read *this* package.json to attempt it at all.
-        await fs.writeFile(
-            path.join(TMP_DIR, 'package.json'),
-            JSON.stringify({
+        writeFiles(site, {
+            'package.json': JSON.stringify({
                 name: 'fixture-project',
                 dependencies: { '@nera-static/plugin-not-installed': '^1.0.0' },
-            })
-        )
+            }),
+        })
 
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -257,7 +224,6 @@ describe('getPluginsData', () => {
             expect(Array.isArray(result.pagesData)).toBe(true)
         } finally {
             warn.mockRestore()
-            await fs.rm(path.join(TMP_DIR, 'package.json'), { force: true })
         }
     })
 
@@ -265,9 +231,8 @@ describe('getPluginsData', () => {
         // A thin site depends on @nera-static/nera (and, transitively, core);
         // neither, nor a theme, nor the plugin-utils library, must be import()ed
         // as a plugin — only real @nera-static/plugin-* packages are.
-        await fs.writeFile(
-            path.join(TMP_DIR, 'package.json'),
-            JSON.stringify({
+        writeFiles(site, {
+            'package.json': JSON.stringify({
                 name: 'fixture-project',
                 dependencies: {
                     '@nera-static/nera': '^1.0.0',
@@ -276,8 +241,8 @@ describe('getPluginsData', () => {
                     '@nera-static/plugin-utils': '^1.0.0',
                     '@nera-static/plugin-not-installed': '^1.0.0',
                 },
-            })
-        )
+            }),
+        })
 
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
         const log = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -304,7 +269,6 @@ describe('getPluginsData', () => {
         } finally {
             warn.mockRestore()
             log.mockRestore()
-            await fs.rm(path.join(TMP_DIR, 'package.json'), { force: true })
         }
     })
 })

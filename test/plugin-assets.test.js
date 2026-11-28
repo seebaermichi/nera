@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
-import os from 'os'
 import { createHash } from 'crypto'
+import { captureConsole, listFiles, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import { getPluginsData, validateAsset } from '../src/setup-plugins.js'
 import run from '../src/index.js'
 
@@ -11,33 +11,14 @@ import run from '../src/index.js'
 // plugins return `[{ from, to }]` and core copies them into public/ after the
 // theme's assets and before the site's.
 
-const createTempPath = () =>
-    path.join(
-        os.tmpdir(),
-        `.nera-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    )
-
-const write = async (file, content) => {
-    await fs.mkdir(path.dirname(file), { recursive: true })
-    await fs.writeFile(file, content)
-}
-
 const hashOf = (content) =>
     createHash('sha256').update(content).digest('hex').slice(0, 10)
 
 // Every file under `dir` as { relPath: content }, for byte-for-byte comparison.
-const snapshotTree = async (dir) => {
-    const out = {}
-    const walk = async (d) => {
-        for (const entry of await fs.readdir(d, { withFileTypes: true })) {
-            const full = path.join(d, entry.name)
-            if (entry.isDirectory()) await walk(full)
-            else out[path.relative(dir, full)] = await fs.readFile(full, 'utf8')
-        }
-    }
-    await walk(dir)
-    return out
-}
+const snapshotTree = (dir) =>
+    Object.fromEntries(
+        listFiles(dir).map((rel) => [rel, fssync.readFileSync(path.join(dir, rel), 'utf8')])
+    )
 
 describe('validateAsset', () => {
     it('accepts an absolute from and a relative to, normalizing to', () => {
@@ -82,7 +63,7 @@ describe('validateAsset', () => {
 })
 
 describe('getAssets hook', () => {
-    let tmpRoot, prevCwd, warn
+    let tmpRoot, warnings
 
     const folders = () => ({
         config: path.join(tmpRoot, 'config'),
@@ -98,7 +79,7 @@ describe('getAssets hook', () => {
     const exists = (rel) => fssync.existsSync(path.join(tmpRoot, 'public', rel))
 
     const writePlugin = (name, code) =>
-        write(path.join(tmpRoot, 'plugins', name, 'index.js'), code)
+        writeFiles(tmpRoot, { [`plugins/${name}/index.js`]: code })
 
     // A plugin whose getAssets returns `entries` verbatim.
     const assetsPlugin = (name, entries) =>
@@ -107,52 +88,33 @@ describe('getAssets hook', () => {
             `export function getAssets() { return ${JSON.stringify(entries)} }`
         )
 
-    const warnings = () => warn.mock.calls.map((c) => c.join(' ')).join('\n')
-
-    beforeEach(async () => {
-        prevCwd = process.cwd()
-        tmpRoot = createTempPath()
-
-        await write(
-            path.join(tmpRoot, 'package.json'),
-            JSON.stringify({ name: 'demo', private: true })
-        )
-        await write(path.join(tmpRoot, 'config', 'app.yaml'), 'name: Demo\nlang: en')
-        await write(
-            path.join(tmpRoot, 'pages', 'index.md'),
-            '---\ntitle: Home\nlayout: layout.pug\n---\n# Hi\n'
-        )
-        await write(
-            path.join(tmpRoot, 'views', 'layout.pug'),
-            'doctype html\nhtml\n  head\n    link(rel="stylesheet" href="/css/site.css")\n  body\n    != content'
-        )
-        await write(path.join(tmpRoot, 'assets', 'css', 'site.css'), 'SITE css')
-
-        // Plugin payload, outside public/ like a real cache folder.
-        await write(path.join(tmpRoot, 'cache', 'files', 'a.txt'), 'PLUGIN a')
-        await write(path.join(tmpRoot, 'cache', 'files', 'sub', 'b.txt'), 'PLUGIN b')
-        await write(path.join(tmpRoot, 'cache', 'one.txt'), 'PLUGIN one')
-
-        process.chdir(tmpRoot)
-        warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    })
-
-    afterEach(async () => {
-        warn.mockRestore()
-        process.chdir(prevCwd)
-        await fs.rm(tmpRoot, { recursive: true, force: true })
+    beforeEach(() => {
+        tmpRoot = useSiteCwd({
+            'package.json': JSON.stringify({ name: 'demo', private: true }),
+            'config/app.yaml': 'name: Demo\nlang: en',
+            'pages/index.md': '---\ntitle: Home\nlayout: layout.pug\n---\n# Hi\n',
+            'views/layout.pug':
+                'doctype html\nhtml\n  head\n    link(rel="stylesheet" href="/css/site.css")\n  body\n    != content',
+            'assets/css/site.css': 'SITE css',
+            // Plugin payload, outside public/ like a real cache folder.
+            'cache/files/a.txt': 'PLUGIN a',
+            'cache/files/sub/b.txt': 'PLUGIN b',
+            'cache/one.txt': 'PLUGIN one',
+        })
+        const lines = captureConsole('warn')
+        warnings = () => lines().join('\n')
     })
 
     it('is additive: a plugin without getAssets builds byte-identically', async () => {
         await build()
-        const before = await snapshotTree(path.join(tmpRoot, 'public'))
+        const before = snapshotTree(path.join(tmpRoot, 'public'))
 
-        await writePlugin(
+        writePlugin(
             'plain',
             'export function getMetaData({ pagesData }) { return pagesData }'
         )
         await build()
-        const after = await snapshotTree(path.join(tmpRoot, 'public'))
+        const after = snapshotTree(path.join(tmpRoot, 'public'))
 
         expect(after).toEqual(before)
     })
@@ -166,7 +128,7 @@ describe('getAssets hook', () => {
     })
 
     it('passes the final app/pagesData and tags entries with the plugin name', async () => {
-        await writePlugin(
+        writePlugin(
             'producer',
             `export function getAppData({ app }) { return { ...app, produced: 'yes' } }
             export function getAssets({ app, pagesData }) {
@@ -175,7 +137,7 @@ describe('getAssets hook', () => {
         )
         // Runs after "producer" alphabetically; its getMetaData must already
         // be reflected in what producer's getAssets sees.
-        await writePlugin(
+        writePlugin(
             'zz-pages',
             'export function getMetaData({ pagesData }) { return [...pagesData, {}, {}] }'
         )
@@ -191,7 +153,7 @@ describe('getAssets hook', () => {
     })
 
     it('copies a directory entry into public/<to>', async () => {
-        await assetsPlugin('images', [
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'files'), to: '_img' },
         ])
         await build()
@@ -202,7 +164,7 @@ describe('getAssets hook', () => {
     })
 
     it('copies a file entry to the file path <to>', async () => {
-        await assetsPlugin('og', [
+        assetsPlugin('og', [
             { from: path.join(tmpRoot, 'cache', 'one.txt'), to: 'og/home.txt' },
         ])
         await build()
@@ -211,8 +173,8 @@ describe('getAssets hook', () => {
     })
 
     it('lets a site asset override a plugin asset', async () => {
-        await write(path.join(tmpRoot, 'assets', '_img', 'a.txt'), 'SITE a')
-        await assetsPlugin('images', [
+        writeFiles(tmpRoot, { 'assets/_img/a.txt': 'SITE a' })
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'files'), to: '_img' },
         ])
         await build()
@@ -222,11 +184,13 @@ describe('getAssets hook', () => {
     })
 
     it('lets a plugin asset override a theme asset', async () => {
-        await write(path.join(tmpRoot, 'config', 'app.yaml'), 'name: Demo\nlang: en\ntheme: ./base')
-        await fs.mkdir(path.join(tmpRoot, 'base', 'views'), { recursive: true })
-        await write(path.join(tmpRoot, 'base', 'assets', '_img', 'a.txt'), 'THEME a')
-        await write(path.join(tmpRoot, 'base', 'assets', '_img', 'c.txt'), 'THEME c')
-        await assetsPlugin('images', [
+        writeFiles(tmpRoot, {
+            'config/app.yaml': 'name: Demo\nlang: en\ntheme: ./base',
+            'base/assets/_img/a.txt': 'THEME a',
+            'base/assets/_img/c.txt': 'THEME c',
+        })
+        await fs.mkdir(path.join(tmpRoot, 'base', 'views'))
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'files'), to: '_img' },
         ])
         await build()
@@ -236,7 +200,7 @@ describe('getAssets hook', () => {
     })
 
     it('discards a non-array result with a warning and keeps building', async () => {
-        await writePlugin('broken', 'export function getAssets() { return { nope: true } }')
+        writePlugin('broken', 'export function getAssets() { return { nope: true } }')
         await build()
 
         expect(warnings()).toMatch(/"broken" getAssets returned invalid format/)
@@ -245,7 +209,7 @@ describe('getAssets hook', () => {
     })
 
     it('skips an entry whose to escapes public/, keeping the valid ones', async () => {
-        await assetsPlugin('images', [
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'one.txt'), to: '../escaped.txt' },
             { from: path.join(tmpRoot, 'cache', 'one.txt'), to: '/abs.txt' },
             { to: '_img' },
@@ -262,7 +226,7 @@ describe('getAssets hook', () => {
     })
 
     it('skips a from that does not exist with a warning', async () => {
-        await assetsPlugin('images', [
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'missing'), to: '_img' },
         ])
         await build()
@@ -273,17 +237,14 @@ describe('getAssets hook', () => {
     })
 
     it('applies base_path and asset_hashing to plugin assets', async () => {
-        await write(
-            path.join(tmpRoot, 'config', 'app.yaml'),
-            'name: Demo\nlang: en\nbase_path: /sub\nasset_hashing: true'
-        )
-        await write(
-            path.join(tmpRoot, 'pages', 'index.md'),
-            '---\ntitle: Home\nlayout: layout.pug\n---\n<img src="/_img/pic.png" srcset="/_img/pic.png 480w, /_img/pic-2x.png 960w" alt="x">\n'
-        )
-        await write(path.join(tmpRoot, 'cache', 'img', 'pic.png'), 'PNG1')
-        await write(path.join(tmpRoot, 'cache', 'img', 'pic-2x.png'), 'PNG2')
-        await assetsPlugin('images', [
+        writeFiles(tmpRoot, {
+            'config/app.yaml': 'name: Demo\nlang: en\nbase_path: /sub\nasset_hashing: true',
+            'pages/index.md':
+                '---\ntitle: Home\nlayout: layout.pug\n---\n<img src="/_img/pic.png" srcset="/_img/pic.png 480w, /_img/pic-2x.png 960w" alt="x">\n',
+            'cache/img/pic.png': 'PNG1',
+            'cache/img/pic-2x.png': 'PNG2',
+        })
+        assetsPlugin('images', [
             { from: path.join(tmpRoot, 'cache', 'img'), to: '_img' },
         ])
         await build()

@@ -1,82 +1,45 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
-import fssync from 'fs'
+import { tempDir, useSiteCwd, writeFiles } from '@nera-static/test-utils'
 import {
     loadAppData,
     getPagesData,
     defaultSettings,
     normalizeBasePath,
 } from '../src/core.js'
-import dotenv from 'dotenv'
 
-dotenv.config()
-
-const TMP_DIR = path.resolve(process.env.TEST_TEMP_DIR || '.test-temp')
+// One fixture site for the whole file; tempDir removes it afterwards.
+const TMP_DIR = tempDir('nera-core-')
 const CONFIG = path.join(TMP_DIR, 'config')
 const PAGES = path.join(TMP_DIR, 'pages')
 
-beforeAll(async () => {
-    if (fssync.existsSync(TMP_DIR)) {
-        await fs.rm(TMP_DIR, { recursive: true, force: true })
-    }
-
-    await fs.mkdir(CONFIG, { recursive: true })
-    await fs.mkdir(PAGES, { recursive: true })
-
-    await fs.writeFile(
-        path.join(CONFIG, 'app.yaml'),
-        'name: TestSite\nlang: en'
-    )
-    await fs.writeFile(
-        path.join(PAGES, 'index.md'),
-        '---\ntitle: Home\n---\n\n# Welcome!'
-    )
-    await fs.mkdir(path.join(PAGES, 'blog'), { recursive: true })
-    await fs.writeFile(path.join(PAGES, 'blog/post.md'), '# Blog Post')
-    await fs.writeFile(path.join(PAGES, 'broken.md'), '::::')
-    await fs.writeFile(path.join(PAGES, 'page.mdx'), '# MDX')
-    await fs.writeFile(
-        path.join(PAGES, 'dated-created.md'),
-        '---\ntitle: Dated\ncreatedAt: 2021-03-04\n---\n\n# Dated'
-    )
-    await fs.writeFile(
-        path.join(PAGES, 'dated-date.md'),
-        '---\ntitle: Dated\ndate: 2019-11-02\n---\n\n# Dated'
-    )
-    await fs.writeFile(
-        path.join(PAGES, 'dated-both.md'),
-        '---\ntitle: Dated\ncreatedAt: 2022-06-07\ndate: 2019-11-02\n---\n\n# Dated'
-    )
-    await fs.writeFile(
-        path.join(PAGES, 'yaml-features.md'),
-        '---\nbase: &b\n  a: 1\nchild:\n  <<: *b\n  c: 2\ntitle: first\ntitle: last\npublished: 2024-05-06\nquoted: "2024-05-06"\ndraft: yes\n---\n\n# YAML'
-    )
-    await fs.writeFile(
-        path.join(PAGES, 'bad-frontmatter.md'),
-        '---\ntitle: [unclosed\n---\n\n# Bad'
-    )
-    await fs.mkdir(path.join(PAGES, 'a.md.notes'), { recursive: true })
-    await fs.writeFile(path.join(PAGES, 'a.md.notes/b.md'), '# Notes')
-})
-
-afterAll(async () => {
-    await fs.rm(TMP_DIR, { recursive: true, force: true })
+beforeAll(() => {
+    writeFiles(TMP_DIR, {
+        'config/app.yaml': 'name: TestSite\nlang: en',
+        'pages/index.md': '---\ntitle: Home\n---\n\n# Welcome!',
+        'pages/blog/post.md': '# Blog Post',
+        'pages/broken.md': '::::',
+        'pages/page.mdx': '# MDX',
+        'pages/dated-created.md': '---\ntitle: Dated\ncreatedAt: 2021-03-04\n---\n\n# Dated',
+        'pages/dated-date.md': '---\ntitle: Dated\ndate: 2019-11-02\n---\n\n# Dated',
+        'pages/dated-both.md':
+            '---\ntitle: Dated\ncreatedAt: 2022-06-07\ndate: 2019-11-02\n---\n\n# Dated',
+        'pages/yaml-features.md':
+            '---\nbase: &b\n  a: 1\nchild:\n  <<: *b\n  c: 2\ntitle: first\ntitle: last\npublished: 2024-05-06\nquoted: "2024-05-06"\ndraft: yes\n---\n\n# YAML',
+        'pages/bad-frontmatter.md': '---\ntitle: [unclosed\n---\n\n# Bad',
+        'pages/a.md.notes/b.md': '# Notes',
+    })
 })
 
 describe('loadAppData', () => {
-    // The generator repo's own root now contains a `theme/` folder (revised
+    // The generator repo's own root contains a `theme/` folder (revised
     // §1b scaffold), so the folder probe would swap views/assets to theme/ for
-    // any test inheriting that cwd. These merge tests assert the legacy
-    // defaults, so run them from a theme-less directory (TMP_DIR has no
-    // `theme/`). The nested probe describe sets its own cwd on top of this.
-    let prevCwd
+    // any test reading the real cwd. These merge tests assert the legacy
+    // defaults, so `process.cwd()` points at an empty, theme-less dir. The
+    // nested probe describe points it at its own site on top of this.
     beforeEach(() => {
-        prevCwd = process.cwd()
-        process.chdir(TMP_DIR)
-    })
-    afterEach(() => {
-        process.chdir(prevCwd)
+        useSiteCwd()
     })
 
     it('loads app.yaml config and page list', () => {
@@ -118,12 +81,10 @@ describe('loadAppData', () => {
     describe('folders from app.yaml', () => {
         const CONFIG_WITH_FOLDERS = path.join(TMP_DIR, 'config-folders')
 
-        beforeAll(async () => {
-            await fs.mkdir(CONFIG_WITH_FOLDERS, { recursive: true })
-            await fs.writeFile(
-                path.join(CONFIG_WITH_FOLDERS, 'app.yaml'),
-                `name: TestSite\nfolders:\n  assets: ./static\n  pages: ${PAGES}\n`
-            )
+        beforeAll(() => {
+            writeFiles(CONFIG_WITH_FOLDERS, {
+                'app.yaml': `name: TestSite\nfolders:\n  assets: ./static\n  pages: ${PAGES}\n`,
+            })
         })
 
         const load = () =>
@@ -171,22 +132,22 @@ describe('loadAppData', () => {
     // assert the returned folder strings only (no file copying), so they are
     // immune to the symlinked-tmpdir quirks that dog the render/copy tests.
     describe('theme/ folder probe', () => {
-        let probeRoot, prevCwd
+        let probeRoot
 
-        beforeEach(async () => {
-            prevCwd = process.cwd()
-            probeRoot = path.join(TMP_DIR, `probe-${Math.random().toString(36).slice(2)}`)
-            await fs.mkdir(path.join(probeRoot, 'config'), { recursive: true })
-            await fs.writeFile(
-                path.join(probeRoot, 'config', 'app.yaml'),
-                'name: Probe\nlang: en\n'
-            )
-            process.chdir(probeRoot)
+        beforeEach(() => {
+            probeRoot = useSiteCwd({ 'config/app.yaml': 'name: Probe\nlang: en\n' })
         })
 
-        afterEach(async () => {
-            process.chdir(prevCwd)
-            await fs.rm(probeRoot, { recursive: true, force: true })
+        // The default folders are relative; they must resolve against
+        // process.cwd(), not the real cwd (this repo, which has its own
+        // config/app.yaml and pages/).
+        it('reads app.yaml and lists pages of the site process.cwd() names', () => {
+            writeFiles(probeRoot, { 'pages/only.md': '# Only' })
+
+            const data = loadAppData()
+
+            expect(data.app.name).toBe('Probe')
+            expect(data.pages).toEqual(['only.md'])
         })
 
         it('points views/assets at theme/ when that folder exists', async () => {
@@ -427,11 +388,8 @@ describe('getPagesData', () => {
                 Object.entries(meta).filter(([key]) => !DERIVED.includes(key))
             )
 
-        beforeAll(async () => {
-            await fs.mkdir(GOLDEN, { recursive: true })
-            for (const [name, text] of Object.entries(files)) {
-                await fs.writeFile(path.join(GOLDEN, name), text)
-            }
+        beforeAll(() => {
+            writeFiles(GOLDEN, files)
         })
 
         it.each(Object.keys(expected))('renders %s as before', (name) => {
