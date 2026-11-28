@@ -15,6 +15,8 @@ const TMP_DIR = path.resolve(
 const PLUGINS_DIR = path.join(TMP_DIR, 'src/plugins')
 const ASYNC_PLUGINS_DIR = path.join(TMP_DIR, 'src/async-plugins')
 const CONFIG_DIR = path.join(TMP_DIR, 'config')
+const CLASS_PLUGINS_DIR = path.join(TMP_DIR, 'src/class-plugins')
+const SORT_PLUGINS_DIR = path.join(TMP_DIR, 'src/sort-plugins')
 
 let originalCwd
 
@@ -91,6 +93,29 @@ beforeAll(async () => {
         ASYNC_PLUGINS_DIR
     )
 
+    // plugin-class-app: getAppData returns a class instance, which is no `app`
+    await fs.mkdir(CLASS_PLUGINS_DIR, { recursive: true })
+    await writePlugin(
+        'plugin-class-app',
+        `class App { constructor(app) { Object.assign(this, app) } }
+        export function getAppData(data) {
+            return new App({ ...data.app, fromClass: true })
+        }`,
+        CLASS_PLUGINS_DIR
+    )
+
+    // Unlisted plugins run in code-unit order: Zeta before alpha before beta
+    await fs.mkdir(SORT_PLUGINS_DIR, { recursive: true })
+    for (const name of ['beta', 'Zeta', 'alpha']) {
+        await writePlugin(
+            name,
+            `export function getAppData(data) {
+                return { ...data.app, ran: [...(data.app.ran || []), '${name}'] }
+            }`,
+            SORT_PLUGINS_DIR
+        )
+    }
+
     // No plugin-order.yaml by default; individual tests will create one if needed
 })
 
@@ -158,6 +183,28 @@ describe('getPluginsData', () => {
         expect(result.app.asyncApp).toBe(true)
 
         expect(result.pagesData).toEqual([{ title: 'from async plugin' }])
+    })
+
+    it('drops a class instance returned from getAppData with the warning', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+        try {
+            const data = { app: { siteName: 'Original' }, pagesData: [] }
+            const result = await getPluginsData(data, CLASS_PLUGINS_DIR)
+
+            expect(result.app).toEqual({ siteName: 'Original' })
+            expect(warn).toHaveBeenCalledWith(
+                '⚠️ Plugin "plugin-class-app" getAppData returned invalid format, skipping replace.'
+            )
+        } finally {
+            warn.mockRestore()
+        }
+    })
+
+    it('runs unlisted plugins in code-unit order of their names', async () => {
+        const result = await getPluginsData({ app: {}, pagesData: [] }, SORT_PLUGINS_DIR)
+
+        expect(result.app.ran).toEqual(['Zeta', 'alpha', 'beta'])
     })
 
     it('respects plugin-order start and end', async () => {

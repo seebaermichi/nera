@@ -137,6 +137,34 @@ describe('resolveTheme', () => {
         )
     })
 
+    it('uses a scoped third-party spec verbatim as the package name', async () => {
+        await fs.writeFile(
+            path.join(tmpRoot, 'package.json'),
+            JSON.stringify({ name: 'site' })
+        )
+        expect(() =>
+            resolveTheme({ app: { theme: '@acme/my-theme' }, cwd: tmpRoot })
+        ).toThrow(
+            new Error(
+                'theme: "@acme/my-theme" — package @acme/my-theme is not ' +
+                    'installed; run `npm install @acme/my-theme`'
+            )
+        )
+    })
+
+    it('fails with what to do when the spec is blank', () => {
+        // `theme: "  "` names no package (themePackage → null); it must not
+        // turn into a lookup of a package called "null".
+        expect(() =>
+            resolveTheme({ app: { theme: '  ' }, cwd: tmpRoot })
+        ).toThrow(
+            new Error(
+                'theme: "  " is blank — set `theme:` in config/app.yaml (or ' +
+                    'NERA_THEME) to a theme name, or remove it to build without a theme'
+            )
+        )
+    })
+
     it('fails loudly when a local theme is missing', () => {
         expect(() =>
             resolveTheme({ app: { theme: './nope' }, cwd: tmpRoot })

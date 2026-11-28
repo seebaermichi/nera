@@ -1,9 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import yaml from 'yaml'
-import { createRequire } from 'module'
-import { fileURLToPath } from 'url'
 import { satisfies, validRange } from 'semver'
+import {
+    ownVersion,
+    requireFromSite,
+    themePackage,
+} from '@nera-static/plugin-utils/packages'
+import { isPlainObject } from '@nera-static/plugin-utils/values'
 
 // Theme discovery (ROADMAP-themes.md §1).
 //
@@ -144,16 +148,17 @@ export function deepMerge(base, override) {
     return out
 }
 
-function isPlainObject(value) {
-    return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
-
-// A bare name is expanded to the @nera-static/theme-<name> convention; anything
-// scoped or slashed is used verbatim, so third-party themes work too.
+// The package a non-local spec names (plugin-utils' `themePackage`: a bare name
+// becomes @nera-static/theme-<name>, a scoped or slashed one is used verbatim).
+// `themePackage` names no package for a blank spec; a quoted `theme: "  "` is
+// a mistake, not a theme called "  ", so it fails here with what to do.
 function packageName(spec) {
-    return spec.includes('/') || spec.startsWith('@')
-        ? spec
-        : `@nera-static/theme-${spec}`
+    const pkg = themePackage(spec)
+    if (pkg) return pkg
+    throw new Error(
+        `theme: "${spec}" is blank — set \`theme:\` in config/app.yaml (or ` +
+            'NERA_THEME) to a theme name, or remove it to build without a theme'
+    )
 }
 
 // Locate an installed theme on disk. A theme has no JS entry point, so it cannot
@@ -165,10 +170,8 @@ function resolvePackageRoot(spec, cwd) {
     const pkg = packageName(spec)
     // Resolve from the site (cwd), like every other lookup in the pipeline —
     // the theme is a dependency of the site, not of the generator.
-    const requireFromSite = createRequire(path.join(cwd, 'package.json'))
-
     try {
-        return path.dirname(requireFromSite.resolve(`${pkg}/package.json`))
+        return path.dirname(requireFromSite(cwd).resolve(`${pkg}/package.json`))
     } catch {
         throw new Error(
             `theme: "${spec}" — package ${pkg} is not installed; ` +
@@ -212,14 +215,8 @@ export function checkThemeCompatibility(
 // different number than the generator's. Reading the generator's own manifest is
 // the one source that stays correct across that change (the §5 "trap").
 export function readGeneratorVersion() {
-    // theme.js lives in <generator>/src, so the manifest is one level up.
-    const here = path.dirname(fileURLToPath(import.meta.url))
-    const pkgPath = path.resolve(here, '..', 'package.json')
-    try {
-        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version
-    } catch {
-        return null
-    }
+    // The nearest manifest with a version above src/theme.js: the generator's.
+    return ownVersion(import.meta.url)
 }
 
 // Read a theme package's package.json off its root; tolerate absence/malformed
@@ -303,8 +300,7 @@ function checkPluginCompatibility(theme, themePkg, cwd) {
 // every published plugin, whose `exports` lists only `.` — makes that resolve
 // throw ERR_PACKAGE_PATH_NOT_EXPORTED, which silenced this check.
 function installedVersion(name, cwd) {
-    const requireFromSite = createRequire(path.join(cwd, 'package.json'))
-    for (const dir of requireFromSite.resolve.paths(name) || []) {
+    for (const dir of requireFromSite(cwd).resolve.paths(name) || []) {
         const pkgPath = path.join(dir, name, 'package.json')
         if (!fs.existsSync(pkgPath)) continue
         try {

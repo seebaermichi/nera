@@ -2,16 +2,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import { pathToFileURL } from 'url'
 import YAML from 'yaml'
-
-/**
- * Normalize an npm-scoped plugin name to its short name.
- * @example "@nera-static/plugin-search" -> "plugin-search"
- */
-function shortPluginName(fullName) {
-    return fullName.startsWith('@nera-static/')
-        ? fullName.replace('@nera-static/', '')
-        : fullName
-}
+import {
+    isPluginPackage,
+    pluginShortName,
+} from '@nera-static/plugin-utils/packages'
+import { byString } from '@nera-static/plugin-utils/sort'
+import { isPlainObject } from '@nera-static/plugin-utils/values'
 
 /**
  * Try to load plugin-order config.
@@ -51,7 +47,8 @@ async function loadPluginOrderConfig() {
 
 /**
  * Sort loaded plugins based on plugin-order config.
- * Unlisted plugins go in the middle, sorted alphabetically by short name.
+ * Unlisted plugins go in the middle, sorted by short name in code-unit order
+ * (the same on every machine and in every locale).
  */
 function orderPlugins(loadedPlugins, startOrder, endOrder) {
     const pluginMap = new Map(loadedPlugins.map((p) => [p.name, p]))
@@ -60,7 +57,7 @@ function orderPlugins(loadedPlugins, startOrder, endOrder) {
         .filter(
             (p) => !startOrder.includes(p.name) && !endOrder.includes(p.name)
         )
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => byString(a.name, b.name))
 
     return [
         ...startOrder.map((name) => pluginMap.get(name)).filter(Boolean),
@@ -126,23 +123,19 @@ export async function getPluginsData(
         // project still loaded the real site's dependencies.
         const pkgJsonPath = path.resolve(process.cwd(), 'package.json')
         const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'))
-        // A plugin is, by convention, exactly an `@nera-static/plugin-*` package
-        // (CLAUDE.md). Match on that prefix rather than the whole `@nera-static/`
-        // scope, so the scope's non-plugin members are never import()ed as
-        // plugins: the engine (`@nera-static/core`) and the CLI
-        // (`@nera-static/nera`) — which a thin site now depends on directly and
-        // which would otherwise log "❌ Failed to load npm plugin nera" on every
-        // build — plus `installer`, `validate`, and theme packages
-        // (`@nera-static/theme-*`, no JS entry point). The one library sharing
-        // the `plugin-` prefix, `@nera-static/plugin-utils`, is excluded by name.
-        const NON_PLUGIN = new Set(['@nera-static/plugin-utils'])
+        // A plugin is exactly an `@nera-static/plugin-*` package other than the
+        // `@nera-static/plugin-utils` library (`isPluginPackage`), so the scope's
+        // non-plugin members are never import()ed as plugins: the engine
+        // (`@nera-static/core`) and the CLI (`@nera-static/nera`) — which a thin
+        // site depends on directly and which would otherwise log "❌ Failed to
+        // load npm plugin nera" on every build — plus `installer`, `validate`,
+        // and theme packages (`@nera-static/theme-*`, no JS entry point).
         const deps = Object.keys(pkgJson.dependencies || {}).filter(
-            (name) =>
-                name.startsWith('@nera-static/plugin-') && !NON_PLUGIN.has(name)
+            isPluginPackage
         )
 
         for (const fullName of deps) {
-            const shortName = shortPluginName(fullName)
+            const shortName = pluginShortName(fullName)
 
             const loadPromise = import(fullName)
                 .then((mod) => {
@@ -205,7 +198,9 @@ export async function getPluginsData(
 
         if (typeof mod.getAppData === 'function') {
             const result = await mod.getAppData({ app: appData, pagesData })
-            if (result && typeof result === 'object' && !Array.isArray(result)) {
+            // A plain object only: a class instance or a Map never worked as
+            // `app` (templates read its keys), so it is dropped like an array.
+            if (isPlainObject(result)) {
                 appData = result
             } else {
                 console.warn(
