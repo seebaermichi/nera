@@ -460,6 +460,14 @@ describe('rewriteHtmlUrls (base_path)', () => {
         )
     })
 
+    it('keeps a comma inside a srcset URL and the list\'s own spacing', () => {
+        const html =
+            '<img srcset="/a.png?w=1,2 1x,/b.png  2x , data:image/png;base64,AA 3x">'
+        expect(rewriteHtmlUrls(html, BP)).toBe(
+            '<img srcset="/nera-website/a.png?w=1,2 1x,/nera-website/b.png  2x , data:image/png;base64,AA 3x">',
+        )
+    })
+
     it('leaves non-root-absolute values and the base path itself alone', () => {
         const html =
             '<a href="/repo">a</a><a href="relative.html">b</a>' +

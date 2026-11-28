@@ -6,9 +6,9 @@ import dotenv from 'dotenv'
 
 dotenv.config({ quiet: true })
 
-// Mirror the presentation probe in core.js (ROADMAP-themes.md §1b): a site's own
-// assets live under theme/ in the revised layout, falling back to the legacy
-// root assets/ so an unmigrated site still watches the right folder.
+// Mirror the presentation probe in core.js (computeFolders): a site's own
+// assets live under theme/assets, and a site without a theme/ folder still
+// uses the legacy root assets/, so an unmigrated site watches the right folder.
 const sourceFolder = fs.existsSync('theme')
     ? path.resolve('theme/assets')
     : path.resolve('assets')

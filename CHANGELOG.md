@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 -   `t()` reads the page language through plugin-utils' `pageLang`: `lang: 'de '` (with a trailing space) now finds the `de` translations, and a site with neither `meta.lang` nor `app.lang` reads `translations.en` instead of returning every key untranslated.
+-   `base_path` and `asset_hashing` split a `srcset` by the HTML standard's candidate rule (plugin-utils' `mapSrcset`): a comma inside a URL (`/a.jpg?w=1,2 1x`, a `data:` URI) no longer cuts the URL in two, and the list's own commas and spacing are kept as written instead of being rewritten to `, `. A `srcset` written as `url descriptor, url descriptor` builds byte-identically.
 
 ## [4.19.1] - 2026-11-26
 

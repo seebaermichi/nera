@@ -157,8 +157,12 @@ export const getPagesData = (
     let successCount = 0
     let errorCount = 0
 
+    // Resolved against `process.cwd()`, like loadAppData's folders: the
+    // default is relative, and fs would read it from the real working dir.
+    const pagesRoot = path.resolve(baseDir)
+
     pages.forEach((page) => {
-        const fullPath = path.join(baseDir, page)
+        const fullPath = path.join(pagesRoot, page)
 
         try {
             // Check if file exists and is readable

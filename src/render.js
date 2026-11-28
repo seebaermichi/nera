@@ -10,6 +10,7 @@ import { pageLang } from '@nera-static/plugin-utils/lang'
 import {
     hasScheme,
     isInside,
+    mapSrcset,
     stripBasePath,
     withBasePath,
 } from '@nera-static/plugin-utils/urls'
@@ -62,7 +63,8 @@ const mapStartTags = (html, fn) => html.replace(START_TAG, (tag) => fn(tag))
 
 // Rewrite the URL-bearing attributes in a rendered HTML string. Covers the
 // attributes Nera and its plugins actually emit; `srcset` is handled specially
-// because it holds a comma-separated list of `url descriptor` pairs.
+// because it holds a comma-separated list of `url descriptor` pairs, split by
+// the HTML standard's rule (`mapSrcset`), so a comma inside a URL survives.
 export const rewriteHtmlUrls = (html, basePath) => {
     if (!basePath) return html
 
@@ -73,20 +75,11 @@ export const rewriteHtmlUrls = (html, basePath) => {
                 (m, attr, quote, val) =>
                     `${attr}=${quote}${withBasePath(val, basePath)}${quote}`,
             )
-            .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
-                const rewritten = list
-                    .split(',')
-                    .map((part) => {
-                        const seg = part.trim()
-                        if (!seg) return part
-                        const [url, ...descriptor] = seg.split(/\s+/)
-                        return [withBasePath(url, basePath), ...descriptor].join(
-                            ' ',
-                        )
-                    })
-                    .join(', ')
-                return `srcset=${quote}${rewritten}${quote}`
-            }),
+            .replace(
+                /\bsrcset=("|')([^"']*)\1/gi,
+                (m, quote, list) =>
+                    `srcset=${quote}${mapSrcset(list, (url) => withBasePath(url, basePath))}${quote}`,
+            ),
     )
 }
 
@@ -278,20 +271,11 @@ export const hashHtmlUrls = (html, htmlFile, hashUrl) =>
                 (m, attr, quote, val) =>
                     `${attr}=${quote}${hashUrl(val, htmlFile)}${quote}`,
             )
-            .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
-                const rewritten = list
-                    .split(',')
-                    .map((part) => {
-                        const seg = part.trim()
-                        if (!seg) return part
-                        const [url, ...descriptor] = seg.split(/\s+/)
-                        return [hashUrl(url, htmlFile), ...descriptor].join(
-                            ' ',
-                        )
-                    })
-                    .join(', ')
-                return `srcset=${quote}${rewritten}${quote}`
-            }),
+            .replace(
+                /\bsrcset=("|')([^"']*)\1/gi,
+                (m, quote, list) =>
+                    `srcset=${quote}${mapSrcset(list, (url) => hashUrl(url, htmlFile))}${quote}`,
+            ),
     )
 
 // Version the `url()` references of one CSS file (root-absolute or relative).

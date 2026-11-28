@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { loadAppData, getPagesData, defaultSettings } from './core.js'
 import { getPluginsData } from './setup-plugins.js'
 import {
@@ -51,7 +52,23 @@ const run = async (settings = defaultSettings) => {
     // render itself ignored it, so a site that set `folders.assets` had its
     // plugin output written to one folder and a different one copied into
     // public/.
-    const { assets, dist, views, pages, plugins } = data.app.folders
+    //
+    // Resolved against `process.cwd()` here, once, because the folders may be
+    // relative (the defaults are) and fs would resolve a relative path against
+    // the process's real working directory instead: every stage below gets an
+    // absolute path, so a caller that points `process.cwd()` at a site (a test
+    // spy) builds that site without `process.chdir`. A folder a caller's
+    // `settings` leaves out stays undefined, so the stage's own default applies.
+    const [assets, dist, views, pages, plugins] = [
+        'assets',
+        'dist',
+        'views',
+        'pages',
+        'plugins',
+    ].map((key) => {
+        const folder = data.app.folders[key]
+        return typeof folder === 'string' ? path.resolve(folder) : folder
+    })
 
     data.pagesData = getPagesData(data.pages, pages)
     data = await getPluginsData(data, plugins)
