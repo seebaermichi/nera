@@ -5,6 +5,14 @@ import { createHash } from 'crypto'
 import beautify from 'js-beautify'
 import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
+import { isIgnoredAsset, readIgnoreList } from '@nera-static/plugin-utils/glob'
+import { pageLang } from '@nera-static/plugin-utils/lang'
+import {
+    hasScheme,
+    isInside,
+    stripBasePath,
+    withBasePath,
+} from '@nera-static/plugin-utils/urls'
 import { resolveEntry } from './resolve.js'
 import { compileLayout } from './engine.js'
 
@@ -33,21 +41,11 @@ const HTML_FORMAT = {
 // URLs *inside* the output are prefixed. All of this is a no-op when `basePath`
 // is '' (a root-served site), so a site without `base_path` is byte-identical.
 //
-// Every prefixer is idempotent: a value already under `basePath` is left alone,
-// so build-time rewriting composes safely with basePath-aware `meta.href` and
-// the `url()` template helper (double-prefixing can't happen).
-
-// Should this root-absolute value be prefixed? Skip protocol-relative (`//cdn`),
-// non-absolute, and already-prefixed values.
-const shouldPrefix = (val, basePath) =>
-    typeof val === 'string' &&
-    val.startsWith('/') &&
-    !val.startsWith('//') &&
-    val !== basePath &&
-    !val.startsWith(`${basePath}/`)
-
-const prefixUrl = (val, basePath) =>
-    shouldPrefix(val, basePath) ? `${basePath}${val}` : val
+// Every prefixer goes through plugin-utils' `withBasePath`, which is
+// idempotent: a value already under `basePath` is left alone, and so are
+// protocol-relative (`//cdn`), non-absolute and non-string values. Build-time
+// rewriting therefore composes safely with basePath-aware `meta.href` and the
+// `url()` template helper (double-prefixing can't happen).
 
 // A start tag: `<` + a letter, then anything up to the first `>` outside a
 // quoted attribute value (so `title="a > b"` does not end it). Comments,
@@ -73,7 +71,7 @@ export const rewriteHtmlUrls = (html, basePath) => {
             .replace(
                 /\b(href|src|poster|data-search-index)=("|')(\/[^"']*)\2/gi,
                 (m, attr, quote, val) =>
-                    `${attr}=${quote}${prefixUrl(val, basePath)}${quote}`
+                    `${attr}=${quote}${withBasePath(val, basePath)}${quote}`
             )
             .replace(/\bsrcset=("|')([^"']*)\1/gi, (m, quote, list) => {
                 const rewritten = list
@@ -82,7 +80,7 @@ export const rewriteHtmlUrls = (html, basePath) => {
                         const seg = part.trim()
                         if (!seg) return part
                         const [url, ...descriptor] = seg.split(/\s+/)
-                        return [prefixUrl(url, basePath), ...descriptor].join(
+                        return [withBasePath(url, basePath), ...descriptor].join(
                             ' '
                         )
                     })
@@ -97,7 +95,7 @@ const rewriteCssUrls = (css, basePath) =>
     css.replace(
         /url\(\s*(['"]?)(\/[^)'"]*)\1\s*\)/gi,
         (m, quote, val) =>
-            `url(${quote}${prefixUrl(val, basePath)}${quote})`
+            `url(${quote}${withBasePath(val, basePath)}${quote})`
     )
 
 // Rewrite root-absolute URLs held under `href`/`url` keys in a JSON asset —
@@ -109,7 +107,7 @@ const rewriteCssUrls = (css, basePath) =>
 const rewriteJsonUrls = (json, basePath) =>
     json.replace(
         /("(?:href|url)"\s*:\s*")(\/[^"]*)(")/gi,
-        (m, pre, val, post) => `${pre}${prefixUrl(val, basePath)}${post}`
+        (m, pre, val, post) => `${pre}${withBasePath(val, basePath)}${post}`
     )
 
 // Rewrite a web app manifest's root-absolute URL fields. Parsed as JSON so we
@@ -123,7 +121,7 @@ const rewriteManifestUrls = (json, basePath) => {
         return null
     }
 
-    const pfx = (v) => prefixUrl(v, basePath)
+    const pfx = (v) => withBasePath(v, basePath)
     for (const key of ['start_url', 'scope', 'id']) {
         if (typeof data[key] === 'string') data[key] = pfx(data[key])
     }
@@ -215,7 +213,7 @@ const isHashable = (url) =>
     url !== '' &&
     !url.startsWith('#') &&
     !url.startsWith('//') &&
-    !/^[a-z][a-z0-9+.-]*:/i.test(url) &&
+    !hasScheme(url) &&
     !url.includes('?')
 
 // Returns `hashUrl(url, fromFile)`. Hashes are memoised per hasher and read
@@ -235,15 +233,13 @@ const makeHasher = (publicFolder, basePath) => {
         let target
         if (decoded.startsWith('/')) {
             // Root-absolute: strip a `base_path` prefix the base-path pass added.
-            const local =
-                basePath && decoded.startsWith(`${basePath}/`)
-                    ? decoded.slice(basePath.length)
-                    : decoded
-            target = path.join(root, local)
+            target = path.join(root, stripBasePath(decoded, basePath))
         } else {
             target = path.resolve(path.dirname(fromFile), decoded)
         }
-        if (!target.startsWith(`${root}${path.sep}`)) return null
+        // Strictly below `public/`: `public/` itself (`/`, or `basePath`
+        // alone) is no file to version.
+        if (!isInside(root, target, { self: false })) return null
         if (PAGE_EXTENSIONS.has(path.extname(target).toLowerCase())) return null
         try {
             return fssync.statSync(target).isFile() ? target : null
@@ -346,26 +342,19 @@ export const hashAssetUrls = async (publicFolder, basePath, enabled) => {
 }
 // -----------------------------------------------------------------------------
 
-const getIgnoredFiles = (basePath) => {
-    const ignorePath = path.join(basePath, '.neraignore')
-
-    if (fssync.existsSync(ignorePath)) {
-        return fssync
-            .readFileSync(ignorePath, 'utf8')
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line !== '')
-    }
-    return []
-}
-
+/**
+ * Whether the site asset pass keeps `filePath` (the opposite of plugin-utils'
+ * `isIgnoredAsset`, which `copyFolder` uses).
+ *
+ * @deprecated Use `isIgnoredAsset` from `@nera-static/plugin-utils/glob`;
+ * this export is removed in 5.0.
+ * @param {string[]} ignoreList the `.neraignore` patterns
+ * @param {string} filePath
+ * @param {string} sourceRoot the assets folder the patterns are relative to
+ * @returns {boolean}
+ */
 export function ignoreFiles(ignoreList, filePath, sourceRoot) {
-    const relativePath = path.relative(sourceRoot, filePath).replace(/\\/g, '/')
-
-    return !ignoreList.some(
-        (pattern) =>
-            relativePath === pattern || relativePath.startsWith(`${pattern}/`)
-    )
+    return !isIgnoredAsset(ignoreList, filePath, sourceRoot)
 }
 
 // OS and editor clutter that never belongs in public/, matched against a file's
@@ -429,11 +418,11 @@ export const copyFolder = async (
     if (fssync.existsSync(sourceFolder)) {
         const base =
             ignoreBase === undefined ? path.dirname(sourceFolder) : ignoreBase
-        const ignore = base === null ? [] : getIgnoredFiles(base)
+        const ignore = base === null ? [] : readIgnoreList(base)
 
         try {
             for (const file of await listFiles(sourceFolder)) {
-                if (!ignoreFiles(ignore, file, sourceFolder)) continue
+                if (isIgnoredAsset(ignore, file, sourceFolder)) continue
                 await copyPreserving(
                     file,
                     path.join(targetFolder, path.relative(sourceFolder, file))
@@ -519,16 +508,14 @@ export const createHtmlFiles = async (
         // explicitly (`link(href=url('/css/main.css'))`); the post-render rewrite
         // below also catches paths that weren't wrapped, so `url()` is optional.
         const basePath = data.app?.basePath || ''
-        data.url = (p) => prefixUrl(p, basePath)
+        data.url = (p) => withBasePath(p, basePath)
 
         for (const pageData of data.pagesData) {
             if (pageData.meta.layout) {
+                // The page's language, trimmed, else the site's, else 'en'.
+                const lang = pageLang(pageData.meta, data.app)
                 data.t = (key) =>
-                    data.app.translations
-                        ? data.app.translations[
-                            pageData.meta.lang || data.app.lang
-                        ]?.[key] || key
-                        : key
+                    data.app.translations?.[lang]?.[key] || key
 
                 let html = pageData.content
 

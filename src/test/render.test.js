@@ -10,6 +10,7 @@ import {
     copyPluginAssets,
     createHtmlFiles,
     deleteFolder,
+    ignoreFiles,
     rewriteHtmlUrls,
     rewriteAssetUrls,
 } from '../render.js'
@@ -350,6 +351,50 @@ describe('createHtmlFiles', () => {
         expect(content).toContain('<title>Home</title>')
     })
 
+    describe('t()', () => {
+        const page = (meta) => ({
+            meta: {
+                layout: 'index.pug',
+                dirname: '/',
+                filename: 'index.html',
+                fullPath: '/index.html',
+                ...meta
+            }
+        })
+        const translations = {
+            de: { headline: 'Willkommen!' },
+            en: { headline: 'Welcome!' }
+        }
+        const render = async (app, meta) => {
+            await createHtmlFiles(
+                { app, pagesData: [page(meta)] },
+                viewsDir,
+                publicDir
+            )
+            return fs.readFile(path.join(publicDir, 'index.html'), 'utf8')
+        }
+
+        it('finds the translations of a page lang with surrounding spaces', async () => {
+            const html = await render({ lang: 'en', translations }, { lang: 'de ' })
+            expect(html).toContain('<h1>Willkommen!</h1>')
+        })
+
+        it('falls back to the site lang when the page sets none', async () => {
+            const html = await render({ lang: 'de', translations }, {})
+            expect(html).toContain('<h1>Willkommen!</h1>')
+        })
+
+        it('reads the en translations when neither page nor site sets a lang', async () => {
+            const html = await render({ translations }, {})
+            expect(html).toContain('<h1>Welcome!</h1>')
+        })
+
+        it('returns the key when the language has no such entry', async () => {
+            const html = await render({ translations: { de: {} } }, { lang: 'de' })
+            expect(html).toContain('<h1>headline</h1>')
+        })
+    })
+
     it('logs each page as the path written under public/, without base_path', async () => {
         const page = (dirname, filename) => ({
             meta: {
@@ -384,6 +429,17 @@ describe('createHtmlFiles', () => {
         } finally {
             log.mockRestore()
         }
+    })
+})
+
+describe('ignoreFiles (deprecated)', () => {
+    it('says whether the asset pass keeps a file, the opposite of isIgnoredAsset', () => {
+        const root = path.join('site', 'assets')
+        const list = ['images', 'robots']
+        expect(ignoreFiles(list, path.join(root, 'images', 'a.png'), root)).toBe(false)
+        expect(ignoreFiles(list, path.join(root, 'images'), root)).toBe(false)
+        expect(ignoreFiles(list, path.join(root, 'robots.txt'), root)).toBe(true)
+        expect(ignoreFiles([], path.join(root, 'a.css'), root)).toBe(true)
     })
 })
 
@@ -446,6 +502,13 @@ describe('rewriteHtmlUrls (base_path)', () => {
         expect(rewriteHtmlUrls(html, BP)).toBe(
             '<img srcset="/nera-website/a.png 1x, /nera-website/b.png 2x">'
         )
+    })
+
+    it('leaves non-root-absolute values and the base path itself alone', () => {
+        const html =
+            '<a href="/repo">a</a><a href="relative.html">b</a>' +
+            '<a href="mailto:x@example.com">c</a><img srcset="/repo 1x">'
+        expect(rewriteHtmlUrls(html, '/repo')).toBe(html)
     })
 
     it('is a no-op with an empty basePath', () => {

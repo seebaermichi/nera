@@ -86,6 +86,21 @@ describe('makeLayeredResolver', () => {
         expect(out).toBe(path.join(themeViews, 'partials', 'missing.pug'))
     })
 
+    it('resolves an include under a root child named "..foo" through the chain', async () => {
+        await fs.mkdir(path.join(themeViews, '..foo'), { recursive: true })
+        await write(path.join(themeViews, '..foo', 'bar.pug'))
+
+        const resolve = makeLayeredResolver([siteViews, themeViews])
+        const out = resolve(
+            '/..foo/bar.pug',
+            path.join(siteViews, 'pages', 'layout.pug'),
+            { basedir: siteViews }
+        )
+        // Pug's default would be the missing site path; the chain finds the
+        // theme's copy, as for any other root child.
+        expect(out).toBe(path.join(themeViews, '..foo', 'bar.pug'))
+    })
+
     it('behaves like default resolution with a single (themeless) root', async () => {
         await write(path.join(siteViews, 'partials', 'head.pug'))
 

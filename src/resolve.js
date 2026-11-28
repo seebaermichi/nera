@@ -1,5 +1,6 @@
 import fssync from 'fs'
 import path from 'path'
+import { isInside } from '@nera-static/plugin-utils/urls'
 
 // Layered view resolution — the single source of truth for how Nera locates a
 // layout and its `include`/`extends` targets across a site's own presentation
@@ -35,8 +36,10 @@ export const makeLayeredResolver = (roots) => (filename, source, options) => {
     const fallback = defaultResolvePath(filename, source, options)
 
     for (const root of roots) {
+        // `isInside`, not `rel.startsWith('..')`: a root child named `..foo`
+        // lies inside the root and resolves through the chain too.
+        if (!isInside(root, fallback)) continue
         const rel = path.relative(root, fallback)
-        if (rel.startsWith('..') || path.isAbsolute(rel)) continue
         for (const candidate of roots) {
             const p = path.join(candidate, rel)
             if (fssync.existsSync(p)) return p

@@ -138,6 +138,47 @@ describe('hashAssetUrls', () => {
         )
     })
 
+    it('leaves the base path itself and the site root unversioned', async () => {
+        await write(
+            path.join(pub, 'index.html'),
+            '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>'
+        )
+
+        await hashAssetUrls(pub, '/repo', true)
+
+        expect(await read('index.html')).toBe(
+            '<a href="/repo">home</a><a href="/">root</a><a href="/repo/">slash</a>'
+        )
+    })
+
+    it('leaves URLs with a scheme alone, also when a same-named file exists', async () => {
+        await write(path.join(pub, 'data/x.js'), 'x')
+        await write(
+            path.join(pub, 'index.html'),
+            '<script src="data:x.js"></script><a href="tel:123">t</a>'
+        )
+
+        await hashAssetUrls(pub, '', true)
+
+        expect(await read('index.html')).toBe(
+            '<script src="data:x.js"></script><a href="tel:123">t</a>'
+        )
+    })
+
+    it('versions a file in a public/ child folder whose name starts with ".."', async () => {
+        await write(path.join(pub, '..cache/a.js'), 'A')
+        await write(
+            path.join(pub, 'index.html'),
+            '<script src="/..cache/a.js"></script>'
+        )
+
+        await hashAssetUrls(pub, '', true)
+
+        expect(await read('index.html')).toContain(
+            `src="/..cache/a.js?v=${hashOf('A')}"`
+        )
+    })
+
     it('versions the search index referenced by data-search-index', async () => {
         await write(path.join(pub, 'search-index.json'), '[]')
         await write(
