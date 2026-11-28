@@ -141,12 +141,10 @@ describe('hashAssetUrls', () => {
     })
 
     it('versions a file in a public/ child folder whose name starts with ".."', async () => {
-        // Written by hand until test-utils 1.0.2 is released: 1.0.1's
-        // writeFiles takes a first segment starting with ".." for an escape
-        // and refuses it.
-        await fs.mkdir(path.join(pub, '..cache'))
-        await fs.writeFile(path.join(pub, '..cache', 'a.js'), 'A')
-        writeFiles(pub, { 'index.html': '<script src="/..cache/a.js"></script>' })
+        writeFiles(pub, {
+            '..cache/a.js': 'A',
+            'index.html': '<script src="/..cache/a.js"></script>',
+        })
 
         await hashAssetUrls(pub, '', true)
 
