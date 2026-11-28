@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
 import os from 'os'
-import { resolveSiteModel } from '../site-model.js'
+import { resolveSiteModel } from '../src/site-model.js'
 
 // resolveSiteModel is cwd-parameterised on purpose — no chdir here. It must
 // return the same folders/roots the build uses, and must NOT throw on a broken

@@ -182,7 +182,7 @@ This repo ships a bundled demo site used to exercise the pipeline during develop
 npm run render  # build the demo site to /public
 npm run dev     # render, then vite + asset watch + rebuild on change
 npm run serve   # vite over the built output
-npm test        # vitest (WATCH mode) — use `npx vitest run` for a single pass
+npm test        # vitest, single pass (`npm run test:watch` for watch mode)
 npm run lint    # eslint .
 ```
 

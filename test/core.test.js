@@ -7,7 +7,7 @@ import {
     getPagesData,
     defaultSettings,
     normalizeBasePath,
-} from '../core'
+} from '../src/core.js'
 import dotenv from 'dotenv'
 
 dotenv.config()

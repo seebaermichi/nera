@@ -2,15 +2,13 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
-import { fileURLToPath } from 'url'
-import { getPluginsData } from '../setup-plugins.js'
+import { getPluginsData } from '../src/setup-plugins.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TMP_DIR = path.resolve(
-    process.env.TEST_TEMP_DIR || path.join(__dirname, '.test-temp')
+    process.env.TEST_TEMP_DIR || path.join(import.meta.dirname, '.test-temp')
 )
 const PLUGINS_DIR = path.join(TMP_DIR, 'src/plugins')
 const ASYNC_PLUGINS_DIR = path.join(TMP_DIR, 'src/async-plugins')

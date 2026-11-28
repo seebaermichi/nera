@@ -1,14 +1,6 @@
-import { defineConfig } from 'vitest/config'
+import { neraConfig } from '@nera-static/test-utils/vitest'
 
-export default defineConfig({
-    test: {
-        // Only core's own tests: scripts/templates/ holds the test files of new repos
-        // (scripts/new-repo.js), which import @nera-static/test-utils.
-        include: ['src/test/**/*.test.js'],
-        globals: true,
-        environment: 'node',
-        coverage: {
-            reporter: ['text', 'html']
-        }
-    }
-})
+// The canonical include (`test/**/*.test.js`) is anchored at the repo root, so the
+// test files under scripts/templates/*/test/ stay out: they are the tests of new
+// repos (scripts/new-repo.js) and import @nera-static/test-utils as their own repo.
+export default neraConfig()

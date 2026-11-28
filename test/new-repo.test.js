@@ -4,11 +4,10 @@ import os from 'os'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import pug from 'pug'
-import { fileURLToPath } from 'url'
-import { formatPackage, mergePackage, newRepo, PACKAGE_KEYS, placeholders, TEMPLATES } from '../../scripts/new-repo.js'
-import { GITIGNORE_ADDITIONS, gitignoreLines } from '../../scripts/style-check/hygiene.js'
+import { formatPackage, mergePackage, newRepo, PACKAGE_KEYS, placeholders, TEMPLATES } from '../scripts/new-repo.js'
+import { GITIGNORE_ADDITIONS, gitignoreLines } from '../scripts/style-check/hygiene.js'
 
-const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/new-repo.js')
+const script = path.resolve(import.meta.dirname, '../scripts/new-repo.js')
 
 // The common set every kind gets, as written into the new repo.
 const COMMON = [

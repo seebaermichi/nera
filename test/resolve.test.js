@@ -6,7 +6,7 @@ import {
     defaultResolvePath,
     makeLayeredResolver,
     resolveEntry,
-} from '../resolve.js'
+} from '../src/resolve.js'
 
 // Parity suite pinning the layered resolver's behaviour, extracted from
 // render.js so `@nera-static/validate` can reuse it. These encode the exact

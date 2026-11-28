@@ -3,11 +3,10 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execFileSync, spawnSync } from 'child_process'
-import { fileURLToPath } from 'url'
-import { findRepos } from '../../scripts/style-check/repos.js'
-import { findCopies, lockedVersion, pluginSource, checkCopies } from '../../scripts/style-check/copies.js'
+import { findRepos } from '../scripts/style-check/repos.js'
+import { findCopies, lockedVersion, pluginSource, checkCopies } from '../scripts/style-check/copies.js'
 
-const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/style-check.js')
+const script = path.resolve(import.meta.dirname, '../scripts/style-check.js')
 
 let workspace
 

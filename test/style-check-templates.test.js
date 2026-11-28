@@ -2,13 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { fileURLToPath } from 'url'
-import { findRepos } from '../../scripts/style-check/repos.js'
-import { CANONICAL_GITIGNORE } from '../../scripts/style-check/hygiene.js'
-import { checkTemplates } from '../../scripts/style-check/templates.js'
-import { TEMPLATES } from '../../scripts/new-repo.js'
+import { findRepos } from '../scripts/style-check/repos.js'
+import { CANONICAL_GITIGNORE } from '../scripts/style-check/hygiene.js'
+import { checkTemplates } from '../scripts/style-check/templates.js'
+import { TEMPLATES } from '../scripts/new-repo.js'
 
-const generatorRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const generatorRoot = path.resolve(import.meta.dirname, '..')
 
 // Two groups like IDENTICAL_GROUPS: one per kind, one across every repo.
 const GROUPS = [

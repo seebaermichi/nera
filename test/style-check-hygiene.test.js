@@ -3,8 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execFileSync, spawnSync } from 'child_process'
-import { fileURLToPath } from 'url'
-import { findRepos, repoKind } from '../../scripts/style-check/repos.js'
+import { findRepos, repoKind } from '../scripts/style-check/repos.js'
 import {
     CANONICAL_GITIGNORE,
     checkLicense,
@@ -14,10 +13,10 @@ import {
     checkPluginConfig,
     checkGitignore,
     gitignoreLines,
-} from '../../scripts/style-check/hygiene.js'
-import { loadAllowList, applyAllowList } from '../../scripts/style-check/report.js'
+} from '../scripts/style-check/hygiene.js'
+import { loadAllowList, applyAllowList } from '../scripts/style-check/report.js'
 
-const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/style-check.js')
+const script = path.resolve(import.meta.dirname, '../scripts/style-check.js')
 const MIT = 'MIT License\n\nCopyright (c) 2026 Michael Becker\n\nPermission is hereby granted\n'
 
 let workspace

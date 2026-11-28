@@ -34,7 +34,8 @@
         "render": "node index.js",
         "preserve": "npm run render",
         "watch:assets": "node src/watch-assets.js",
-        "test": "vitest",
+        "test": "vitest run",
+        "test:watch": "vitest",
         "dev": "npm run render && concurrently -k -n 'vite,watch,server' -c blue,magenta,green \"npm:serve\" \"npm:watch:assets\" \"npm:start\"",
         "prepare": "husky"
     },
@@ -74,6 +75,7 @@
         "yaml": "^2.4.1"
     },
     "devDependencies": {
+        "@nera-static/test-utils": "^1.0.1",
         "chokidar": "^6.0.0",
         "concurrently": "^10.0.3",
         "eslint": "^10.7.0",

@@ -3,8 +3,8 @@ import path from 'path'
 import fs from 'fs/promises'
 import os from 'os'
 import { createHash } from 'crypto'
-import { hashAssetUrls, hashHtmlUrls } from '../render.js'
-import run from '../index.js'
+import { hashAssetUrls, hashHtmlUrls } from '../src/render.js'
+import run from '../src/index.js'
 
 const createTempPath = () =>
     path.join(

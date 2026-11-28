@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { spawnSync } from 'child_process'
-import { fileURLToPath, pathToFileURL } from 'url'
+import { pathToFileURL } from 'url'
 import path from 'path'
 import fs from 'fs/promises'
 import fssync from 'fs'
@@ -13,7 +13,7 @@ import {
     ignoreFiles,
     rewriteHtmlUrls,
     rewriteAssetUrls,
-} from '../render.js'
+} from '../src/render.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -670,7 +670,7 @@ describe('dotenv loading', () => {
         // A child process, because render.js calls dotenv.config() once at
         // import time — this worker imported it long ago, from another cwd.
         const renderUrl = pathToFileURL(
-            path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../render.js')
+            path.resolve(import.meta.dirname, '../src/render.js')
         ).href
         const env = { ...process.env }
         delete env.NERA_DOTENV_PROBE

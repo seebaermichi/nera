@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
@@ -9,9 +8,9 @@ import {
     deepMerge,
     checkThemeCompatibility,
     readGeneratorVersion
-} from '../theme.js'
-import { createHtmlFiles } from '../render.js'
-import run from '../index.js'
+} from '../src/theme.js'
+import { createHtmlFiles } from '../src/render.js'
+import run from '../src/index.js'
 
 const createTempPath = (sub = '') =>
     path.join(
@@ -876,12 +875,7 @@ describe('readGeneratorVersion (§5)', () => {
         // The version the generator reports about itself is the ground truth for
         // the compat check; it must come from the generator's manifest so the
         // §5 "trap" (site version ≠ generator version after §8) cannot bite.
-        const genPkgPath = path.resolve(
-            path.dirname(fileURLToPath(import.meta.url)),
-            '..',
-            '..',
-            'package.json'
-        )
+        const genPkgPath = path.resolve(import.meta.dirname, '..', 'package.json')
         const version = JSON.parse(fssync.readFileSync(genPkgPath, 'utf-8'))
             .version
         expect(readGeneratorVersion()).toBe(version)

@@ -4,8 +4,8 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
 import { createHash } from 'crypto'
-import { getPluginsData, validateAsset } from '../setup-plugins.js'
-import run from '../index.js'
+import { getPluginsData, validateAsset } from '../src/setup-plugins.js'
+import run from '../src/index.js'
 
 // The `getAssets` plugin hook (core 4.13.0, nera-plugin-images/ROADMAP.md D2):
 // plugins return `[{ from, to }]` and core copies them into public/ after the

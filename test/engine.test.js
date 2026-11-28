@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import os from 'os'
 import pug from 'pug'
-import { compileLayout, templateExtension } from '../engine.js'
+import { compileLayout, templateExtension } from '../src/engine.js'
 
 // The engine seam (PUG-STRATEGY.md B0): compileLayout must compile exactly as
 // render.js did before the seam — `{ basedir }` alone without a theme, the

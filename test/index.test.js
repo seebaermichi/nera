@@ -4,9 +4,9 @@ import fs from 'fs/promises'
 import fssync from 'fs'
 import os from 'os'
 import dotenv from 'dotenv'
-import run, * as core from '../index.js'
+import run, * as core from '../src/index.js'
 import * as engineSubpath from '@nera-static/core/engine'
-import pkg from '../../package.json' with { type: 'json' }
+import pkg from '../package.json' with { type: 'json' }
 
 dotenv.config()
 
