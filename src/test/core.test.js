@@ -382,6 +382,77 @@ describe('getPagesData', () => {
         })
     })
 
+    // Golden edge cases of the `---` fence: what each file renders to and
+    // which frontmatter it yields. Pinned before core switched from its own
+    // markdown-it block rule to plugin-utils' `splitFrontmatter`, so the
+    // switch provably changes nothing.
+    describe('frontmatter fence (golden cases)', () => {
+        const GOLDEN = path.join(TMP_DIR, 'golden')
+        const files = {
+            'crlf.md': '---\r\ntitle: CRLF\r\n---\r\n\r\n# Body\r\n',
+            'cr.md': '---\rtitle: CR\r---\r\r# Body\r',
+            'empty.md': '---\n---\n\n# Body\n',
+            'unclosed.md': '---\ntitle: Open\nlayout: x\n',
+            'bom.md': '\uFEFF---\ntitle: BOM\n---\n\n# Body\n',
+            'indented.md': ' ---\ntitle: Indented\n---\n\n# Body\n',
+            'four.md': '----\ntitle: Four\n---\n\n# Body\n',
+            'trailing.md': '--- \ntitle: Trailing\n---\n\n# Body\n',
+            'close-four.md': '---\ntitle: Close\n----\nmore: yes\n---\n\nText\n',
+            'dup.md': '---\ntitle: a\ntitle: b\n---\nText\n',
+            'merge.md': '---\nbase: &b\n  a: 1\nchild:\n  <<: *b\n  c: 2\n---\nText\n',
+            'none.md': '# Just markdown\n\n---\n\nAfter rule\n',
+            'tight.md': '---\ntitle: Tight\n---\n# Heading right after\n    indented code\n',
+        }
+        const expected = {
+            'crlf.md': ['<h1>Body</h1>\n', { title: 'CRLF' }],
+            'cr.md': ['<h1>Body</h1>\n', { title: 'CR' }],
+            'empty.md': ['<h1>Body</h1>\n', {}],
+            'unclosed.md': ['', { title: 'Open', layout: 'x' }],
+            'bom.md': ['<h2>\uFEFF---\ntitle: BOM</h2>\n<h1>Body</h1>\n', {}],
+            'indented.md': ['<hr>\n<h2>title: Indented</h2>\n<h1>Body</h1>\n', {}],
+            'four.md': ['<hr>\n<h2>title: Four</h2>\n<h1>Body</h1>\n', {}],
+            'trailing.md': ['<hr>\n<h2>title: Trailing</h2>\n<h1>Body</h1>\n', {}],
+            'dup.md': ['<p>Text</p>\n', { title: 'b' }],
+            'merge.md': ['<p>Text</p>\n', { base: { a: 1 }, child: { a: 1, c: 2 } }],
+            'none.md': ['<h1>Just markdown</h1>\n<hr>\n<p>After rule</p>\n', {}],
+            'tight.md': [
+                '<h1>Heading right after</h1>\n<pre><code>indented code\n</code></pre>\n',
+                { title: 'Tight' },
+            ],
+        }
+        // The frontmatter alone, without the keys getPagesData derives.
+        const DERIVED = ['createdAt', 'href', 'fullPath', 'dirname', 'filename']
+        const ownMeta = ({ meta }) =>
+            Object.fromEntries(
+                Object.entries(meta).filter(([key]) => !DERIVED.includes(key))
+            )
+
+        beforeAll(async () => {
+            await fs.mkdir(GOLDEN, { recursive: true })
+            for (const [name, text] of Object.entries(files)) {
+                await fs.writeFile(path.join(GOLDEN, name), text)
+            }
+        })
+
+        it.each(Object.keys(expected))('renders %s as before', (name) => {
+            const [page] = getPagesData([name], GOLDEN)
+            const [content, meta] = expected[name]
+            expect(page.content).toBe(content)
+            expect(ownMeta(page)).toEqual(meta)
+        })
+
+        it('does not take `----` as the closing line', () => {
+            const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+            expect(getPagesData(['close-four.md'], GOLDEN)).toHaveLength(0)
+            errors.mockRestore()
+        })
+
+        it('gives a page without frontmatter none after one with it', () => {
+            const pages = getPagesData(['merge.md', 'none.md'], GOLDEN)
+            expect(pages.map(ownMeta)).toEqual([expected['merge.md'][1], {}])
+        })
+    })
+
     // createdAt resolution (nera-platform R1): frontmatter wins over the
     // filesystem birthtime, which is unreliable under CI where a fresh
     // checkout stamps every file with the same date and silently breaks any

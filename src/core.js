@@ -3,63 +3,32 @@ import path from 'path'
 import fsReaddirRecursive from 'fs-readdir-recursive'
 import MarkdownIt from 'markdown-it'
 import yaml from 'yaml'
+import {
+    FRONTMATTER_OPTIONS,
+    splitFrontmatter,
+} from '@nera-static/plugin-utils/frontmatter'
+import { normalizeBasePath } from '@nera-static/plugin-utils/urls'
 
-// Frontmatter is parsed with `yaml` like every other YAML file Nera reads, set
-// up to match what pages saw under markdown-it-meta/js-yaml 3: unquoted dates
-// become Date objects, `<<` merge keys work, and a repeated key takes the last
-// value. `nera validate` parses the same block, so a page it accepts parses
-// here too.
-const FRONTMATTER_OPTIONS = {
-    schema: 'core',
-    customTags: ['timestamp'],
-    merge: true,
-    uniqueKeys: false,
-}
-
-// Block rule for a `---` fenced YAML block on the page's first line, replacing
-// markdown-it-meta. The result goes into the per-render `env`, not onto the
-// shared `md` instance: markdown-it-meta's `md.meta` was never reset, so a page
-// without frontmatter inherited the previous page's.
-const frontmatterRule = (state, start, end) => {
-    if (start !== 0 || state.blkIndent !== 0 || state.tShift[start] < 0) {
-        return false
-    }
-    const lineAt = (line) =>
-        state.src.slice(state.bMarks[line], state.eMarks[line])
-    if (lineAt(start) !== '---') {
-        return false
-    }
-
-    const data = []
-    let line = start
-    while (line < end) {
-        line++
-        if (lineAt(line) === '---' || state.tShift[line] < 0) {
-            break
-        }
-        data.push(lineAt(line))
-    }
-
-    state.env.meta = yaml.parse(data.join('\n'), FRONTMATTER_OPTIONS) || {}
-    state.line = line + 1
-    return true
-}
+// `normalizeBasePath` (a site's `base_path` → '' or `/sub`) lives in
+// plugin-utils; it stays exported here because tooling imports it from
+// `@nera-static/core/core`.
+export { normalizeBasePath }
 
 const md = new MarkdownIt({ html: true })
-md.block.ruler.before('code', 'frontmatter', frontmatterRule, { alt: [] })
 
-// Normalise a site's `base_path` (config/app.yaml) into a URL prefix.
-// Absent/blank/`/` → '' so a root-served site is untouched and renders
-// byte-identically. Otherwise: trim, drop trailing slashes, guarantee one
-// leading slash. `nera-website` → `/nera-website`; `/foo/bar/` → `/foo/bar`.
-// This is the prefix a subdirectory deploy (e.g. GitHub *project* Pages served
-// under `/<repo>/`) needs so that every root-absolute link and asset resolves.
-export const normalizeBasePath = (raw) => {
-    if (typeof raw !== 'string') return ''
-    const trimmed = raw.trim()
-    if (trimmed === '' || trimmed === '/') return ''
-    const noTrailing = trimmed.replace(/\/+$/, '')
-    return noTrailing.startsWith('/') ? noTrailing : `/${noTrailing}`
+// A page's frontmatter and Markdown body: the `---` fence is found by
+// plugin-utils' `splitFrontmatter` and the YAML parsed with its
+// `FRONTMATTER_OPTIONS` (unquoted dates become Dates, `<<` merge keys work, a
+// repeated key takes the last value), the same rule `nera validate` applies.
+// The meta is built per page, so a page without frontmatter never inherits
+// another page's.
+const parsePage = (fileContent) => {
+    const split = splitFrontmatter(fileContent)
+    if (!split) return { content: md.render(fileContent), meta: {} }
+    return {
+        content: md.render(split.body),
+        meta: yaml.parse(split.yamlText, FRONTMATTER_OPTIONS) || {},
+    }
 }
 
 export const defaultSettings = {
@@ -198,9 +167,7 @@ export const getPagesData = (
 
             // Read and parse markdown
             const fileContent = fs.readFileSync(fullPath, 'utf-8')
-            const env = {}
-            const content = md.render(fileContent, env)
-            const pageMeta = env.meta || {}
+            const { content, meta: pageMeta } = parsePage(fileContent)
 
             // Resolve the creation date. Prefer an author/platform-supplied
             // date from frontmatter — `createdAt`, else `date` — because the
