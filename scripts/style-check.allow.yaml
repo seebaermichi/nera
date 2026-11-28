@@ -61,3 +61,7 @@
   repo: generator
   item: eslint.config.js
   reason: core lints with the @nera-static/stan editor export (D5), like templates/common; the fleet majority still has the pre-stan config until each repo moves to nera-stan
+- check: helpers
+  repo: (fleet)
+  item: parsePage
+  reason: core's parsePage renders the page body with markdown-it, which plugin-utils does not carry; the shared part (splitFrontmatter, FRONTMATTER_OPTIONS) already comes from plugin-utils

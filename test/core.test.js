@@ -115,6 +115,26 @@ describe('loadAppData', () => {
         })
     })
 
+    // Plugins such as pagination see pages in this order, so it is pinned:
+    // depth first, each folder's entries in byte order, dotfiles and dot
+    // folders skipped, names relative to the pages folder (as the
+    // fs-readdir-recursive package listed them).
+    it('lists pages depth first in byte order, without dotfiles', () => {
+        const pages = path.join(TMP_DIR, 'pages-order')
+        writeFiles(pages, {
+            'b.md': '', 'a/z.md': '', 'a/b.md': '', 'a-b.md': '', 'a.md': '',
+            '.hidden.md': '', '.drafts/x.md': '',
+        })
+
+        const data = loadAppData({
+            folders: { ...defaultSettings.folders, config: CONFIG, pages },
+        })
+
+        expect(data.pages).toEqual([
+            path.join('a', 'b.md'), path.join('a', 'z.md'), 'a-b.md', 'a.md', 'b.md',
+        ])
+    })
+
     it('handles missing pages directory gracefully', () => {
         const settings = {
             folders: {

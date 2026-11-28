@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
--   `@nera-static/plugin-utils` (^1.8.0) is a dependency: core reads `base_path`, frontmatter, `.neraignore`, package names, the page language and plain-object checks through its shared helpers instead of local copies, so core, validate, the CLI and the plugins agree on each rule.
+-   `@nera-static/plugin-utils` (^1.9.0) is a dependency: core reads `base_path`, frontmatter, `.neraignore`, package names, the page language, plain-object checks and file listings through its shared helpers instead of local copies, so core, validate, the CLI and the plugins agree on each rule.
 
 ### Changed
 
@@ -21,13 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   The exported `deepMerge` treats non-plain objects (class instances, `Map`, `Date`) as leaves and replaces them whole instead of merging their keys.
 -   `normalizeBasePath` stays exported from `@nera-static/core` and `@nera-static/core/core`, now as a re-export of plugin-utils.
 -   The deprecation warning for the legacy root `views/`/`assets/` no longer points to a local-only spec file.
+-   The pages folder and the asset folders are listed with plugin-utils' `walkFiles`. Pages keep their order (depth first, each folder's entries in byte order, dotfiles skipped), so plugins see `pagesData` as before.
 
 ### Deprecated
 
 -   `ignoreFiles` (`@nera-static/core/render`): use `isIgnoredAsset` from `@nera-static/plugin-utils/glob`. It stays as a thin wrapper and is removed in 5.0.0.
 
+### Removed
+
+-   The `fs-readdir-recursive` dependency: the page list comes from plugin-utils' `walkFiles`.
+
 ### Fixed
 
+-   An asset folder reachable under two names (the folder itself and a symlink to it) is copied under both names; before, only the first one reached `public/`. A link back up the tree is still not walked again.
 -   `t()` reads the page language through plugin-utils' `pageLang`: `lang: 'de '` (with a trailing space) now finds the `de` translations, and a site with neither `meta.lang` nor `app.lang` reads `translations.en` instead of returning every key untranslated.
 -   `base_path` and `asset_hashing` split a `srcset` by the HTML standard's candidate rule (plugin-utils' `mapSrcset`): a comma inside a URL (`/a.jpg?w=1,2 1x`, a `data:` URI) no longer cuts the URL in two, and the list's own commas and spacing are kept as written instead of being rewritten to `, `. A `srcset` written as `url descriptor, url descriptor` builds byte-identically.
 

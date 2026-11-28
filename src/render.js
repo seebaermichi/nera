@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import beautify from 'js-beautify'
 import { rimraf } from 'rimraf'
 import dotenv from 'dotenv'
+import { walkFiles } from '@nera-static/plugin-utils/files'
 import { isIgnoredAsset, readIgnoreList } from '@nera-static/plugin-utils/glob'
 import { pageLang } from '@nera-static/plugin-utils/lang'
 import {
@@ -351,31 +352,6 @@ const JUNK = new RegExp([
     /^Thumbs\.db$/, /^ehthumbs\.db$/, /^[Dd]esktop\.ini$/, /@eaDir$/,
 ].map((re) => re.source).join('|'))
 
-// Every file under `dir`, dotfiles included, junk excluded. Symlinks are
-// followed like cpy's glob did (a linked directory is walked, a dangling link
-// skipped); `seen` stops a link pointing back up the tree from looping.
-const listFiles = async (dir, seen = new Set()) => {
-    const real = await fs.realpath(dir)
-    if (seen.has(real)) return []
-    seen.add(real)
-
-    const files = []
-    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name)
-        let stat = entry
-        if (entry.isSymbolicLink()) {
-            stat = await fs.stat(full).catch(() => null)
-            if (!stat) continue
-        }
-        if (stat.isDirectory()) {
-            files.push(...(await listFiles(full, seen)))
-        } else if (stat.isFile() && !JUNK.test(entry.name)) {
-            files.push(full)
-        }
-    }
-    return files
-}
-
 // Copy one file, creating its directory and keeping its mode and timestamps,
 // as cpy's copy-file did.
 const copyPreserving = async (from, to) => {
@@ -408,7 +384,12 @@ export const copyFolder = async (
         const ignore = base === null ? [] : readIgnoreList(base)
 
         try {
-            for (const file of await listFiles(sourceFolder)) {
+            // Dotfiles included (`.htaccess`, `.well-known/`), junk matched by
+            // basename. plugin-utils' `walkFiles` follows symlinks like cpy's
+            // glob did: a linked folder is walked, a dangling link skipped, a
+            // link back up the tree not walked again.
+            for (const file of walkFiles(sourceFolder, { dotfiles: true })) {
+                if (JUNK.test(path.basename(file))) continue
                 if (isIgnoredAsset(ignore, file, sourceFolder)) continue
                 await copyPreserving(
                     file,

@@ -1,12 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import fsReaddirRecursive from 'fs-readdir-recursive'
 import MarkdownIt from 'markdown-it'
 import yaml from 'yaml'
 import {
     FRONTMATTER_OPTIONS,
     splitFrontmatter,
 } from '@nera-static/plugin-utils/frontmatter'
+import { walkFiles } from '@nera-static/plugin-utils/files'
 import { normalizeBasePath } from '@nera-static/plugin-utils/urls'
 
 // `normalizeBasePath` (a site's `base_path` → '' or `/sub`) lives in
@@ -127,7 +127,7 @@ export const loadAppData = (settings = defaultSettings) => {
     try {
         const pagesFolder = path.resolve(appConfig.folders.pages)
         if (fs.existsSync(pagesFolder)) {
-            pages = fsReaddirRecursive(pagesFolder)
+            pages = walkFiles(pagesFolder, { relative: true })
             console.log(`✅ Found ${pages.length} page(s) to process`)
         } else {
             console.warn(

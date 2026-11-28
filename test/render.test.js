@@ -136,6 +136,21 @@ describe('copyFolder', () => {
         ).toBe('via link')
     })
 
+    // A folder reachable under two names (itself and a link to it) is copied
+    // under both: only a link back up the tree is cut off.
+    it('copies a folder under every name a link gives it', async () => {
+        await fs.mkdir(path.join(srcDir, 'img'), { recursive: true })
+        await fs.writeFile(path.join(srcDir, 'img', 'a.png'), 'png')
+        await fs.symlink(path.join(srcDir, 'img'), path.join(srcDir, 'img-alias'))
+
+        await copyFolder(srcDir, publicDir)
+
+        const files = listFiles(publicDir)
+
+        expect(files).toContain(path.join('img', 'a.png'))
+        expect(files).toContain(path.join('img-alias', 'a.png'))
+    })
+
     // §2d: the theme asset pass passes `null` so a theme package's payload is
     // never filtered by a .neraignore — author-controlled via `files:`.
     it('skips the ignore list entirely when ignoreBase is null', async () => {
